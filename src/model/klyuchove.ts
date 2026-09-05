@@ -38,6 +38,8 @@ export const VID = Object.freeze({
   dvizhenie: 'dvizhenie',
   /** кешът, даден за месец · един ред на месец (негово, 05.09) */
   kesh: 'kesh',
+  /** ДДС за един месец · начислен · кредит · декларирано · платено (негово, 05.09 т.2) */
+  dds: 'dds',
   /** една номенклатура · id = ключът ѝ · всички стойности живеят на този адрес */
   nomenklatura: 'nomenklatura',
   stopanin: 'stopanin',

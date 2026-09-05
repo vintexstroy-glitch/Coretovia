@@ -1,20 +1,19 @@
 /**
- * СМЕТКИ · движението и кешът (ADR-006).
+ * СМЕТКИ · движението, кешът и ДДС (ADR-006 · ADR-007).
  *
  * Движението е родов „нов ред" в `dvizheniya` — от бутона и от десния бутон
  * върху Имот, Обект или Бизнес (тогава родителят идва от избора и командата
- * ОТВАРЯ чернова). Върху него важат родовите предусловия на реда (`red.ts`) и
- * ДВЕ негови: точно една секция, и тя е от страната на ЗНАКА (правило 20:
- * приходът е +, разходът е −; нулата не е движение), и месецът е ГГГГ-ММ.
+ * ОТВАРЯ чернова). Върху него важат родовите предусловия на реда (`red.ts`) —
+ * включително знакът срещу страната на секцията (правило 20) — и месецът ГГГГ-ММ.
  *
- * Кешът е един ред на МЕСЕЦ (негово, 05.09: „…дадени Кеш пари за Заплати и
- * Фактури Кеш и сверка на края на месеца от извлечението"). Ключът на реда е
- * изведен от месеца (`kesh:2026-09`), затова два раздела пишат в ЕДИН ред и
- * `expectedRev` ги пази — вместо да раждат по един ред на месец всеки.
+ * Кешът и ДДС са ЕДИН РЕД НА МЕСЕЦ (негово, 05.09 т.2). Затова са една и съща
+ * команда с различни колони: ключът на реда се извежда от МЕСЕЦА (`kesh:2026-09`
+ * · `dds:2026-09`), два раздела пишат в ЕДИН ред и `expectedRev` ги пази, вместо
+ * да раждат по един ред на месец всеки.
  */
 
 import type { Kletka } from '../../model/kletka.js';
-import { sashtnost, VID } from '../../model/klyuchove.js';
+import { sashtnost, VID, type Vid } from '../../model/klyuchove.js';
 import { tablitsata } from '../../model/model.js';
 import { MODEL } from '../../model/osnova.js';
 import { shemaNaReda, strogObekt } from '../../model/shema.js';
@@ -33,7 +32,6 @@ import {
 import { komandaZaNovRed } from './red.js';
 
 const TABLITSA = 'dvizheniya';
-const TABLITSA_KESH = 'kesh';
 
 /** Родителите, към които може да сочи движение · от Модела, не преписани. */
 const RODITELI = new Set(
@@ -74,16 +72,15 @@ export const smetkiDobaviDvizhenie = komandaZaNovRed(
   },
 );
 
-export interface TovarKesh {
+/** Товарът на ред-за-месец · месецът и по едно число на колона. */
+interface TovarZaMesets {
   readonly mesets: string;
-  readonly zaplati: Kletka | null;
-  readonly fakturi: Kletka | null;
-  readonly izvlechenie: Kletka | null;
+  readonly [kolona: string]: Kletka | null | string;
 }
 
-/** Живият ред на кеша за месеца · `undefined`, ако още го няма. */
-function redaNaMeseca(k: Kontekst, mesets: string): number | undefined {
-  const tv = k.ogledalo.tablitsi.get(TABLITSA_KESH);
+/** Живият ред за месеца в таблица с колона `mesets` · `undefined`, ако още го няма. */
+function redaNaMeseca(k: Kontekst, tablitsa: string, mesets: string): number | undefined {
+  const tv = k.ogledalo.tablitsi.get(tablitsa);
   if (tv === undefined) return undefined;
   for (const i of zhiviteRedove(tv)) {
     const m = kletkaNa(tv, i, 'mesets');
@@ -92,78 +89,106 @@ function redaNaMeseca(k: Kontekst, mesets: string): number | undefined {
   return undefined;
 }
 
-const shemaNaKesha = strogObekt({
-  // дължината я казва ПРЕДУСЛОВИЕТО, с думите на месеца, а не схемата с „7 знака"
-  mesets: { type: 'string' },
-  ...Object.fromEntries(
-    Object.entries(
-      shemaNaReda(tablitsata(MODEL, TABLITSA_KESH), 'sazdavane').properties ?? {},
-    ).filter(([klyuch]) => klyuch !== 'mesets'),
-  ),
-});
+const dumiZaSuma = (x: Kletka | null): string =>
+  x === null ? '' : 'stoynost_st' in x ? pishi(x.stoynost_st) : '';
 
-const zapishiKesh: Komanda<TovarKesh> = {
-  klyuch: 'smetki.zapishiKesh',
-  ime: 'Запиши кеша за месеца',
-  opisanie:
-    'Записва дадените кеш пари за Заплати Кеш и Фактури Кеш и изтегленото по извлечение за един месец.',
-  prozortsi: ['smetki'],
-  stepen: 'pishe',
-  myasto: 'sluzhebna',
-  proizvezhda: [TIP.redZapisan],
-  shema: shemaNaKesha,
-  predusloviya: [
-    {
-      ime: 'месецът е ГГГГ-ММ',
-      proveri: (v) =>
-        OBRAZETS_NA_MESETSA.test(v.mesets) ? null : `„${v.mesets}" не е месец ГГГГ-ММ.`,
+/**
+ * ЕДИН РЕД НА МЕСЕЦ · кешът и ДДС са една и съща команда с различни колони.
+ *
+ * Ключът се извежда от месеца, затова вторият запис за същия месец ПОПРАВЯ реда,
+ * а не ражда втори; `expectedRev` пази двата раздела един от друг.
+ */
+function komandaZaMesets(
+  tablitsa: string,
+  vid: Vid,
+  klyuch: string,
+  ime: string,
+  opisanie: string,
+): Komanda<TovarZaMesets> {
+  const t = tablitsata(MODEL, tablitsa);
+  const koloni = t.koloni.filter((k) => k.klyuch !== 'mesets').map((k) => k.klyuch);
+  const komanda: Komanda<TovarZaMesets> = {
+    klyuch,
+    ime,
+    opisanie,
+    prozortsi: [t.prozorets],
+    stepen: 'pishe',
+    myasto: 'sluzhebna',
+    proizvezhda: [TIP.redZapisan],
+    shema: strogObekt({
+      // дължината я казва ПРЕДУСЛОВИЕТО, с думите на месеца, а не схемата с „7 знака"
+      mesets: { type: 'string' },
+      ...Object.fromEntries(
+        Object.entries(shemaNaReda(t, 'sazdavane').properties ?? {}).filter(
+          ([k]) => k !== 'mesets',
+        ),
+      ),
+    }),
+    predusloviya: [
+      {
+        ime: 'месецът е ГГГГ-ММ',
+        proveri: (v) =>
+          OBRAZETS_NA_MESETSA.test(v.mesets) ? null : `„${v.mesets}" не е месец ГГГГ-ММ.`,
+      },
+      {
+        ime: 'поне едно число',
+        proveri: (v) =>
+          koloni.every((k) => (v[k] ?? null) === null)
+            ? 'Няма какво да се запише — всички полета са празни.'
+            : null,
+      },
+    ],
+    dryRun: (v, k) => {
+      const opis = tablitsata(k.model, tablitsa);
+      const id = idNaRed(vid, v.mesets);
+      const s = sashtnost(opis.sashtnost, id);
+      const dosega = redaNaMeseca(k, tablitsa, v.mesets);
+      const tv = k.ogledalo.tablitsi.get(tablitsa);
+      const kletki: Record<string, Kletka | null> = { mesets: { tekst: v.mesets } };
+      const razliki: Razlika[] = [];
+      for (const kolona of koloni) {
+        const novo = (v[kolona] as Kletka | null | undefined) ?? null;
+        kletki[kolona] = novo;
+        const staro =
+          dosega === undefined || tv === undefined ? null : kletkaNa(tv, dosega, kolona);
+        if (dumiZaSuma(staro) !== dumiZaSuma(novo))
+          razliki.push({
+            kakvo: opis.koloni.find((c) => c.klyuch === kolona)?.ime ?? kolona,
+            bilo: dumiZaSuma(staro),
+            stava: dumiZaSuma(novo),
+          });
+      }
+      return predvaritelno(
+        k,
+        klyuch,
+        [
+          {
+            type: TIP.redZapisan,
+            sashtnost: s,
+            payload: { tablitsa, id, kletki },
+            expectedRev: revNa(k, s),
+          },
+        ],
+        razliki,
+        `${ime} · ${v.mesets}.`,
+      );
     },
-    {
-      ime: 'поне едно число',
-      proveri: (v) =>
-        v.zaplati === null && v.fakturi === null && v.izvlechenie === null
-          ? 'Няма какво да се запише — и трите полета са празни.'
-          : null,
-    },
-  ],
-  dryRun: (v, k) => {
-    const t = tablitsata(k.model, TABLITSA_KESH);
-    // ключът на реда идва от МЕСЕЦА · два раздела пишат в един ред, не в два
-    const id = idNaRed(VID.kesh, v.mesets);
-    const s = sashtnost(t.sashtnost, id);
-    const kletki: Record<string, Kletka | null> = {
-      mesets: { tekst: v.mesets },
-      zaplati: v.zaplati,
-      fakturi: v.fakturi,
-      izvlechenie: v.izvlechenie,
-    };
-    const i = redaNaMeseca(k, v.mesets);
-    const tv = k.ogledalo.tablitsi.get(TABLITSA_KESH);
-    const razliki: Razlika[] = [];
-    for (const kol of t.koloni) {
-      if (kol.klyuch === 'mesets') continue;
-      const staro = i === undefined || tv === undefined ? null : kletkaNa(tv, i, kol.klyuch);
-      const novo = kletki[kol.klyuch] ?? null;
-      const dumi = (x: Kletka | null): string =>
-        x === null ? '' : 'stoynost_st' in x ? pishi(x.stoynost_st) : '';
-      if (dumi(staro) !== dumi(novo))
-        razliki.push({ kakvo: kol.ime, bilo: dumi(staro), stava: dumi(novo) });
-    }
-    return predvaritelno(
-      k,
-      'smetki.zapishiKesh',
-      [
-        {
-          type: TIP.redZapisan,
-          sashtnost: s,
-          payload: { tablitsa: TABLITSA_KESH, id, kletki },
-          expectedRev: revNa(k, s),
-        },
-      ],
-      razliki,
-      `Кешът за ${v.mesets}.`,
-    );
-  },
-};
+  };
+  return Object.freeze(komanda);
+}
 
-export const smetkiZapishiKesh: Komanda<TovarKesh> = Object.freeze(zapishiKesh);
+export const smetkiZapishiKesh = komandaZaMesets(
+  'kesh',
+  VID.kesh,
+  'smetki.zapishiKesh',
+  'Запиши кеша за месеца',
+  'Записва дадените кеш пари за Заплати Кеш и Фактури Кеш и изтегленото по извлечение за един месец.',
+);
+
+export const smetkiZapishiDds = komandaZaMesets(
+  'dds',
+  VID.dds,
+  'smetki.zapishiDds',
+  'Запиши ДДС за месеца',
+  'Записва начисления ДДС, данъчния кредит, декларираното и платеното за един месец, и числата от счетоводството.',
+);

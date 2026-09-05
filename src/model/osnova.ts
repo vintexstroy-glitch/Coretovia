@@ -606,6 +606,87 @@ const KESH_KOLONI: readonly Kolona[] = [
   },
 ];
 
+/**
+ * ДДС · един ред на МЕСЕЦ (негово, 05.09 т.2): „Върни ДДС като ред Към Приход
+ * или разход с натрупване всеки месец и зависимост за внасяне или за плащане към
+ * нас е знака на ддс. И Сверка и възможност да декларираш колко си платил и
+ * колко остава да се внася или да ти плащат…"
+ *
+ * ДЪЛЖИМОТО се СМЯТА (начислен − кредит), не се въвежда: два записа за едно и
+ * също число се разминават (правило 17). Декларираното и платеното са негови
+ * числа — какво е подадено и какво е внесено; остатъкът пак се смята.
+ * ИЗДАДЕНИТЕ и ПЛАТЕНИТЕ фактури идват от счетоводството с МЕСЕЦ назад (негово,
+ * 05.09 т.3) и служат само за сверка.
+ */
+const DDS_KOLONI: readonly Kolona[] = [
+  {
+    klyuch: 'mesets',
+    ime: 'месец',
+    vid: 'tekst',
+    zadalzhitelna: true,
+    zatvorena: false,
+    nashaDuma: true,
+    vKlyucha: true,
+  },
+  {
+    klyuch: 'nachislen',
+    ime: 'начислен ДДС',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'kredit',
+    ime: 'данъчен кредит',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'deklarirano',
+    ime: 'декларирано',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'plateno',
+    ime: 'платено',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'izdadeni',
+    ime: 'издадени фактури (счетоводство)',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'plateni',
+    ime: 'платени фактури (счетоводство)',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+];
+
+const DDS: Tablitsa = Object.freeze({
+  klyuch: 'dds',
+  ime: 'ДДС',
+  prozorets: 'smetki',
+  sashtnost: 'dds',
+  koloni: DDS_KOLONI,
+  nashaTablitsa: true,
+});
+
 const KESH: Tablitsa = Object.freeze({
   klyuch: 'kesh',
   ime: 'Кеш',
@@ -843,6 +924,7 @@ export const TABLITSI: readonly Tablitsa[] = Object.freeze([
   ZADACHI,
   DVIZHENIYA,
   KESH,
+  DDS,
 ]);
 
 /** МОДЕЛЪТ на резен 1 · единственият екземпляр в кода. */

@@ -36,12 +36,14 @@ describe('основата на резен 1', () => {
       'zadachi',
       'dvizheniya',
       'kesh',
+      'dds',
     ]);
     expect(TABLITSI.map((t) => t.prozorets)).toEqual([
       'imoti',
       'imoti',
       'imoti',
       'upravlenie',
+      'smetki',
       'smetki',
       'smetki',
     ]);

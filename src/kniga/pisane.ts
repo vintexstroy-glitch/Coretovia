@@ -884,6 +884,61 @@ function listUpravlenie(
 }
 
 /**
+ * НАШ блок в неговия лист · лента · глава · ред на месец · празен ред отдолу.
+ *
+ * Кешът и ДДС са негови ДУМИ от 05.09, но нямат място в листа му, затова стоят
+ * НАКРАЯ, под всичките му редове: така нито един негов адрес не мърда. Блокът се
+ * чете обратно с родовия четец (лента + глава по място).
+ */
+function blokNaNashaTablitsa(
+  l: ReturnType<typeof novList>,
+  o: Ogledalo,
+  t: Tablitsa,
+  KL: number,
+  sh: Shapka,
+  imeNaLista: string,
+): MyastoNaTablitsa {
+  const { redove, b, slivaniya, otklyucheni, otklyucheniRedove } = l;
+  const tv = o.tablitsi.get(t.klyuch);
+  const koloni = koloniNaReda(t);
+  const rLenta = redove.length + 1;
+  redove.push([glava(t.ime)]);
+  slivaniya.push(`A${rLenta}:${bukvaNaKolona(koloni.length)}${rLenta}`);
+  b.lenti += 1;
+  const glavi: Red = koloni.map((k) => glava(k.ime));
+  glavi[KL - 1] = glava(KLYUCH);
+  redove.push(glavi);
+  b.glavi += 1;
+  const parvi = redove.length + 1;
+  let posleden = redove.length;
+  if (tv !== undefined) {
+    for (const i of zhiviteRedove(tv)) {
+      const z = redKato(tv, i);
+      const red: Red = koloni.map((k) =>
+        kletkaZaExcel(o, t.klyuch, k.klyuch, z.kletki[k.klyuch] ?? null, z.kletki),
+      );
+      red[KL - 1] = z.id;
+      redove.push(red);
+      b.danni += 1;
+      otklyucheni.push(`A${redove.length}:${sh.posledna}${redove.length}`);
+      otklyucheniRedove.push(redove.length);
+      posleden = redove.length;
+    }
+  }
+  otklyucheni.push(`A${redove.length + 1}:${sh.posledna}${redove.length + 1}`);
+  otklyucheniRedove.push(redove.length + 1);
+  redove.push([]);
+  b.prazni += 1;
+  return {
+    klyuch: t.klyuch,
+    list: imeNaLista,
+    klyuchKolona: KL,
+    obhvat: posleden >= parvi ? `A${parvi}:${sh.posledna}${posleden}` : '',
+    redove: tv === undefined ? 0 : zhiviteRedove(tv).length,
+  };
+}
+
+/**
  * СМЕТКИ · листът му, дословно: инструкциите (2–10) · Бутони (11–13) · ОБЕКТИ и
  * Диаграма Гант (14) · двете глави (15–16) · филтър (17) · дървото на ДЕЛАТА
  * (18–35, ПРЕПИС от Управление — домът на задачите е там) · ПРИХОД (36) със
@@ -989,37 +1044,10 @@ function listSmetki(
   redove.push([]);
   b.prazni += 1;
 
-  // КЕШЪТ · наш блок с негова дума (05.09) · лента · глава · ред на месец
-  const tK = tablitsata(o.model, 'kesh');
-  const tvK = o.tablitsi.get('kesh');
-  const rKesh = redove.length + 1;
-  redove.push([glava(tK.ime)]);
-  slivaniya.push(`A${rKesh}:${bukvaNaKolona(koloniNaReda(tK).length)}${rKesh}`);
-  b.lenti += 1;
-  const glaviKesh: Red = koloniNaReda(tK).map((k) => glava(k.ime));
-  glaviKesh[KL - 1] = glava(KLYUCH);
-  redove.push(glaviKesh);
-  b.glavi += 1;
-  const parviKesh = redove.length + 1;
-  let posledenKesh = redove.length;
-  if (tvK !== undefined) {
-    for (const i of zhiviteRedove(tvK)) {
-      const z = redKato(tvK, i);
-      const red: Red = koloniNaReda(tK).map((k) =>
-        kletkaZaExcel(o, 'kesh', k.klyuch, z.kletki[k.klyuch] ?? null, z.kletki),
-      );
-      red[KL - 1] = z.id;
-      redove.push(red);
-      b.danni += 1;
-      otklyucheni.push(`A${redove.length}:${sh.posledna}${redove.length}`);
-      otklyucheniRedove.push(redove.length);
-      posledenKesh = redove.length;
-    }
-  }
-  otklyucheni.push(`A${redove.length + 1}:${sh.posledna}${redove.length + 1}`);
-  otklyucheniRedove.push(redove.length + 1);
-  redove.push([]);
-  b.prazni += 1;
+  // НАШИТЕ блокове с негова дума (05.09) · Кеш и ДДС · лента · глава · ред на месец
+  const mestaNaNashite = ['kesh', 'dds'].map((klyuch) =>
+    blokNaNashaTablitsa(l, o, tablitsata(o.model, klyuch), KL, sh, p.list),
+  );
 
   const shirini: Record<number, number> = {
     1: 10,
@@ -1050,13 +1078,7 @@ function listSmetki(
         obhvat: posledenRed >= parviRed ? `A${parviRed}:${sh.posledna}${posledenRed}` : '',
         redove: s.broyDvizheniya,
       },
-      {
-        klyuch: 'kesh',
-        list: p.list,
-        klyuchKolona: KL,
-        obhvat: posledenKesh >= parviKesh ? `A${parviKesh}:${sh.posledna}${posledenKesh}` : '',
-        redove: tvK === undefined ? 0 : zhiviteRedove(tvK).length,
-      },
+      ...mestaNaNashite,
     ],
     sverka: sverka(`износ · ${p.list}`, b.sbor, redove.length, kogato),
   };

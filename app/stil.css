@@ -660,3 +660,42 @@ label.malak.buton-grupa .pole.malak {
   text-align: right;
   white-space: nowrap;
 }
+
+/* ═══ подтабовете · НАП · ДДС (ADR-007) ═══ */
+.podtabove {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0.4rem 0 0.2rem;
+  border-bottom: 1px solid var(--linija);
+}
+
+.podtabove .podtab {
+  border: 1px solid var(--linija);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: var(--hartiya);
+  color: var(--sivo);
+  padding: 0.25rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.podtabove .podtab.tekusht {
+  background: var(--zeleno);
+  border-color: var(--zeleno);
+  color: #fff;
+  font-weight: 600;
+}
+
+.reshetka.smetki tr.red.dds td {
+  color: var(--sivo);
+  font-style: italic;
+}
+
+.reshetka.smetki tr.sektsiya.dds td {
+  background: var(--zhalto);
+  color: var(--mastilo);
+}
+
+[data-nap-nahodki] td:last-child {
+  white-space: normal;
+}

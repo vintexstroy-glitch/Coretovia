@@ -72,7 +72,6 @@ import { fokusiraySled, pokazhiGreshka, zakachiRedaktsiya } from '../reshetka/re
 import { kletkaHTML } from '../reshetka/reshetka.js';
 import { zakachiZebrata } from '../reshetka/zebra.js';
 import { gantIDumiHTML, izpalniOtMenyuto, zakachiDyasnoMenyu, zapaziKnigata } from './deystviya.js';
-import { dumiteHTML } from './profil.js';
 
 const PAMET = Object.freeze({
   filtar: 'upravlenie.filtar',

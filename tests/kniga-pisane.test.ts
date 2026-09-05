@@ -133,6 +133,7 @@ describe('Книгата на изход', () => {
       zadachi: 0,
       dvizheniya: 0,
       kesh: 0,
+      dds: 0,
     });
   });
 
@@ -322,6 +323,7 @@ describe('Книгата на изход', () => {
       ['zadachi', UPRAVLENIE, 0],
       ['dvizheniya', SMETKI, 0],
       ['kesh', SMETKI, 0],
+      ['dds', SMETKI, 0],
     ]);
     expect(tablitsi[0]?.[3]).toBe('A6:J8');
     const nomenklaturi = s.kletki.filter((r) => r[0] === 'nomenklatura');

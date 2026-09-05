@@ -8,7 +8,7 @@
 import type { Komanda, Myasto } from './komanda.js';
 import { imotiDobaviBiznes, imotiDobaviObekt, imotiSazdayImot } from './prozortsi/imoti.js';
 import { redIzklyuchi, redPopraviKletka, redVarni } from './prozortsi/red.js';
-import { smetkiDobaviDvizhenie, smetkiZapishiKesh } from './prozortsi/smetki.js';
+import { smetkiDobaviDvizhenie, smetkiZapishiDds, smetkiZapishiKesh } from './prozortsi/smetki.js';
 import { upravlenieDobaviZadacha } from './prozortsi/upravlenie.js';
 import { knigaIznesi, knigaVnesi } from './prozortsi/kniga.js';
 import {
@@ -38,6 +38,7 @@ export const KATALOG: readonly KoyaDaE[] = Object.freeze([
   upravlenieDobaviZadacha,
   smetkiDobaviDvizhenie,
   smetkiZapishiKesh,
+  smetkiZapishiDds,
   redPopraviKletka,
   redIzklyuchi,
   redVarni,
