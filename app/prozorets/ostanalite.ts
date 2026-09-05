@@ -13,9 +13,7 @@ import { dumiteHTML } from './profil.js';
 
 /** С кой резен идва прозорецът · по `docs/03-plan.md`. */
 export const REZEN_NA_PROZORETSA: Readonly<Partial<Record<KlyuchNaProzorets, number>>> =
-  Object.freeze({
-    prodazhbi: 5,
-  });
+  Object.freeze({});
 
 export function narisuvayOstanalite(k: KonteksNaEkrana, klyuch: KlyuchNaProzorets): void {
   const p = PROZORTSI.find((x) => x.klyuch === klyuch);

@@ -15,6 +15,7 @@
  * ДАДЕНИ отвън (родителят от десния бутон) — те влизат в товара, не в полетата.
  */
 
+import { izpalniOtMenyuto, zakachiDyasnoMenyu, zapaziKnigata } from '../prozorets/deystviya.js';
 import type { Kletka, Kletki } from '../../src/model/kletka.js';
 import { type Kolona, slotNaKolonata } from '../../src/model/kolona.js';
 import { tablitsata } from '../../src/model/model.js';
@@ -155,4 +156,26 @@ export function otvoriChernova(
   if (oblik?.sled !== undefined) oblik.sled.after(tr);
   else tbody.prepend(tr);
   poleta.values().next().value?.focus();
+}
+
+/**
+ * БУТОНИТЕ на прозорец с таблици · отваряне на чернова · „Запази книгата" ·
+ * дясното меню. Три прозореца ги закачаха еднакво; домът им е един (правило 17).
+ */
+export function zakachiButonite(
+  k: KonteksNaEkrana,
+  prozorets: string,
+  tablitsaNaButona: Readonly<Record<string, string>>,
+): void {
+  for (const b of k.tyalo.querySelectorAll<HTMLButtonElement>('[data-buton]')) {
+    b.addEventListener('click', () => {
+      const klyuch = b.dataset['buton'] ?? '';
+      const tablitsa = tablitsaNaButona[klyuch];
+      if (tablitsa !== undefined) otvoriChernova(k.tyalo, k, tablitsa, klyuch);
+    });
+  }
+  k.tyalo.querySelector<HTMLButtonElement>('[data-zapazi-kniga]')?.addEventListener('click', () => {
+    void zapaziKnigata(k);
+  });
+  zakachiDyasnoMenyu(k, prozorets, (b) => void izpalniOtMenyuto(k, b.klyuch, b.tovar));
 }

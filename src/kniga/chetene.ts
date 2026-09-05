@@ -52,6 +52,7 @@ import {
   GLAVI_NA_NOMENKLATURITE,
   GRUPA,
   KLYUCH,
+  OBSHTO_EVRO,
   SBOR,
   NOMENKLATURI,
   RAZDELITEL_NA_GRUPATA,
@@ -559,6 +560,9 @@ class Chetets {
       const kletki = l.kletki[i] ?? [];
       if (ePrazen(kletki.slice(0, Math.max(koloni.length, jKlyuch + 1)))) break;
       if (lenti.has(tekstNa(kletki[0])) || instruktsii.has(tekstNa(kletki[1]))) break;
+      // неговият ред „ОБЩО евро" под всяка таблица с продажби е СБОР, не данни:
+      // слятата клетка го повтаря в B..G и всяко число там би било „не е число"
+      if (tekstNa(kletki[0]) === OBSHTO_EVRO) break;
       obhodeni += 1;
       const red = i + 1;
       if (this.eBazov(t, koloni, kletki)) {

@@ -30,6 +30,18 @@ import type { Model } from './model.js';
 import type { Nomenklatura, StoynostNaNomenklatura } from './nomenklatura.js';
 import type { Nomeratsiya, Segment, Tablitsa } from './tablitsa.js';
 
+/**
+ * ЛЕНТИТЕ на двете му таблици с продажби · A3 и A60, ДОСЛОВНО (правило 21).
+ *
+ * Двете са за РАЗЛИЧНИ сгради и с различни глави: първата няма „евро/квадрат", а
+ * вноските ѝ се казват „смр" там, където втората казва „кеш". Едно и също нещо,
+ * два негови правописа — затова смятането върви по БЕЛЕГ, не по дума (ADR-010).
+ */
+export const LENTA_NA_PARVATA_SGRADA =
+  'Т А Б Л И Ц А  за продажби на Винтекс Строй ЕАД в обект: "ЖИЛИЩНА СГРАДА С ПОДЗЕМНИ ГАРАЖИ  УПИ ІХ-1691,1692, кв. 47, м. Студентски град, р-н Студентски, гр. София"';
+export const LENTA_NA_VTORATA_SGRADA =
+  'Т А Б Л И Ц А  за продажбите на Винтекс Строй ЕАД в обект: ЖИЛИЩНА СГРАДА С ПОДЗЕМНИ ГАРАЖИ в УПИ V-3508, кв. 56, м. Малинова долина, р-н Студентски, гр. София';
+
 export const PROZORTSI: readonly ProzoretsVOsnovata[] = Object.freeze([
   { klyuch: 'profil', list: 'Профил', lenti: [] },
   {
@@ -67,7 +79,7 @@ export const PROZORTSI: readonly ProzoretsVOsnovata[] = Object.freeze([
   {
     klyuch: 'prodazhbi',
     list: 'Продажби',
-    lenti: ['Таблица за продажби · първа сграда', 'Таблица за продажби · втора сграда'],
+    lenti: [LENTA_NA_PARVATA_SGRADA, LENTA_NA_VTORATA_SGRADA],
   },
   { klyuch: 'ii', list: 'ИИ', lenti: ['Активни агенти', 'Неактивни агенти'] },
   { klyuch: 'nastroyki', list: 'Настройки(Стопанин)', lenti: [] },
@@ -1069,6 +1081,111 @@ export type OsNaDostapa = (typeof OSI_NA_DOSTAPA)[number];
  * той бие. Така „Създаване на Длъжност с достъп" (неговото B14) расте от
  * събития, а началото е неговото.
  */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ПРОДАЖБИ · двете му таблици (A3:T58 и A60:T77), с главите му дословно.
+ *
+ * Всяка продажба има ДВЕ страни — по банка и в кеш — и за всяка: цена, вноски и
+ * ПРОВЕРКА. В Книгата проверката е формула; тук се СМЯТА (цена − сбор на
+ * вноските) и се записва като сверка, дори когато е нула (правило 7). Затова е
+ * ЗАТВОРЕНА колона: сметка не се редактира от никого (правило 23).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Купувачът · четирите му глави за човека · еднакви в двете таблици. */
+const KUPUVACH: readonly Kolona[] = [
+  { ...tekst('apartament', 'апартамент', true), vKlyucha: true, kratko: 'апартамент' },
+  tekst('telefon', 'телефон'),
+  tekst('ime', 'име'),
+  tekst('imeyl', 'имейл'),
+];
+
+/** Принадлежностите и квадратурата · гараж · п. място · мазе · квадратура. */
+const PRINADLEZHNOSTI: readonly Kolona[] = [
+  { klyuch: 'garazh', ime: 'гараж', vid: 'chislo', zadalzhitelna: false, zatvorena: false },
+  { klyuch: 'pMyasto', ime: 'п. място', vid: 'chislo', zadalzhitelna: false, zatvorena: false },
+  { klyuch: 'maze', ime: 'мазе', vid: 'chislo', zadalzhitelna: false, zatvorena: false },
+  {
+    klyuch: 'kvadratura',
+    ime: 'квадратура',
+    vid: 'chislo',
+    merka: 'kvsm',
+    zadalzhitelna: false,
+    zatvorena: false,
+  },
+];
+
+/** Пари в продажба · с ролята и страната им. */
+function pari(
+  klyuch: string,
+  ime: string,
+  rolya: 'tsena' | 'vnoska' | 'proverka',
+  strana: 'banka' | 'kesh',
+): Kolona {
+  return {
+    klyuch,
+    ime,
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: rolya === 'proverka',
+    plashtane: { rolya, strana },
+  };
+}
+
+const PRODAZHBI_KOLONI: readonly Kolona[] = [
+  ...KUPUVACH,
+  ...PRINADLEZHNOSTI,
+  { klyuch: 'tsena', ime: 'цена', vid: 'evro', zadalzhitelna: false, zatvorena: false },
+  pari('tsenaBanka', 'цена банка', 'tsena', 'banka'),
+  pari('tsenaSmr', 'цена смр ', 'tsena', 'kesh'),
+  pari('pdBanka', 'ПД банка', 'vnoska', 'banka'),
+  pari('pdSmr', 'ПД смр', 'vnoska', 'kesh'),
+  pari('nsBanka', 'НС банка', 'vnoska', 'banka'),
+  pari('nsSmr', 'НС смр', 'vnoska', 'kesh'),
+  pari('akt15Smr', 'Акт 15 смр', 'vnoska', 'kesh'),
+  pari('akt15', 'Акт 15', 'vnoska', 'banka'),
+  pari('akt16', 'АКТ 16 ', 'vnoska', 'banka'),
+  pari('proverkaBanka', 'проверка банка', 'proverka', 'banka'),
+  pari('proverkaKesh', 'проверка кеш', 'proverka', 'kesh'),
+];
+
+const PRODAZHBI2_KOLONI: readonly Kolona[] = [
+  ...KUPUVACH,
+  ...PRINADLEZHNOSTI,
+  {
+    klyuch: 'evroKvadrat',
+    ime: 'евро/квадрат',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+  },
+  { klyuch: 'tsena', ime: 'цена', vid: 'evro', zadalzhitelna: false, zatvorena: false },
+  pari('tsenaBanka', 'цена банка', 'tsena', 'banka'),
+  pari('tsenaSmr', 'цена смр ', 'tsena', 'kesh'),
+  pari('pdBanka', 'ПД банка', 'vnoska', 'banka'),
+  pari('pdKesh', 'ПД кеш', 'vnoska', 'kesh'),
+  pari('nsBanka', 'НС банка', 'vnoska', 'banka'),
+  pari('nsKesh', 'НС кеш', 'vnoska', 'kesh'),
+  pari('akt15Banka', 'АКТ 15 банка', 'vnoska', 'banka'),
+  pari('akt16Banka', 'АКТ 16 банка ', 'vnoska', 'banka'),
+  pari('proverkaBanka', 'проверка банка', 'proverka', 'banka'),
+  pari('proverkaKesh', 'проверка кеш', 'proverka', 'kesh'),
+];
+
+const PRODAZHBI: Tablitsa = Object.freeze({
+  klyuch: 'prodazhbi',
+  ime: LENTA_NA_PARVATA_SGRADA,
+  prozorets: 'prodazhbi',
+  sashtnost: 'prodazhba',
+  koloni: PRODAZHBI_KOLONI,
+});
+
+const PRODAZHBI2: Tablitsa = Object.freeze({
+  klyuch: 'prodazhbi2',
+  ime: LENTA_NA_VTORATA_SGRADA,
+  prozorets: 'prodazhbi',
+  sashtnost: 'prodazhba2',
+  koloni: PRODAZHBI2_KOLONI,
+});
+
 export const TABLITSI: readonly Tablitsa[] = Object.freeze([
   IMOTI,
   OBEKTI,
@@ -1080,6 +1197,8 @@ export const TABLITSI: readonly Tablitsa[] = Object.freeze([
   STOPANI,
   SLUZHITELI,
   DOSTAP,
+  PRODAZHBI,
+  PRODAZHBI2,
 ]);
 
 /** МОДЕЛЪТ на резен 1 · единственият екземпляр в кода. */

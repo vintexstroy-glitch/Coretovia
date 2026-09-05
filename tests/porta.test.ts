@@ -31,7 +31,7 @@ describe('Портата', () => {
     const samoChete: PortaZaChetene = iz;
     // @ts-expect-error — агентът не пише: PortaZaChetene няма izpalni (K3)
     expect(typeof samoChete.izpalni).toBe('function');
-    expect(samoChete.katalog()).toHaveLength(21);
+    expect(samoChete.katalog()).toHaveLength(23);
     expect(samoChete.ogledalo().stopanin).toBe('');
   });
 

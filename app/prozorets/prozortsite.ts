@@ -1,6 +1,6 @@
 /**
  * ОСЕМТЕ ПРОЗОРЕЦА · кой файл рисува кой ключ · един дом (правило 14).
- * Седем са построени; само Продажби казва кога идва (правило 12).
+ * Осемте са построени; онова, което още го няма ВЪТРЕ в тях, го казват сами.
  */
 
 import type { KlyuchNaProzorets } from '../../src/model/klyuchove.js';
@@ -9,6 +9,7 @@ import { narisuvayII } from './ii.js';
 import { narisuvayImoti } from './imoti.js';
 import { narisuvayNastroyki } from './nastroyki.js';
 import { narisuvayOstanalite } from './ostanalite.js';
+import { narisuvayProdazhbi } from './prodazhbi.js';
 import { narisuvaySluzhiteli } from './sluzhiteli.js';
 import { narisuvaySmetki } from './smetki.js';
 import { narisuvayProfil } from './profil.js';
@@ -36,6 +37,9 @@ export function narisuvayProzorets(klyuch: KlyuchNaProzorets, k: KonteksNaEkrana
       return;
     case 'sluzhiteli':
       narisuvaySluzhiteli(k);
+      return;
+    case 'prodazhbi':
+      narisuvayProdazhbi(k);
       return;
     default:
       narisuvayOstanalite(k, klyuch);

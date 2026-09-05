@@ -496,6 +496,8 @@ describe('сторното и разписката', () => {
         stopani: 0,
         sluzhiteli: 0,
         dostap: 0,
+        prodazhbi: 0,
+        prodazhbi2: 0,
       },
       iznesenoNa: '2026-09-05T12:30:00.000Z',
     };
@@ -514,6 +516,8 @@ describe('сторното и разписката', () => {
             stopani: 0,
             sluzhiteli: 0,
             dostap: 0,
+            prodazhbi: 0,
+            prodazhbi2: 0,
           },
         }),
       ).zashto[0],

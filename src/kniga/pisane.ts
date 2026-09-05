@@ -49,6 +49,7 @@ import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { type Red as RedNaOgledaloto, redKato, zhiviteRedove } from '../ogledalo/tablitsa.js';
 import type { Kursor } from '../sabitiya/tovari.js';
 import { darvoto } from '../smetach/darvo.js';
+import { prodazhbite, TABLITSI_NA_PRODAZHBITE } from '../smetach/prodazhbi.js';
 import { programata } from '../smetach/programa.js';
 import { lentaNa, sboroveVKolonite } from '../smetach/gant.js';
 import { dumiNaKletka, imeNaReda, imeNaVrazkata, tekstNaIzbora } from '../smetach/kletki.js';
@@ -85,7 +86,9 @@ import {
   KLYUCH_KOLONA_SMETKI,
   SEKTSIYA,
   DUMI_ZA_OTCHETITE,
+  KLYUCH_KOLONA_PRODAZHBI,
   KLYUCH_KOLONA_SLUZHITELI,
+  OBSHTO_EVRO,
   DUMI_ZA_DLAZHNOST,
   GLAVI_NA_PROGRAMATA,
 } from './dumi.js';
@@ -368,7 +371,13 @@ type PisachNaList = (
   imeNaNastroykite: string,
   podtablitsi: Map<string, Podtablitsa>,
   kogato: string,
-) => { list: OpisNaList; mesta: MyastoNaTablitsa[]; sverka: Sverka };
+) => {
+  list: OpisNaList;
+  mesta: MyastoNaTablitsa[];
+  sverka: Sverka;
+  /** сверки на СМЯТАНОТО (проверките на продажбите) · нулата също се записва */
+  dopalnitelni?: readonly Sverka[];
+};
 
 /** ИмотиОбектиБизнеси · трите таблици в неговия ред · инструкции · лента · глава · данни. */
 function listImoti(
@@ -1124,6 +1133,41 @@ const listSmetki: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) =
  * като записи (ADR-008). Базовият ред отива в Книгата без ключ — допише ли се в
  * него нещо, Сверчикът го чете като НОВ ред, и оттам нататък бие записаният.
  */
+/**
+ * ЕДИН РЕД С ДАННИ в листа · бута го, брои го и ГО ОТКЛЮЧВА.
+ *
+ * Три листа го правеха еднакво (Служители · Продажби · базовите редове): редът
+ * влиза, броячът расте, обхватът му става отключен, за да се пише в Excel върху
+ * данните, но не върху главите (решение 15 на резен 1).
+ */
+function redSDanni(l: ReturnType<typeof novList>, red: Red, KL: number, id: string | null): void {
+  const posledna = bukvaNaKolona(KL);
+  if (id !== null) red[KL - 1] = id;
+  l.redove.push(red);
+  l.b.danni += 1;
+  l.otklyucheni.push(`A${l.redove.length}:${posledna}${l.redove.length}`);
+  l.otklyucheniRedove.push(l.redove.length);
+}
+
+/** Мястото на таблицата в листа · за служебния лист (един дом на формата). */
+function myastoto(
+  klyuch: string,
+  list: string,
+  KL: number,
+  parviRed: number,
+  posledenRed: number,
+  redove: number,
+): MyastoNaTablitsa {
+  const posledna = bukvaNaKolona(KL);
+  return {
+    klyuch,
+    list,
+    klyuchKolona: KL,
+    obhvat: posledenRed >= parviRed ? `A${parviRed}:${posledna}${posledenRed}` : '',
+    redove,
+  };
+}
+
 const listSluzhiteli: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) => {
   const l = novList();
   const { redove, b, slivaniya, validatsii, otklyucheni, otklyucheniRedove } = l;
@@ -1152,11 +1196,7 @@ const listSluzhiteli: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogat
             ? tekstNaNomera(nomerNa.get(i) ?? [])
             : kletkaZaExcel(o, t.klyuch, k.klyuch, r.kletki[k.klyuch] ?? null, r.kletki),
         );
-        red[KL - 1] = r.id;
-        redove.push(red);
-        b.danni += 1;
-        otklyucheni.push(`A${redove.length}:${posledna}${redove.length}`);
-        otklyucheniRedove.push(redove.length);
+        redSDanni(l, red, KL, r.id);
         for (const [ki, k] of koloni.entries()) {
           if (k.vid !== 'izbor') continue;
           const izvor = izvorNa(k.nomenklatura);
@@ -1174,10 +1214,7 @@ const listSluzhiteli: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogat
           if (k.klyuch === 'dlazhnost') return d.dlazhnost;
           return (d as unknown as Record<string, string>)[k.klyuch] ?? null;
         });
-        redove.push(red);
-        b.danni += 1;
-        otklyucheni.push(`A${redove.length}:${posledna}${redove.length}`);
-        otklyucheniRedove.push(redove.length);
+        redSDanni(l, red, KL, null);
       }
     }
     const posledenRed = redove.length;
@@ -1185,13 +1222,16 @@ const listSluzhiteli: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogat
     otklyucheniRedove.push(redove.length + 1);
     redove.push([]);
     b.prazni += 1;
-    mesta.push({
-      klyuch: t.klyuch,
-      list: p.list,
-      klyuchKolona: KL,
-      obhvat: posledenRed >= parviRed ? `A${parviRed}:${posledna}${posledenRed}` : '',
-      redove: tv === undefined ? 0 : zhiviteRedove(tv).length,
-    });
+    mesta.push(
+      myastoto(
+        t.klyuch,
+        p.list,
+        KL,
+        parviRed,
+        posledenRed,
+        tv === undefined ? 0 : zhiviteRedove(tv).length,
+      ),
+    );
     if (ti === 0) l.zamraziPod = redove.length;
   }
 
@@ -1269,6 +1309,106 @@ function listSluzheben(
 }
 
 /** Книгата от Огледалото · осемте листа + служебният · в реда на Книгата му. */
+/**
+ * ПРОДАЖБИ · двете му таблици (A3:T58 и A60:T77), с главите му дословно.
+ *
+ * Всяка завършва с неговия ред „ОБЩО евро" (A58 · A77), където в Книгата стоят
+ * `=SUM(...)`. Тук се пишат ЧИСЛАТА, сметнати в цели центове: формулата се
+ * връща с резен 6, а дотогава сборът е верен и се чете обратно.
+ *
+ * Проверките („проверка банка" · „проверка кеш") са ЗАТВОРЕНИ колони — сметка,
+ * не данни. Пишат се сметнати и не се четат обратно като клетки.
+ */
+const listProdazhbi: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) => {
+  const l = novList();
+  const { redove, b, slivaniya, otklyucheni, otklyucheniRedove } = l;
+  const KL = KLYUCH_KOLONA_PRODAZHBI;
+  const posledna = bukvaNaKolona(KL);
+  const mesta: MyastoNaTablitsa[] = [];
+  const smetnati = prodazhbite(o, kogato);
+  const sverki: Sverka[] = [];
+
+  // неговите A1 · B1 · бележката над двете таблици
+  for (const d of DUMI_OT_KNIGATA.prodazhbi ?? []) {
+    redove.push([d.nomer, d.tekst]);
+    b.instruktsii += 1;
+  }
+  redove.push([]);
+  b.prazni += 1;
+
+  for (const [ti, klyuch] of TABLITSI_NA_PRODAZHBITE.entries()) {
+    const t = tablitsata(o.model, klyuch);
+    const koloni = koloniNaReda(t);
+    const smetnata = smetnati.tablitsi[ti]!;
+    sverki.push(...smetnata.sverki);
+    lentaIGlavi(l, t, t.koloni, KL);
+    const parviRed = redove.length + 1;
+    const tv = o.tablitsi.get(klyuch);
+    if (tv !== undefined) {
+      for (const r of smetnata.redove) {
+        const z = redKato(tv, r.i);
+        const red: Red = t.koloni.map((k) => {
+          const p = k.plashtane;
+          if (p?.rolya === 'proverka') {
+            // парите в Книгата се пишат в ЕВРО (клетката е с формат #,##0.00),
+            // а тук се смятат в цели центове · едно място за превръщането
+            return (r.strani.find((x) => x.strana === p.strana)?.ostatak ?? 0) / 100;
+          }
+          return kletkaZaExcel(o, klyuch, k.klyuch, z.kletki[k.klyuch] ?? null, z.kletki);
+        });
+        redSDanni(l, red, KL, r.id);
+      }
+    }
+    const posledenRed = redove.length;
+    // неговият ред „ОБЩО евро" · слят по ширината на думите му (A58:G58 · A77:G77)
+    const rObshto = redove.length + 1;
+    const obshto: Red = t.koloni.map((k) => {
+      const v = smetnata.obshto[k.klyuch];
+      return v === undefined || v === 0 ? null : k.vid === 'evro' ? v / 100 : v;
+    });
+    obshto[0] = OBSHTO_EVRO;
+    redove.push(obshto);
+    b.sborove += 1;
+    slivaniya.push(`A${rObshto}:G${rObshto}`);
+    redove.push([]);
+    b.prazni += 1;
+    mesta.push(
+      myastoto(
+        klyuch,
+        p.list,
+        KL,
+        parviRed,
+        posledenRed,
+        tv === undefined ? 0 : zhiviteRedove(tv).length,
+      ),
+    );
+    if (ti === 0) l.zamraziPod = redove.length;
+    void koloni;
+    void imeNaNastroykite;
+    void podtablitsi;
+  }
+
+  const list: OpisNaList = {
+    ime: p.list,
+    redove,
+    slivaniya,
+    validatsii: l.validatsii,
+    otklyucheni,
+    otklyucheniRedove,
+    zashtita: true,
+    skritiKoloni: [KL],
+    tekstoviKoloni: [1, 2, 4],
+    shirini: { 1: 16, 2: 14, 3: 20, 4: 24 },
+    ...(l.zamraziPod === undefined ? {} : { zamraziPod: l.zamraziPod }),
+  };
+  return {
+    list,
+    mesta,
+    sverka: sverka(`износ · ${p.list}`, b.sbor, redove.length, kogato),
+    dopalnitelni: sverki,
+  };
+};
+
 export function knigataOtOgledaloto(o: Ogledalo, kursor: Kursor, kogato: string): KnigaZaIznos {
   const listove: OpisNaList[] = [];
   const sverki: Sverka[] = [];
@@ -1299,6 +1439,11 @@ export function knigataOtOgledaloto(o: Ogledalo, kursor: Kursor, kogato: string)
       listove.push(sl.list);
       sverki.push(sl.sverka);
       mesta.push(...sl.mesta);
+    } else if (p.klyuch === 'prodazhbi') {
+      const pr = listProdazhbi(o, p, nastroyki.list, n.podtablitsi, kogato);
+      listove.push(pr.list);
+      sverki.push(pr.sverka, ...(pr.dopalnitelni ?? []));
+      mesta.push(...pr.mesta);
     } else if (p.klyuch === 'ii') {
       const s = listII(p.list, p.lenti, kogato);
       listove.push(s.list);

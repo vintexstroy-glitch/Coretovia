@@ -23,16 +23,10 @@ import {
 } from '../../src/smetach/pravo.js';
 import { DOSTAP_PO_PODRAZBIRANE } from '../../src/model/osnova.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { otvoriChernova } from '../reshetka/chernova.js';
+import { otvoriChernova, zakachiButonite } from '../reshetka/chernova.js';
 import { ekraniraj } from '../reshetka/obshto.js';
 import { reshetkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
-import {
-  butoniteHTML,
-  iznosVestHTML,
-  izpalniOtMenyuto,
-  zakachiDyasnoMenyu,
-  zapaziKnigata,
-} from './deystviya.js';
+import { butoniteHTML, iznosVestHTML } from './deystviya.js';
 
 /** Кой бутон коя таблица отваря · трите му места за нов ред. */
 const TABLITSA_NA_BUTONA: Readonly<Record<string, string>> = Object.freeze({
@@ -138,14 +132,5 @@ export function narisuvaySluzhiteli(k: KonteksNaEkrana): void {
 
   zakachiReshetkata(k);
 
-  for (const b of k.tyalo.querySelectorAll<HTMLButtonElement>('[data-buton]')) {
-    b.addEventListener('click', () => {
-      const tablitsa = TABLITSA_NA_BUTONA[b.dataset['buton'] ?? ''];
-      if (tablitsa !== undefined) otvoriChernova(k.tyalo, k, tablitsa, b.dataset['buton'] ?? '');
-    });
-  }
-  k.tyalo.querySelector<HTMLButtonElement>('[data-zapazi-kniga]')?.addEventListener('click', () => {
-    void zapaziKnigata(k);
-  });
-  zakachiDyasnoMenyu(k, 'sluzhiteli', (b) => void izpalniOtMenyuto(k, b.klyuch, b.tovar));
+  zakachiButonite(k, 'sluzhiteli', TABLITSA_NA_BUTONA);
 }

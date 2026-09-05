@@ -18,7 +18,6 @@ describe('резените по прозорец', () => {
   }
 
   it('всеки прозорец без екран сочи ред от плана, в който стои листът му', () => {
-    expect(Object.keys(REZEN_NA_PROZORETSA).length).toBeGreaterThan(0);
     for (const [klyuch, rezen] of Object.entries(REZEN_NA_PROZORETSA)) {
       const list = PROZORTSI.find((p) => p.klyuch === klyuch)?.list ?? '';
       const zaglavie = redove.get(String(rezen)) ?? '';
@@ -26,11 +25,9 @@ describe('резените по прозорец', () => {
     }
   });
 
-  it('седемте построени прозореца нямат „идва с резен"', () => {
-    for (const k of ['profil', 'imoti', 'ii', 'nastroyki', 'upravlenie', 'smetki', 'sluzhiteli']) {
-      expect(REZEN_NA_PROZORETSA).not.toHaveProperty(k);
-    }
-    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(1);
+  it('ОСЕМТЕ прозореца са построени · нито един не казва „идва с резен"', () => {
+    for (const p of PROZORTSI) expect(REZEN_NA_PROZORETSA).not.toHaveProperty(p.klyuch);
+    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(0);
   });
 
   it('бутоните на Управление, които „идват с резен N", сочат ред от плана с темата си', () => {

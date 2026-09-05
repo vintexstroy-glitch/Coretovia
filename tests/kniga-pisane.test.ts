@@ -116,6 +116,7 @@ const NASTROYKI = PROZORTSI.find((p) => p.klyuch === 'nastroyki')!.list;
 const UPRAVLENIE = PROZORTSI.find((p) => p.klyuch === 'upravlenie')!.list;
 const SMETKI = PROZORTSI.find((p) => p.klyuch === 'smetki')!.list;
 const SLUZHITELI = PROZORTSI.find((p) => p.klyuch === 'sluzhiteli')!.list;
+const PRODAZHBI = PROZORTSI.find((p) => p.klyuch === 'prodazhbi')!.list;
 
 describe('Книгата на изход', () => {
   it('осем листа в реда му + служебният, скрит · сверката на всеки лист затваря', async () => {
@@ -138,6 +139,8 @@ describe('Книгата на изход', () => {
       stopani: 0,
       sluzhiteli: 0,
       dostap: 0,
+      prodazhbi: 0,
+      prodazhbi2: 0,
     });
   });
 
@@ -331,6 +334,8 @@ describe('Книгата на изход', () => {
       ['stopani', SLUZHITELI, 0],
       ['sluzhiteli', SLUZHITELI, 0],
       ['dostap', SLUZHITELI, 0],
+      ['prodazhbi', PRODAZHBI, 0],
+      ['prodazhbi2', PRODAZHBI, 0],
     ]);
     expect(tablitsi[0]?.[3]).toBe('A6:J8');
     const nomenklaturi = s.kletki.filter((r) => r[0] === 'nomenklatura');

@@ -44,6 +44,8 @@ export const VID = Object.freeze({
   stopan: 'stopan',
   /** ред от таблицата „Служители свързани с Coretovia" */
   sluzhitel: 'sluzhitel',
+  prodazhba: 'prodazhba',
+  prodazhba2: 'prodazhba2',
   /** ред от таблицата „Достъп на Длъжности за Служител" · четирите оси */
   dostap: 'dostap',
   /** една номенклатура · id = ключът ѝ · всички стойности живеят на този адрес */

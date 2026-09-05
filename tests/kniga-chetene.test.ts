@@ -32,6 +32,8 @@ describe('неговата Книга · мострата без служебе�
       'stopani',
       'sluzhiteli',
       'dostap',
+      'prodazhbi',
+      'prodazhbi2',
     ]);
     const imoti = p.tablitsi.get('imoti')!;
     expect(imoti.sKlyuchove).toBe(false);

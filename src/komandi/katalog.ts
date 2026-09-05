@@ -14,6 +14,7 @@ import {
   sluzhiteliDobaviSluzhitel,
   sluzhiteliDobaviStopan,
 } from './prozortsi/sluzhiteli.js';
+import { prodazhbiDobaviParva, prodazhbiDobaviVtora } from './prozortsi/prodazhbi.js';
 import { upravlenieDobaviZadacha } from './prozortsi/upravlenie.js';
 import { knigaIznesi, knigaVnesi } from './prozortsi/kniga.js';
 import {
@@ -47,6 +48,8 @@ export const KATALOG: readonly KoyaDaE[] = Object.freeze([
   sluzhiteliDobaviStopan,
   sluzhiteliDobaviSluzhitel,
   sluzhiteliDobaviDlazhnost,
+  prodazhbiDobaviParva,
+  prodazhbiDobaviVtora,
   redPopraviKletka,
   redIzklyuchi,
   redVarni,

@@ -9,17 +9,11 @@
 
 import { blokoveNaDumite } from '../../src/model/dumite.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { otvoriChernova } from '../reshetka/chernova.js';
+import { otvoriChernova, zakachiButonite } from '../reshetka/chernova.js';
 import { ekraniraj } from '../reshetka/obshto.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
 import { reshetkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
-import {
-  butoniteHTML,
-  iznosVestHTML,
-  izpalniOtMenyuto,
-  zakachiDyasnoMenyu,
-  zapaziKnigata,
-} from './deystviya.js';
+import { butoniteHTML, iznosVestHTML } from './deystviya.js';
 import { dumiteHTML } from './profil.js';
 
 /** Кой бутон коя таблица отваря · трите му бутона, поименно. */
@@ -59,21 +53,11 @@ export function narisuvayImoti(k: KonteksNaEkrana): void {
 
   zakachiReshetkata(k);
 
-  for (const b of k.tyalo.querySelectorAll<HTMLButtonElement>('[data-buton]')) {
-    b.addEventListener('click', () => {
-      const klyuch = b.dataset['buton'] ?? '';
-      const tablitsa = TABLITSA_NA_BUTONA[klyuch];
-      if (tablitsa !== undefined) otvoriChernova(k.tyalo, k, tablitsa, klyuch);
-    });
-  }
+  zakachiButonite(k, 'imoti', TABLITSA_NA_BUTONA);
   k.tyalo
     .querySelector<HTMLInputElement>('[data-pokazhi-izklyuchenite]')
     ?.addEventListener('change', (e) => {
       zapomniEkranno(PAMET_IZKLYUCHENITE, (e.target as HTMLInputElement).checked);
       k.prerisuvay();
     });
-  k.tyalo.querySelector<HTMLButtonElement>('[data-zapazi-kniga]')?.addEventListener('click', () => {
-    void zapaziKnigata(k);
-  });
-  zakachiDyasnoMenyu(k, 'imoti', (b) => void izpalniOtMenyuto(k, b.klyuch, b.tovar));
 }
