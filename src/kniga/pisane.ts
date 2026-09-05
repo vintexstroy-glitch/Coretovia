@@ -17,6 +17,7 @@
  * по таблица за разписката.
  */
 
+import { AGENTI, GLAVI_NA_AGENTITE, statusNaAgenta } from '../model/agenti.js';
 import { DUMI_OT_KNIGATA, type DumaOtKnigata } from '../model/dumi-ot-knigata.js';
 import { blokoveNaDumite } from '../model/dumite.js';
 import type { Kletka } from '../model/kletka.js';
@@ -42,15 +43,17 @@ import {
   type OpisNaList,
   type ValidatsiyaOtSpisak,
 } from './ooxml.js';
-
-/** Нашите думи в Книгата · не негови · тук е домът им. */
-const KLYUCH = 'Ключ';
-const NOMENKLATURI = 'Номенклатури';
-const GLAVI_NA_NOMENKLATURITE = ['Номенклатура', '№', 'Стойност', 'Белег', 'Спряна'] as const;
-const SPRYANA = 'спряна';
-/** колоната „Ключ" на ИмотиОбектиБизнеси · J · извън деветте му колони */
-const KLYUCH_KOLONA_IMOTI = 10;
-const KLYUCH_KOLONA_NASTROYKI = 6;
+import {
+  GLAVI_NA_NOMENKLATURITE,
+  GRUPA,
+  KLYUCH,
+  KLYUCH_KOLONA_IMOTI,
+  KLYUCH_KOLONA_NASTROYKI,
+  NOMENKLATURI,
+  RAZDELITEL_NA_GRUPATA,
+  SLUZHEBNO,
+  SPRYANA,
+} from './dumi.js';
 
 export interface KnigaZaIznos {
   readonly listove: readonly OpisNaList[];
@@ -99,6 +102,48 @@ function listSamoSDumi(
   }
   return {
     list: { ime, redove },
+    sverka: sverka(`износ · ${ime}`, b.sbor, redove.length, kogato),
+  };
+}
+
+/** ИИ · инструкциите му + „Активни агенти" (петте му реда, със статус) + „Неактивни агенти" (празна, както е при него). */
+function listII(
+  ime: string,
+  lenti: readonly string[],
+  kogato: string,
+): { list: OpisNaList; sverka: Sverka } {
+  const redove: Red[] = [];
+  const b = new Broyach();
+  const slivaniya: string[] = [];
+  for (const d of DUMI_OT_KNIGATA.ii) {
+    while (redove.length < d.red - 1) {
+      redove.push([]);
+      b.prazni += 1;
+    }
+    redove.push(redNaDumata(d));
+    b.instruktsii += 1;
+  }
+  const posledna = bukvaNaKolona(GLAVI_NA_AGENTITE.length);
+  const lenta = (tekst: string): void => {
+    redove.push([glava(tekst)]);
+    slivaniya.push(`A${redove.length}:${posledna}${redove.length}`);
+    b.lenti += 1;
+    redove.push(GLAVI_NA_AGENTITE.map(glava));
+    b.glavi += 1;
+  };
+  lenta(lenti[0] ?? '');
+  for (const a of AGENTI) {
+    redove.push([a.nomer, a.agent, a.dlazhnost, a.zadacha, statusNaAgenta(a)]);
+    b.danni += 1;
+  }
+  lenta(lenti[1] ?? '');
+  return {
+    list: {
+      ime,
+      redove,
+      slivaniya,
+      shirini: { 1: 4, 2: 22, 3: 14, 4: 80, 5: 26, 6: 10, 7: 12 },
+    },
     sverka: sverka(`износ · ${ime}`, b.sbor, redove.length, kogato),
   };
 }
@@ -177,6 +222,7 @@ function listNastroyki(
   redove.push([...GLAVI_NA_NOMENKLATURITE.map(glava), glava(KLYUCH)]);
   b.glavi += 1;
   const kolonaStoynost = bukvaNaKolona(3);
+  const kolonaSpryana = bukvaNaKolona(5);
   for (const n of o.nomenklaturi.values()) {
     redove.push([glava(n.ime)]);
     const glavaNaPodtablitsata = redove.length;
@@ -187,7 +233,8 @@ function listNastroyki(
     const parviZhiv = redove.length + 1;
     for (const s of [...zhiviStoynosti, ...spreni]) {
       redove.push(redNaStoynost(n, s));
-      otklyucheni.push(`${kolonaStoynost}${redove.length}`);
+      // Стойността и „Спряна" са негови за писане; номерът, белегът и ключът — не
+      otklyucheni.push(`${kolonaStoynost}${redove.length}`, `${kolonaSpryana}${redove.length}`);
       b.danni += 1;
     }
     const posledenZhiv = parviZhiv + zhiviStoynosti.length - 1;
@@ -251,6 +298,7 @@ function listImoti(
   const slivaniya: string[] = [];
   const validatsii: ValidatsiyaOtSpisak[] = [];
   const otklyucheni: string[] = [];
+  const otklyucheniRedove: number[] = [];
   const mesta: MyastoNaTablitsa[] = [];
   const blokove = blokoveNaDumite('imoti');
   let zamraziPod: number | undefined;
@@ -298,7 +346,10 @@ function listImoti(
       red[KLYUCH_KOLONA_IMOTI - 1] = r.id;
       redove.push(red);
       b.danni += 1;
-      otklyucheni.push(`B${redove.length}:${posledna}${redove.length}`);
+      // целият ред · и клетките извън деветте колони (K..XFD, като стил на реда): Excel трие
+      // ред само когато нито една негова клетка не е заключена
+      otklyucheni.push(`A${redove.length}:${bukvaNaKolona(KLYUCH_KOLONA_IMOTI)}${redove.length}`);
+      otklyucheniRedove.push(redove.length);
       for (const [ki, k] of koloni.entries()) {
         if (k.vid !== 'izbor') continue;
         const izvor = izvorNa(k.nomenklatura);
@@ -318,7 +369,7 @@ function listImoti(
         red[0] = `${tekstNaNomera(g.imotNomer)}.${g.kategoriya}`;
         if (kolonaNaImota >= 0) red[kolonaNaImota] = g.imotIme;
         if (kolonaNaGrupata >= 0) red[kolonaNaGrupata] = g.kategoriyaTekst;
-        red[KLYUCH_KOLONA_IMOTI - 1] = `grupa:${g.imotId}·${g.kategoriya}`;
+        red[KLYUCH_KOLONA_IMOTI - 1] = `${GRUPA}${g.imotId}${RAZDELITEL_NA_GRUPATA}${g.kategoriya}`;
         redove.push(red);
         b.grupovi += 1;
         for (const r of g.redove) redNaDanni(r.i, [t.roditel!.kolona]);
@@ -350,6 +401,11 @@ function listImoti(
         avtofiltar = `A${redNaGlavata}:${posledna}${redove.length}`;
       }
     }
+    // празният ред след таблицата е ОТКЛЮЧЕН · там се дописва (четенето спира на инструкция)
+    otklyucheni.push(
+      `A${redove.length + 1}:${bukvaNaKolona(KLYUCH_KOLONA_IMOTI)}${redove.length + 1}`,
+    );
+    otklyucheniRedove.push(redove.length + 1);
     mesta.push({
       klyuch: t.klyuch,
       obhvat:
@@ -368,6 +424,7 @@ function listImoti(
     slivaniya,
     validatsii,
     otklyucheni,
+    otklyucheniRedove,
     zashtita: true,
     skritiKoloni: [KLYUCH_KOLONA_IMOTI],
     tekstoviKoloni: [1],
@@ -390,17 +447,20 @@ function listSluzheben(
   podtablitsi: Map<string, Podtablitsa>,
 ): { list: OpisNaList; sverka: Sverka } {
   const redove: Red[] = [
-    ['versiya', o.model.versiya],
-    ['otpechatak', otpechatakNaModela(o.model)],
-    ['kursor', kursor.naematel, kursor.seq, kursor.hash],
-    ['iznesenoNa', kogato],
+    [SLUZHEBNO.versiya, o.model.versiya],
+    [SLUZHEBNO.otpechatak, otpechatakNaModela(o.model)],
+    [SLUZHEBNO.kursor, kursor.naematel, kursor.seq, kursor.hash],
+    [SLUZHEBNO.iznesenoNa, kogato],
+    [SLUZHEBNO.stopanin, o.stopanin],
   ];
+  // върхът на ВСЯКА верига, не само на пишещата: сблъсъкът се мери по веригата на реда
+  for (const k of o.kursori.values()) redove.push([SLUZHEBNO.veriga, k.naematel, k.seq, k.hash]);
   for (const m of mesta) {
-    redove.push(['tablitsa', m.klyuch, listImoti, m.obhvat, KLYUCH_KOLONA_IMOTI, m.redove]);
+    redove.push([SLUZHEBNO.tablitsa, m.klyuch, listImoti, m.obhvat, KLYUCH_KOLONA_IMOTI, m.redove]);
   }
   for (const p of podtablitsi.values()) {
     redove.push([
-      'nomenklatura',
+      SLUZHEBNO.nomenklatura,
       p.klyuch,
       listNastroyki,
       p.obhvat,
@@ -412,7 +472,7 @@ function listSluzheben(
     list: { ime: SLUZHEBEN_LIST, redove, skrit: true },
     sverka: sverka(
       `износ · ${SLUZHEBEN_LIST}`,
-      4 + mesta.length + podtablitsi.size,
+      5 + o.kursori.size + mesta.length + podtablitsi.size,
       redove.length,
       kogato,
     ),
@@ -437,6 +497,10 @@ export function knigataOtOgledaloto(o: Ogledalo, kursor: Kursor, kogato: string)
       sverki.push(i.sverka);
       mesta = i.mesta;
       imeNaImotite = p.list;
+    } else if (p.klyuch === 'ii') {
+      const s = listII(p.list, p.lenti, kogato);
+      listove.push(s.list);
+      sverki.push(s.sverka);
     } else {
       const s = listSamoSDumi(p.klyuch, p.list, kogato);
       listove.push(s.list);

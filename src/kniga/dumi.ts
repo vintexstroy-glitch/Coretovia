@@ -1,0 +1,43 @@
+/**
+ * ДУМИТЕ НА КНИГАТА · нашите думи в изнесения файл · един дом (правило 14).
+ *
+ * Писането (`pisane.ts`) ги слага, четенето (`chetene.ts`) ги търси. Не са
+ * негови — затова не са в `osnova.ts`, а тук, отстрани, при адаптера.
+ */
+
+/** главата на скритата колона с ключа на реда */
+export const KLYUCH = 'Ключ';
+/** лентата над номенклатурите в Настройки(Стопанин) */
+export const NOMENKLATURI = 'Номенклатури';
+/** главите на голямата таблица с номенклатурите */
+export const GLAVI_NA_NOMENKLATURITE = [
+  'Номенклатура',
+  '№',
+  'Стойност',
+  'Белег',
+  'Спряна',
+] as const;
+/** думата в колоната „Спряна" */
+export const SPRYANA = 'спряна';
+/** колоната „Ключ" на ИмотиОбектиБизнеси · J · извън деветте му колони */
+export const KLYUCH_KOLONA_IMOTI = 10;
+/** колоната „Ключ" на Настройки(Стопанин) · F */
+export const KLYUCH_KOLONA_NASTROYKI = 6;
+/** ключът на групов ред · `grupa:‹imotId›·‹категория›` */
+export const GRUPA = 'grupa:';
+/** разделителят в ключа на групов ред и в ключа на стойност */
+export const RAZDELITEL_NA_GRUPATA = '·';
+
+/** етикетите в първата колона на служебния лист `_coretovia` */
+export const SLUZHEBNO = Object.freeze({
+  versiya: 'versiya',
+  otpechatak: 'otpechatak',
+  kursor: 'kursor',
+  /** върхът на ВСЯКА верига при износа · сблъсъкът се мери по веригата на реда (правило 6) */
+  veriga: 'veriga',
+  iznesenoNa: 'iznesenoNa',
+  /** имейлът на Стопанина · Книга на друг Стопанин не се слива тихо (правило 21) */
+  stopanin: 'stopanin',
+  tablitsa: 'tablitsa',
+  nomenklatura: 'nomenklatura',
+} as const);

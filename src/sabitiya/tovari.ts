@@ -62,6 +62,24 @@ export interface PayloadKnigaIznesena {
   readonly iznesenoNa: string;
 }
 
+/** Разписката за внесена Книга · какво е предложил Сверчикът и какво е приел човекът. */
+export interface PayloadKnigaVnesena {
+  /** SHA-256 на файла · същият файл, същият ключ на действието */
+  readonly otpechatakNaFayla: string;
+  /** кога е била изнесена (от служебния лист) · празно, ако не е наша Книга */
+  readonly iznesenoNa: string;
+  /** seq на веригата при износа · 0, ако не е наша Книга */
+  readonly kursorSeqNaIznosa: number;
+  readonly predlozheni: number;
+  readonly izbrani: number;
+  /** приети = записани + повторени (вече били там) */
+  readonly prieti: number;
+  /** 0 или 1 · вносът спира при първия отказ */
+  readonly otkazani: number;
+  readonly nahodki: number;
+  readonly vnesenoNa: string;
+}
+
 export interface PayloadStorno {
   readonly pogasyavaSeq: number;
   /** пропусната = своята верига */

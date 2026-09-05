@@ -13,7 +13,14 @@ import { strogObekt } from '../../model/shema.js';
 import { zhiviteRedove } from '../../ogledalo/tablitsa.js';
 import { TIP } from '../../sabitiya/registar.js';
 import type { Kursor } from '../../sabitiya/tovari.js';
-import { type Komanda, type Kontekst, kursorNa, predvaritelno, razlika } from '../komanda.js';
+import {
+  type Komanda,
+  type Kontekst,
+  kursorNa,
+  predvaritelno,
+  razlika,
+  revNa,
+} from '../komanda.js';
 
 interface TovarIznesi {
   readonly otpechatak: string;
@@ -104,3 +111,75 @@ const iznesi: Komanda<TovarIznesi> = {
 };
 
 export const knigaIznesi = Object.freeze(iznesi);
+
+interface TovarVnesi {
+  readonly otpechatakNaFayla: string;
+  readonly iznesenoNa: string;
+  readonly kursorSeqNaIznosa: number;
+  readonly predlozheni: number;
+  readonly izbrani: number;
+  readonly prieti: number;
+  readonly otkazani: number;
+  readonly nahodki: number;
+  readonly vnesenoNa: string;
+}
+
+const TSYALO = { type: 'integer', minimum: 0 } as const;
+
+/**
+ * РАЗПИСКАТА ЗА ВНОС · след като човекът е приел каквото е приел.
+ *
+ * Самите промени са минали като команди от каталога (`src/porta/vnasyane.ts`); тук
+ * остава следата: кой файл, кога е бил изнесен, колко е предложено, избрано, прието,
+ * отказано, колко находки. Пише се ВИНАГИ при „Приеми" — и при нула, и при спиране
+ * (правило 7): разлика, която не е записана, не е сверявана. Същността е файлът
+ * (по отпечатъка му); втора разписка за същия файл е следващ rev, не повторение.
+ */
+const vnesi: Komanda<TovarVnesi> = {
+  klyuch: 'kniga.vnesi',
+  ime: 'Внеси Книгата',
+  opisanie: 'Записва разписката за внесена Книга: отпечатък на файла, предложени, приети, находки.',
+  prozortsi: ['ii'],
+  stepen: 'pishe',
+  myasto: 'sluzhebna',
+  proizvezhda: [TIP.knigaVnesena],
+  shema: strogObekt({
+    otpechatakNaFayla: { type: 'string', minLength: 8 },
+    iznesenoNa: { type: 'string' },
+    kursorSeqNaIznosa: TSYALO,
+    predlozheni: TSYALO,
+    izbrani: TSYALO,
+    prieti: TSYALO,
+    otkazani: TSYALO,
+    nahodki: TSYALO,
+    vnesenoNa: { type: 'string', minLength: 10 },
+  }),
+  predusloviya: [
+    {
+      ime: 'избрани ≤ предложени · приети + отказани ≤ избрани',
+      proveri: (v) =>
+        v.izbrani > v.predlozheni
+          ? 'Избраните не могат да са повече от предложените.'
+          : v.prieti + v.otkazani > v.izbrani
+            ? 'Приетите и отказаните не могат да са повече от избраните.'
+            : null,
+    },
+  ],
+  dryRun: (v, k) => {
+    const s = sashtnost('kniga', v.otpechatakNaFayla);
+    return predvaritelno(
+      k,
+      'kniga.vnesi',
+      [{ type: TIP.knigaVnesena, sashtnost: s, payload: { ...v }, expectedRev: revNa(k, s) }],
+      [
+        razlika(
+          'Книга',
+          '',
+          `внесена · ${v.prieti} приети от ${v.izbrani} избрани (${v.predlozheni} предложени) · ${v.otkazani} отказани · ${v.nahodki} находки`,
+        ),
+      ],
+      `Разписка: ${v.prieti} приети от ${v.izbrani} избрани (${v.predlozheni} предложени), ${v.otkazani} отказани, ${v.nahodki} находки.`,
+    );
+  },
+};
+export const knigaVnesi = Object.freeze(vnesi);

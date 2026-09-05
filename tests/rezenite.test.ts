@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { REZEN_NA_PROZORETSA } from '../app/prozorets/ostanalite.js';
+import { REZEN_NA_AGENTITE } from '../src/model/agenti.js';
 import { PROZORTSI } from '../src/model/osnova.js';
 
 describe('резените по прозорец', () => {
@@ -25,9 +26,14 @@ describe('резените по прозорец', () => {
     }
   });
 
-  it('трите построени прозореца нямат „идва с резен"', () => {
-    for (const k of ['profil', 'imoti', 'nastroyki']) {
+  it('четирите построени прозореца нямат „идва с резен"', () => {
+    for (const k of ['profil', 'imoti', 'ii', 'nastroyki']) {
       expect(REZEN_NA_PROZORETSA).not.toHaveProperty(k);
     }
+    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(4);
+  });
+
+  it('четиримата агенти без модел сочат реда „ИИ" на плана', () => {
+    expect(redove.get(String(REZEN_NA_AGENTITE))).toContain('ИИ');
   });
 });

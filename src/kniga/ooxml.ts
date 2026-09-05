@@ -63,6 +63,11 @@ export interface OpisNaList {
   readonly skrit?: boolean;
   /** обхвати с ОТКЛЮЧЕНИ клетки · важат при защита */
   readonly otklyucheni?: readonly string[];
+  /**
+   * цели редове, отключени до последната колона на Excel · клетките извън описаните (K..XFD)
+   * нямат запис и иначе са заключени, а Excel трие ред само без нито една заключена клетка
+   */
+  readonly otklyucheniRedove?: readonly number[];
   /** защита без парола · честна спирачка: сортиране, филтър, вмъкване остават */
   readonly zashtita?: boolean;
 }
@@ -89,6 +94,8 @@ export interface ProchetenList {
   readonly validatsii: readonly ProchetenaValidatsiya[];
   /** адресите на отключените клетки */
   readonly otklyucheni: readonly string[];
+  /** номерата на отключените ЦЕЛИ редове */
+  readonly otklyucheniRedove: readonly number[];
   readonly zashtiten: boolean;
 }
 
@@ -128,6 +135,7 @@ export async function napishiKniga(listove: readonly OpisNaList[]): Promise<Uint
         list.getCell(r, k).protection = { locked: false };
       });
     }
+    for (const r of opis.otklyucheniRedove ?? []) list.getRow(r).protection = { locked: false };
     if (opis.zamraziPod !== undefined) list.views = [{ state: 'frozen', ySplit: opis.zamraziPod }];
     if (opis.avtofiltar !== undefined) list.autoFilter = opis.avtofiltar;
     for (const k of opis.parichniKoloni ?? []) list.getColumn(k).numFmt = '#,##0.00';
@@ -165,8 +173,10 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
     const kletki: ProchetenaStoynost[][] = [];
     const formuli = new Map<string, string>();
     const otklyucheni: string[] = [];
+    const otklyucheniRedove: number[] = [];
     let broyKoloni = 0;
     list.eachRow({ includeEmpty: true }, (red, nomer) => {
+      if (red.protection?.locked === false) otklyucheniRedove.push(nomer);
       const stoynosti: ProchetenaStoynost[] = [];
       red.eachCell({ includeEmpty: true }, (kl, k) => {
         stoynosti[k - 1] = stoynostNaKletka(kl.value);
@@ -204,6 +214,7 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
       skritiKoloni,
       validatsii,
       otklyucheni,
+      otklyucheniRedove,
       zashtiten: zashtita?.sheet === true,
     });
   });

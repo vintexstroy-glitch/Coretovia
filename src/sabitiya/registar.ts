@@ -20,6 +20,7 @@ export const TIP = Object.freeze({
   redZapisan: 'РедЗаписан',
   redIzklyuchen: 'РедИзключен',
   knigaIznesena: 'КнигаИзнесена',
+  knigaVnesena: 'КнигаВнесена',
   storno: 'Сторно',
 } as const);
 
@@ -162,6 +163,24 @@ export const SABITIYA: Readonly<Record<TipSabitie, Proverka>> = Object.freeze({
       n.push('Редовете по таблица са цели числа ≥ 0.');
     }
     if (!eNeprazenTekst(p['iznesenoNa'])) n.push('Липсва кога е изнесена.');
+    return n;
+  },
+
+  [TIP.knigaVnesena]: (p) => {
+    const n: string[] = [];
+    if (!eNeprazenTekst(p['otpechatakNaFayla'])) n.push('Липсва отпечатъкът на файла.');
+    if (typeof p['iznesenoNa'] !== 'string') n.push('„iznesenoNa" е текст (може празен).');
+    for (const k of [
+      'kursorSeqNaIznosa',
+      'predlozheni',
+      'izbrani',
+      'prieti',
+      'otkazani',
+      'nahodki',
+    ]) {
+      if (!eTsyalo(p[k]) || (p[k] as number) < 0) n.push(`„${k}" е цяло число ≥ 0.`);
+    }
+    if (!eNeprazenTekst(p['vnesenoNa'])) n.push('Липсва кога е внесена.');
     return n;
   },
 

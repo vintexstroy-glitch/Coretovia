@@ -47,6 +47,9 @@ export interface NaivnoOgledalo {
   readonly pogaseni: number;
   readonly storna: number;
   readonly neprocheteni: number;
+  /** разписките за износ и внос · само броени · оракулът ги вижда като събития */
+  readonly knigi: number;
+  readonly vnasyaniya: number;
 }
 
 export function naivnoSgavane(sabitiya: readonly Sabitie[], model: Model): NaivnoOgledalo {
@@ -81,6 +84,8 @@ export function naivnoSgavane(sabitiya: readonly Sabitie[], model: Model): Naivn
   let prilozheni = 0;
   let broyPogaseni = 0;
   let neprocheteni = 0;
+  let knigi = 0;
+  let vnasyaniya = 0;
 
   for (const s of sabitiya) {
     if (!validno(s)) {
@@ -156,6 +161,12 @@ export function naivnoSgavane(sabitiya: readonly Sabitie[], model: Model): Naivn
         red.izklyuchen = p.izklyuchen;
         break;
       }
+      case TIP.knigaIznesena:
+        knigi += 1;
+        break;
+      case TIP.knigaVnesena:
+        vnasyaniya += 1;
+        break;
       default:
         break;
     }
@@ -169,5 +180,7 @@ export function naivnoSgavane(sabitiya: readonly Sabitie[], model: Model): Naivn
     pogaseni: broyPogaseni,
     storna,
     neprocheteni,
+    knigi,
+    vnasyaniya,
   };
 }

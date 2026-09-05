@@ -19,6 +19,8 @@ export interface KonteksNaEkrana {
   /** думите за хранилището и крана · четат се при всяко рисуване, кранът се мени */
   hranilishte(): string;
   proveriVerigata(): Promise<string>;
+  /** SHA-256 на качен файл · за отпечатъка на внесената Книга · само коренът държи хеша */
+  otpechatakNaBaytove(baytove: ArrayBuffer): Promise<string>;
   /** рисува текущия прозорец наново от живото Огледало */
   prerisuvay(): void;
 }

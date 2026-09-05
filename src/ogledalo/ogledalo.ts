@@ -28,6 +28,7 @@ import { proveriTovar, TIP } from '../sabitiya/registar.js';
 import type {
   Kursor,
   PayloadKnigaIznesena,
+  PayloadKnigaVnesena,
   PayloadRedIzklyuchen,
   PayloadRedZapisan,
   PayloadStorno,
@@ -67,6 +68,8 @@ export interface Ogledalo {
   readonly tablitsi: ReadonlyMap<string, TablitsaVOgledaloto>;
   readonly nomenklaturi: ReadonlyMap<string, ZhivaNomenklatura>;
   readonly knigi: readonly PayloadKnigaIznesena[];
+  /** разписките за внесени Книги · кога, колко предложено, колко прието */
+  readonly vnasyaniya: readonly PayloadKnigaVnesena[];
   readonly pogaseni: readonly PogasenZapis[];
   readonly neprocheteni: readonly Neprocheteno[];
   /** върхът на всяка верига, както е минал през сгъването */
@@ -202,6 +205,7 @@ export function fold(sabitiya: readonly Sabitie[], model: Model, kogato: string)
     tablitsi,
     nomenklaturi: new Map(st.nomenklaturi),
     knigi: Object.freeze([...st.knigi]),
+    vnasyaniya: Object.freeze([...st.vnasyaniya]),
     pogaseni: Object.freeze(pogaseni),
     neprocheteni: Object.freeze(neprocheteni),
     kursori,

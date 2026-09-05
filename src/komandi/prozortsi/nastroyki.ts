@@ -23,6 +23,7 @@ import {
   spri,
   type ZhivaNomenklatura,
 } from '../../model/nomenklatura.js';
+import type { Predlozhenie } from '../../model/predlozhenie.js';
 import { strogObekt } from '../../model/shema.js';
 import { TIP } from '../../sabitiya/registar.js';
 import {
@@ -105,8 +106,25 @@ const dobaviStoynost: Komanda<TovarDobaviStoynost> = {
   myasto: 'kletka',
   proizvezhda: [TIP.stoynostZapisana],
   shema: strogObekt({ nomenklatura: NOMENKLATURA, tekst: TEKST, belezi: BELEZI }),
+  otPredlozhenie: (p: Predlozhenie) =>
+    p.vid === 'nova-stoynost'
+      ? { nomenklatura: p.nomenklatura, tekst: p.tekst, belezi: p.belezi }
+      : null,
   predusloviya: [
     imaNomenklatura,
+    {
+      ime: 'белегът сочи категория с видове',
+      proveri: (v, k) => {
+        const n = zhivata(k, v.nomenklatura);
+        if (n?.podredbaPo === undefined) return null;
+        const kategorii = zhivata(k, n.podredbaPo);
+        const kat =
+          kategorii === undefined ? undefined : poNomer(kategorii, Number(v.belezi[n.podredbaPo]));
+        return kat?.belezi['bezVid'] === true
+          ? `„${kat.tekst}" няма видове — тя е своя таблица.`
+          : null;
+      },
+    },
     {
       ime: 'текстът е нов · и не е спрян',
       proveri: (v, k) => {
@@ -148,6 +166,10 @@ const preimenuvayStoynost: Komanda<TovarPreimenuvayStoynost> = {
   myasto: 'kletka',
   proizvezhda: [TIP.stoynostZapisana],
   shema: strogObekt({ nomenklatura: NOMENKLATURA, nomer: NOMER, belezi: BELEZI, tekst: TEKST }),
+  otPredlozhenie: (p: Predlozhenie) =>
+    p.vid === 'preimenuvana'
+      ? { nomenklatura: p.nomenklatura, nomer: p.nomer, belezi: p.belezi, tekst: p.tekst }
+      : null,
   predusloviya: [
     imaNomenklatura,
     imaNomer,
@@ -193,6 +215,10 @@ function komandaZaSpirane(spryana: boolean): Komanda<SNomer> {
     myasto: 'kletka',
     proizvezhda: [TIP.stoynostSpryana],
     shema: strogObekt({ nomenklatura: NOMENKLATURA, nomer: NOMER, belezi: BELEZI }),
+    otPredlozhenie: (p: Predlozhenie) =>
+      p.vid === (spryana ? 'spryana' : 'varnata')
+        ? { nomenklatura: p.nomenklatura, nomer: p.nomer, belezi: p.belezi }
+        : null,
     predusloviya: [
       imaNomenklatura,
       imaNomer,

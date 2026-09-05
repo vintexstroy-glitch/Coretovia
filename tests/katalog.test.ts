@@ -10,10 +10,10 @@ import { CHETTSI } from '../src/ogledalo/chettsi.js';
 import { SABITIYA, TIP } from '../src/sabitiya/registar.js';
 
 describe('каталогът', () => {
-  it('тринайсет команди · уникални ключове · `prozorets.glagol`', () => {
-    expect(KATALOG).toHaveLength(13);
+  it('четиринайсет команди · уникални ключове · `prozorets.glagol`', () => {
+    expect(KATALOG).toHaveLength(14);
     const klyuchove = KATALOG.map((k) => k.klyuch);
-    expect(new Set(klyuchove).size).toBe(13);
+    expect(new Set(klyuchove).size).toBe(14);
     for (const k of klyuchove) expect(k).toMatch(/^[a-z]+\.[a-zA-Z]+$/);
     expect(komandaPoKlyuch('imoti.sazdayImot')?.ime).toBe('Създай имот');
     expect(komandaPoKlyuch('nyama.takava')).toBeUndefined();
@@ -45,7 +45,7 @@ describe('каталогът', () => {
 
   it('описанието за екрана и агента няма dryRun и предусловия', () => {
     const opis = opisNaKataloga();
-    expect(opis).toHaveLength(13);
+    expect(opis).toHaveLength(14);
     for (const o of opis) {
       expect(o).not.toHaveProperty('dryRun');
       expect(o).not.toHaveProperty('predusloviya');

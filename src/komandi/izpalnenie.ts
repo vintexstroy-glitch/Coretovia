@@ -6,6 +6,7 @@
  * повторен `probvay` плюс записът.
  */
 
+import type { IdNaPredlozhenie, Predlozhenie } from '../model/predlozhenie.js';
 import { proveriTovar } from '../sabitiya/registar.js';
 import { KATALOG, komandaPoKlyuch } from './katalog.js';
 import type { Izbran, Kontekst, Myasto, Predvaritelno } from './komanda.js';
@@ -101,4 +102,21 @@ export function butoniZa(
     });
   }
   return butoni;
+}
+
+/**
+ * Командата за предложение на Сверчика · пита каталога, не знае ключове.
+ * Точно една команда казва „мое е"; нито една → `null` (тестът пази, че за
+ * всеки вид има една).
+ */
+export function komandaZaPredlozhenie(
+  p: Predlozhenie,
+  idNa: IdNaPredlozhenie,
+): { readonly klyuch: string; readonly tovar: unknown } | null {
+  for (const komanda of KATALOG) {
+    if (komanda.otPredlozhenie === undefined) continue;
+    const tovar = komanda.otPredlozhenie(p, idNa);
+    if (tovar !== null) return { klyuch: komanda.klyuch, tovar };
+  }
+  return null;
 }

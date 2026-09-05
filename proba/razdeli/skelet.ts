@@ -58,7 +58,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   proveri(
     'осем листа · осем познати · нула непознати · сверка нула',
     await tekstNa(p, '[data-kniga-vest]'),
-    '8 листа · 8 познати · 0 непознати · сверка: 8 = 8 + 0 · разлика 0',
+    '8 листа · 8 познати · 0 служебни · 0 непознати · сверка: 8 = 8 + 0 + 0 · разлика 0',
   );
   const listove = await tekstoveNa(p, '[data-listove] tbody tr td:first-child');
   proveri(

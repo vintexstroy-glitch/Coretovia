@@ -226,7 +226,7 @@
 | domein/stopanin.ts | 236 | ПРЕНАПИСВАНЕ (Стопанинът от първото събитие · резен 4) | src/model/dlazhnost.ts | Служители | ADR-043 стар |
 | domein/sluzhiteli.ts | 79 | ПРЕНАПИСВАНЕ (Служители с четирите оси · резен 4) | src/komandi/prozortsi/sluzhiteli.ts | Служители | 14 |
 | domein/potvarzhdenie.ts | 166 | ЧАКА (имейл потвърждение) | — | — | И94 |
-| domein/agenti.ts | 601 | ПРЕНАПИСВАНЕ (протоколът като данни · резен 2/7) | src/agenti/protokol.ts | ИИ | 18 |
+| domein/agenti.ts | 601 | ПРЕНАПИСВАНЕ (петте му агента като данни · резен 2 · `src/model/agenti.ts`; протоколът · резен 7) | src/agenti/protokol.ts | ИИ | 18 |
 | domein/zadachi.ts | 189 | ПРЕНАПИСВАНЕ (задачите на агента · резен 7) | src/agenti/zadachi.ts | ИИ | 18 |
 | domein/ezitsi.ts | 72 | ЧАКА | — | — | 19 |
 | domein/azbuki.ts | 77 | ЧАКА | — | — | ADR-008 |

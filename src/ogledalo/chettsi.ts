@@ -10,6 +10,7 @@ import { poNomer, sStoynost, spri } from '../model/nomenklatura.js';
 import { TIP, type TipSabitie } from '../sabitiya/registar.js';
 import type {
   PayloadKnigaIznesena,
+  PayloadKnigaVnesena,
   PayloadRedIzklyuchen,
   PayloadRedZapisan,
   PayloadStopaninZapisan,
@@ -63,6 +64,10 @@ export const CHETTSI: Readonly<Record<TipSabitie, Chetets>> = Object.freeze({
 
   [TIP.knigaIznesena]: (s, st) => {
     st.knigi.push(tovar<PayloadKnigaIznesena>(s));
+  },
+
+  [TIP.knigaVnesena]: (s, st) => {
+    st.vnasyaniya.push(tovar<PayloadKnigaVnesena>(s));
   },
 
   // Сторното се прилага като МАСКА в първия проход на `fold`; дотук не стига.

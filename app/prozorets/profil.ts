@@ -7,7 +7,7 @@
  */
 
 import { DUMI_OT_KNIGATA } from '../../src/model/dumi-ot-knigata.js';
-import { prozoretsPoList } from '../../src/model/osnova.js';
+import { prozoretsPoList, SLUZHEBEN_LIST } from '../../src/model/osnova.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { ekraniraj } from '../reshetka/obshto.js';
@@ -44,8 +44,8 @@ export function narisuvayProfil(k: KonteksNaEkrana): void {
       <p data-veriga></p>
     </section>
     <section class="sektsiya" data-sektsiya="kniga">
-      <h2>Книгата</h2>
-      <p>Прочети една Книга (.xlsx). Нищо не се записва — само се показва какво има в нея.</p>
+      <h2>Погледни Книгата</h2>
+      <p>Показва какво има в една Книга (.xlsx) — листове, редове, колони. Нищо не се сверява и нищо не се записва; вносът е в <a href="#/ii">ИИ · Сверчикът</a>.</p>
       <input type="file" accept=".xlsx" data-kniga>
       <p data-kniga-vest></p>
       <table class="tablitsa" data-listove hidden>
@@ -86,23 +86,24 @@ export function narisuvayProfil(k: KonteksNaEkrana): void {
       const { prochetiKniga } = await import('../../src/kniga/ooxml.js');
       const kniga = await prochetiKniga(await fayl.arrayBuffer());
       const poznati = kniga.listove.filter((l) => prozoretsPoList(l.ime) !== undefined).length;
+      const sluzhebni = kniga.listove.filter((l) => l.ime === SLUZHEBEN_LIST).length;
       const tbody = tablitsa.querySelector('tbody');
       if (tbody) {
         tbody.innerHTML = kniga.listove
           .map((l) => {
             const p = prozoretsPoList(l.ime);
             return `<tr data-list="${ekraniraj(l.ime)}"><td translate="no">${ekraniraj(l.ime)}</td><td>${
-              p ? p.klyuch : '— непознат'
+              p ? p.klyuch : l.ime === SLUZHEBEN_LIST ? 'служебен' : '— непознат'
             }</td><td>${l.broyRedove}</td><td>${l.broyKoloni}</td><td>${l.slivaniya.length}</td></tr>`;
           })
           .join('');
       }
       tablitsa.hidden = false;
-      const nepoznati = kniga.listove.length - poznati;
+      const nepoznati = kniga.listove.length - poznati - sluzhebni;
       vest.textContent =
-        `${kniga.listove.length} листа · ${poznati} познати · ${nepoznati} непознати · ` +
-        `сверка: ${kniga.listove.length} = ${poznati} + ${nepoznati} · разлика ${
-          kniga.listove.length - poznati - nepoznati
+        `${kniga.listove.length} листа · ${poznati} познати · ${sluzhebni} служебни · ${nepoznati} непознати · ` +
+        `сверка: ${kniga.listove.length} = ${poznati} + ${sluzhebni} + ${nepoznati} · разлика ${
+          kniga.listove.length - poznati - sluzhebni - nepoznati
         }`;
     } catch (g) {
       vest.textContent = `Книгата не се чете: ${dumiZaGreshka(g)}`;

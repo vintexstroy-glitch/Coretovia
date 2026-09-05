@@ -14,6 +14,7 @@ import { pusniServer, pochakaySurvara, spriServer } from './yadro/server.ts';
 import { tishina } from './yadro/tishina.ts';
 
 import * as imoti from './razdeli/imoti.ts';
+import * as kniga from './razdeli/kniga.ts';
 import * as skelet from './razdeli/skelet.ts';
 
 async function main(): Promise<void> {
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   try {
     await skelet.blok1(ctx);
     await imoti.blok1(ctx);
+    await kniga.blok1(ctx);
   } catch (greshka) {
     broyach.dobaviNahodka({
       razdel: broyach.posledenRazdel,

@@ -15,6 +15,11 @@
 
 import { sashtnost } from '../../model/klyuchove.js';
 import { tablitsata } from '../../model/model.js';
+import {
+  type IdNaPredlozhenie,
+  PREDLOZHENIE,
+  type Predlozhenie,
+} from '../../model/predlozhenie.js';
 import { MODEL, TABLITSI } from '../../model/osnova.js';
 import { poNomer } from '../../model/nomenklatura.js';
 import { strogObekt, shemaNaReda } from '../../model/shema.js';
@@ -198,6 +203,39 @@ function bezPrazni(kletki: Kletki): Kletki {
   return Object.fromEntries(Object.entries(kletki).filter(([, v]) => v !== null));
 }
 
+/**
+ * Заместителят `@predlozhenie:N` във връзка → id-то на реда, който предложение N ражда:
+ * същото извеждане като в `dryRun` (`idNaRed` от ключа на действието), затова Обектът
+ * под нов Имот от същата Книга сочи точно него.
+ */
+function zamestiPredlozheniyata(t: Tablitsa, kletki: Kletki, idNa: IdNaPredlozhenie): Kletki {
+  const rez: Record<string, Kletka | null> = {};
+  for (const [klyuch, v] of Object.entries(kletki)) {
+    const kol = kolonaNa(t, klyuch);
+    if (
+      v !== null &&
+      'tekst' in v &&
+      v.tekst.startsWith(PREDLOZHENIE) &&
+      kol?.vid === 'vrazka' &&
+      kol.vrazka !== undefined
+    ) {
+      const i = Number(v.tekst.slice(PREDLOZHENIE.length));
+      rez[klyuch] = { tekst: idNaRed(tablitsata(MODEL, kol.vrazka).sashtnost, idNa(i)) };
+    } else rez[klyuch] = v;
+  }
+  return rez;
+}
+
+/** Схемата при създаване иска ВСИЧКИ ключове · липсващите са null. */
+function vsichkiKletki(t: Tablitsa, kletki: Kletki): Kletki {
+  const rez: Record<string, Kletka | null> = {};
+  for (const kol of t.koloni) {
+    if (kol.zatvorena || slotNaKolonata(kol) === undefined) continue;
+    rez[kol.klyuch] = kletki[kol.klyuch] ?? null;
+  }
+  return rez;
+}
+
 interface TovarNovRed {
   readonly kletki: Kletki;
 }
@@ -217,6 +255,15 @@ function komandaZaNovRed(
     myasto: 'buton',
     proizvezhda: [TIP.redZapisan],
     shema: strogObekt({ kletki: shemaNaReda(tablitsata(MODEL, tablitsa), 'sazdavane') }),
+    otPredlozhenie: (p: Predlozhenie, idNa) =>
+      p.vid === 'nov-red' && p.tablitsa === tablitsa
+        ? {
+            kletki: vsichkiKletki(
+              tablitsata(MODEL, tablitsa),
+              zamestiPredlozheniyata(tablitsata(MODEL, tablitsa), p.kletki, idNa),
+            ),
+          }
+        : null,
     predusloviya: [
       {
         ime: 'клетките са живи и номерът е свободен',
@@ -325,6 +372,14 @@ const popraviKletka: Komanda<TovarPopravka> = {
     id: ID,
     kletki: { type: 'object', description: 'по ключ на колона · null изпразва' },
   }),
+  otPredlozhenie: (p: Predlozhenie, idNa) =>
+    p.vid === 'popravka' && MODEL.tablitsi.has(p.tablitsa)
+      ? {
+          tablitsa: p.tablitsa,
+          id: p.id,
+          kletki: zamestiPredlozheniyata(tablitsata(MODEL, p.tablitsa), p.kletki, idNa),
+        }
+      : null,
   predusloviya: [
     {
       ime: 'редът съществува и е жив',
@@ -416,6 +471,12 @@ function komandaZaIzklyuchvane(izklyuchen: boolean): Komanda<TovarRed> {
     proizvezhda: [TIP.redIzklyuchen],
     shema: strogObekt({ tablitsa: TABLITSA, id: ID }),
     otIzbora: (izbran: Izbran) => ({ tablitsa: izbran.tablitsa, id: izbran.id }),
+    ...(izklyuchen
+      ? {
+          otPredlozhenie: (p: Predlozhenie) =>
+            p.vid === 'izklyuchi' ? { tablitsa: p.tablitsa, id: p.id } : null,
+        }
+      : {}),
     predusloviya: [
       {
         ime: izklyuchen ? 'редът е жив' : 'редът е изключен',

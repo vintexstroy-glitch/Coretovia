@@ -542,3 +542,54 @@ describe('два раздела · и втора верига', () => {
     expect(iz.ogledalo().sverka.nared).toBe(true);
   });
 });
+
+describe('категория без видове', () => {
+  it('„Бизнес" няма видове · нова стойност в „Вид на обект" под нея се отказва с думи', async () => {
+    const { iz } = await nachalo();
+    const r = otkazat(
+      await iz.izpalni('v1', 'nastroyki.dobaviStoynost', {
+        nomenklatura: NOMENKLATURA.vidNaObekt,
+        tekst: 'Кантора',
+        belezi: { kategoriya: 3 },
+      }),
+    );
+    expect(r.zashto).toEqual(['„Бизнес" няма видове — тя е своя таблица.']);
+  });
+});
+
+describe('часовникът назад (отложено от ADR-003 §8)', () => {
+  it('такт, който върви назад, не ражда REPLAY · Изпълнителят го стяга с милисекунда напред', async () => {
+    const k = knigaZaTest();
+    let sega = Date.parse('2026-09-05T12:00:10.000Z');
+    const iz = await Izpalnitel.otvori({
+      vrata: k.vrata,
+      dnevnik: k.dnevnik,
+      model: MODEL,
+      veriga: KNIGA,
+      aktor: () => STOPANIN,
+      sega: () => new Date(sega).toISOString(),
+    });
+    uspeh(await iz.izpalni('k0', 'stopanin.otkriy', { imeyl: STOPANIN }));
+    // часовникът на устройството се връща с десет секунди назад
+    sega -= 10_000;
+    uspeh(
+      await iz.izpalni('k1', 'nastroyki.dobaviStoynost', {
+        nomenklatura: NOMENKLATURA.sastoyanieNaImot,
+        tekst: 'Продаден',
+        belezi: {},
+      }),
+    );
+    sega -= 5_000;
+    uspeh(
+      await iz.izpalni('k2', 'imoti.sazdayImot', {
+        kletki: { ime: { tekst: 'Студентски Град' }, sastoyanie: { nomer: 2 }, ...PRAZEN_IMOT },
+      }),
+    );
+    const s = await k.dnevnik.chetiVsichki(KNIGA);
+    expect(s.map((x) => x.seq)).toEqual([1, 2, 3]);
+    const ts = s.map((x) => Date.parse(x.ts));
+    expect(ts[1]).toBe(ts[0]! + 1);
+    expect(ts[2]).toBe(ts[1]! + 1);
+    expect(iz.sverki.nezatvoreni).toEqual([]);
+  });
+});

@@ -172,7 +172,8 @@ function obhodE() {
   // защото се вика по име; и в `CHAKA` — защото чакането наистина е в него.
   // Извади ли се от `CHAKA`, обходът веднага го обявява — тъй че вписването не
   // е надпис, а се проверява с нарочно счупване.
-  const deystvie = /\.(click|selectOption|fill|waitForEvent)\(|napishiSigurno\(|napishiVPoleto\(/;
+  const deystvie =
+    /\.(click|selectOption|fill|waitForEvent|check|uncheck|setInputFiles)\(|napishiSigurno\(|napishiVPoleto\(/;
   const chete = /\$\$?eval\(|tekstNa\(/;
   const nam = [];
   for (const f of faylove('proba')) {

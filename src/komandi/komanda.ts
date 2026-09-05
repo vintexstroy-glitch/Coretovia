@@ -16,6 +16,7 @@
 
 import type { KlyuchNaProzorets, Vid } from '../model/klyuchove.js';
 import type { Model } from '../model/model.js';
+import type { IdNaPredlozhenie, Predlozhenie, Razlika } from '../model/predlozhenie.js';
 import type { ShemaJSON } from '../model/shema.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import type { TipSabitie } from '../sabitiya/registar.js';
@@ -52,12 +53,7 @@ export interface Operatsiya {
   readonly expectedRev: number;
 }
 
-/** Разликата с думи · какво било, какво става · за екрана и за агента. */
-export interface Razlika {
-  readonly kakvo: string;
-  readonly bilo: string;
-  readonly stava: string;
-}
+export type { Razlika } from '../model/predlozhenie.js';
 
 export interface Predvaritelno {
   readonly komanda: string;
@@ -102,6 +98,12 @@ export interface Komanda<V> {
   readonly bezStopanin?: true;
   /** товарът от избрания ред · за десните бутони · `null` = не важи за този ред */
   readonly otIzbora?: (izbran: Izbran, k: Kontekst) => V | null;
+  /**
+   * Товарът от предложение на Сверчика · `null` = не е за тази команда. Командата КАЗВА
+   * кое предложение изпълнява; екранът и агентът не знаят ключ (ADR-004). `idNa` дава
+   * ключа на действието на предложение № i — за заместителя `@predlozhenie:N`.
+   */
+  readonly otPredlozhenie?: (p: Predlozhenie, idNa: IdNaPredlozhenie) => V | null;
   readonly predusloviya: readonly Preduslovie<V>[];
   dryRun(v: V, k: Kontekst): Predvaritelno;
 }

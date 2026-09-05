@@ -3,13 +3,13 @@
  *
  * Единственото място, което сглобява носител, Врата и Изпълнител (K2). Всичко
  * останало получава Портата и тялото, в което рисува. Осемте прозореца са
- * лента и хеш-адреси; шестте, които още не са построени, го КАЗВАТ (правило 12).
+ * лента и хеш-адреси; четирите, които още не са построени, го КАЗВАТ (правило 12).
  */
 
 import type { KlyuchNaProzorets } from '../src/model/klyuchove.js';
 import { MODEL, PROZORTSI } from '../src/model/osnova.js';
 import { otvoriDnevnik } from '../src/nositel/dnevnik-indexeddb.js';
-import { sha256Web } from '../src/nositel/hash-web.js';
+import { sha256NaBaytove, sha256Web } from '../src/nositel/hash-web.js';
 import {
   klyuchalkaMezhduRazdeli,
   kolkoMyasto,
@@ -103,6 +103,7 @@ async function main(): Promise<void> {
         ? `Веригата е цяла · ${r.proverni} от ${r.proverni} звена.`
         : `Веригата се къса на seq ${r.parvoSchupeno} (${r.prichina}).`;
     },
+    otpechatakNaBaytove: (baytove) => sha256NaBaytove(baytove),
     prerisuvay: () => narisuvay(),
   };
 

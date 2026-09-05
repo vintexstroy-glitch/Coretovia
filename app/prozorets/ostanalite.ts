@@ -1,5 +1,5 @@
 /**
- * ОСТАНАЛИТЕ ПРОЗОРЦИ · името, „идва с резен N" и думите му (правило 12:
+ * ОСТАНАЛИТЕ ЧЕТИРИ ПРОЗОРЦИ · името, „идва с резен N" и думите му (правило 12:
  * липсващото се казва, не се крие). Редът на резените има един дом —
  * `docs/03-plan.md`; числата тук са преписани оттам и `tests/rezenite.test.ts` ги сверява.
  */
@@ -18,7 +18,6 @@ export const REZEN_NA_PROZORETSA: Readonly<Partial<Record<KlyuchNaProzorets, num
     smetki: 3,
     sluzhiteli: 4,
     prodazhbi: 5,
-    ii: 7,
   });
 
 export function narisuvayOstanalite(k: KonteksNaEkrana, klyuch: KlyuchNaProzorets): void {

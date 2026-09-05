@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { knigataOtOgledaloto } from '../src/kniga/pisane.js';
 import { napishiKniga, prochetiKniga, type ProchetenList } from '../src/kniga/ooxml.js';
+import { AGENTI, GLAVI_NA_AGENTITE, statusNaAgenta } from '../src/model/agenti.js';
 import { DUMI_OT_KNIGATA } from '../src/model/dumi-ot-knigata.js';
 import { MODEL, NOMENKLATURA, PROZORTSI, SLUZHEBEN_LIST } from '../src/model/osnova.js';
 import { otpechatakNaModela } from '../src/model/otpechatak.js';
@@ -205,12 +206,66 @@ describe('Книгата на изход', () => {
     expect(imoti.zashtiten).toBe(true);
     expect(imoti.otklyucheni).toContain('B6');
     expect(imoti.otklyucheni).toContain('H6');
-    expect(imoti.otklyucheni).not.toContain('A6');
-    expect(imoti.otklyucheni).not.toContain('J6');
+    // целият ред с данни е отключен (и A, и J), за да може Excel да го трие; главата — не
+    expect(imoti.otklyucheni).toContain('A6');
+    expect(imoti.otklyucheni).toContain('J6');
     expect(imoti.otklyucheni).not.toContain('B5');
+    expect(imoti.otklyucheni).not.toContain('J5');
+    // ЦЕЛИЯТ ред, и K..XFD · Excel трие ред само без нито една заключена клетка (ADR-004 §6)
+    expect(imoti.otklyucheniRedove).toContain(6);
+    expect(imoti.otklyucheniRedove).not.toContain(5);
+    // празният ред след Имотите (три Имота · ред 9) е отключен · там се дописва
+    expect(imoti.otklyucheni).toContain('A9');
+    expect(imoti.otklyucheni).toContain('J9');
+    expect(imoti.otklyucheniRedove).toContain(9);
+    expect(imoti.otklyucheni).not.toContain('A10');
     const nastroyki = list(NASTROYKI);
     expect(nastroyki.skritiKoloni).toEqual([6]);
     expect(nastroyki.zashtiten).toBe(true);
+    // редът със стойност отключва C „Стойност" и E „Спряна" · не № · Белег · Ключ
+    const r2 = nastroyki.kletki.findIndex((r) => r[5] === 'sastoyanie-na-imot##2') + 1;
+    expect(nastroyki.otklyucheni).toContain(`C${r2}`);
+    expect(nastroyki.otklyucheni).toContain(`E${r2}`);
+    for (const k of ['A', 'B', 'D', 'F']) expect(nastroyki.otklyucheni).not.toContain(`${k}${r2}`);
+    // празният ред след подтаблица · A..E, за да се допише стойност; ключът F остава заключен —
+    // иначе копие на цял ред би пренесло ключа и Сверчикът би чел „преименувана"
+    let prazen = r2;
+    while (nastroyki.kletki[prazen]?.some((v) => v !== null && v !== undefined)) prazen += 1;
+    for (const k of ['A', 'B', 'C', 'D', 'E'])
+      expect(nastroyki.otklyucheni).toContain(`${k}${prazen + 1}`);
+    expect(nastroyki.otklyucheni).not.toContain(`F${prazen + 1}`);
+  });
+
+  it('листът ИИ носи инструкциите му и двете таблици с агенти · петте реда със статус', async () => {
+    const { list } = await iznesena();
+    const ii = list(PROZORTSI.find((p) => p.klyuch === 'ii')!.list);
+    // пин с ръка · неговите пет реда и седемте му глави (zadanie/07 · A7–G7 · B8–D12)
+    expect(AGENTI).toHaveLength(5);
+    expect(AGENTI.map((a) => a.dlazhnost)).toEqual([
+      'Сверчик',
+      'Архитект',
+      'Инвеститор',
+      'Брокер',
+      'Анализатор',
+    ]);
+    expect(GLAVI_NA_AGENTITE).toEqual([
+      '№',
+      'агент',
+      'длъжност',
+      'задача',
+      'статус',
+      'време',
+      'отчет',
+    ]);
+    expect(ii.kletki[5]?.[0]).toBe('Активни агенти');
+    expect(ii.kletki[6]).toEqual([...GLAVI_NA_AGENTITE]);
+    expect(ii.kletki.slice(7, 12).map((r) => [r[0], r[1], r[2], r[4]])).toEqual(
+      AGENTI.map((a) => [a.nomer, a.agent, a.dlazhnost, statusNaAgenta(a)]),
+    );
+    expect(ii.kletki[12]?.[0]).toBe('Неактивни агенти');
+    expect(ii.kletki[13]).toEqual([...GLAVI_NA_AGENTITE]);
+    expect(ii.slivaniya).toEqual(['A6:G6', 'A13:G13']);
+    expect(ii.kletki).toHaveLength(14);
   });
 
   it('валидациите сочат подтаблиците на Настройки · само живите стойности', async () => {
@@ -245,6 +300,11 @@ describe('Книгата на изход', () => {
     expect(s.kletki[0]).toEqual(['versiya', 1]);
     expect(s.kletki[1]?.[1]).toBe(otpechatakNaModela(MODEL));
     expect(s.kletki[2]).toEqual(['kursor', KNIGA, kursor.seq, kursor.hash]);
+    expect(s.kletki[4]).toEqual(['stopanin', STOPANIN]);
+    // върхът на ВСЯКА верига · тук една · сблъсъкът се мери по веригата на реда
+    expect(s.kletki.filter((r) => r[0] === 'veriga')).toEqual([
+      ['veriga', KNIGA, kursor.seq, kursor.hash],
+    ]);
     const tablitsi = s.kletki.filter((r) => r[0] === 'tablitsa');
     expect(tablitsi.map((r) => [r[1], r[2], r[5]])).toEqual([
       ['imoti', IMOTI, 3],

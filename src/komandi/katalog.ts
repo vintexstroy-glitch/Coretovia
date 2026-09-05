@@ -14,7 +14,7 @@ import {
   imotiSazdayImot,
   imotiVarniRed,
 } from './prozortsi/imoti.js';
-import { knigaIznesi } from './prozortsi/kniga.js';
+import { knigaIznesi, knigaVnesi } from './prozortsi/kniga.js';
 import {
   nastroykiDobaviStoynost,
   nastroykiPreimenuvayStoynost,
@@ -44,6 +44,7 @@ export const KATALOG: readonly KoyaDaE[] = Object.freeze([
   imotiVarniRed,
   obshtoStorno,
   knigaIznesi,
+  knigaVnesi,
 ]);
 
 export function komandaPoKlyuch(klyuch: string): KoyaDaE | undefined {

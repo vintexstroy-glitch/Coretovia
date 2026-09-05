@@ -133,6 +133,7 @@ describe('колонното Огледало == наивното сгъване
       n.storna,
       n.neprocheteni,
     ]);
+    expect([o.knigi.length, o.vnasyaniya.length]).toEqual([n.knigi, n.vnasyaniya]);
   });
 
   it('стойностите са каквито са записани · последната дума бие ПО ПОЛЕ · null изпразва', async () => {

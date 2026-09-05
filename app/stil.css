@@ -357,3 +357,34 @@ button.vtorichen {
 ol[data-prozortsi] li {
   padding: 0.15rem 0;
 }
+
+/* ═══ ИИ · отчетът на Сверчика ═══ */
+.reshetka tr.svarsheno td {
+  color: var(--sivo);
+}
+
+.greshka-tekst {
+  color: var(--cherveno);
+}
+
+.tablitsa tr.greshka-red td {
+  color: var(--cherveno);
+}
+
+.sivo {
+  color: var(--sivo);
+}
+
+details.sverki {
+  margin: 0.5rem 0;
+}
+
+details.sverki summary {
+  cursor: pointer;
+  color: var(--sivo);
+}
+
+.reshetka.agenti td:nth-child(4) {
+  max-width: 40rem;
+  white-space: normal;
+}

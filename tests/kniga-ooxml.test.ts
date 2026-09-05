@@ -43,6 +43,25 @@ describe('Книгата · кръгът', () => {
     expect(proverni).toBeGreaterThan(20);
   });
 
+  it('отключеният ЦЯЛ ред се пише като стил на реда и се чете обратно · главата остава заключена', async () => {
+    const kniga = await prochetiKniga(
+      await napishiKniga([
+        {
+          ime: 'Лист',
+          redove: [['глава'], ['ред', 1], ['ред', 2]],
+          otklyucheni: ['A2:B2'],
+          otklyucheniRedove: [2, 3],
+          zashtita: true,
+        },
+      ]),
+    );
+    const l = kniga.listove[0]!;
+    expect(l.otklyucheniRedove).toEqual([2, 3]);
+    expect(l.otklyucheni).toContain('A2');
+    expect(l.otklyucheni).not.toContain('A1');
+    expect(l.zashtiten).toBe(true);
+  });
+
   it('текстовата номерация остава текст · „3.1" не става число', async () => {
     const kniga = await prochetiKniga(await napishiKniga(MOSTRA));
     const imoti = kniga.listove.find((l) => l.ime === 'ИмотиОбектиБизнеси')!;
