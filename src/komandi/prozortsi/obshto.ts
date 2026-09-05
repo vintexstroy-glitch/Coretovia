@@ -34,7 +34,7 @@ const storno: Komanda<TovarStorno> = {
   ime: 'Сторно на последната промяна',
   opisanie:
     'Погасява едно записано събитие с причина. Журналът не се пипа; Огледалото се пресгъва.',
-  prozortsi: ['imoti', 'nastroyki'],
+  prozortsi: ['imoti', 'nastroyki', 'upravlenie'],
   stepen: 'pishe',
   myasto: 'desen-buton',
   proizvezhda: [TIP.storno],

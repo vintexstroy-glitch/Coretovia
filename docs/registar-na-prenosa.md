@@ -174,7 +174,7 @@
 | domein/sveryavane.ts | 321 | ПРЕНАПИСВАНЕ („Сверяване от Ексел" → „Сверяване с банкови извлечения") | src/smetach/sverki/sveryavane.ts | С | 7 |
 | domein/storno.ts | 122 | ПРЕНАПИСВАНЕ (безопасно сторно върху колонния индекс) | src/domein/storno.ts | Я | 1 |
 | domein/sverka-verigi.ts | 272 | ПРЕНАПИСВАНЕ (внася `akaunt` · `zamrazyavane`; логиката на сблъсъците — дословно) | src/smetach/sverki/verigi.ts | Я | 6 |
-| domein/dela.ts | 695 | ПРЕНАПИСВАНЕ (`OTSENKI` · `SASTOYANIYA` · `prevediOtsenkata` дословно; дървото → индекс) | src/domein/dela.ts + src/ogledalo/darvo.ts | У · Г | 17 |
+| domein/dela.ts | 695 | ПРЕНАПИСВАНЕ (Оценката и Видът станаха номенклатури; дървото е `darvo.ts`, задачата — ред на таблица `zadachi`) | src/smetach/darvo.ts + src/model/osnova.ts | У · Г | 17 |
 | domein/gant.ts | 329 | ПРЕНОС | src/smetach/gant.ts | У · Г | И104 |
 | domein/darvo-na-stroezha.ts | 172 | ПРЕНОС | src/domein/darvo-na-stroezha.ts | Г | 18 |
 | domein/lineen-grafik.ts | 310 | ПРЕНОС | src/iztochnik/lineen-grafik.ts | Г | 7 · 18 |
@@ -259,9 +259,9 @@
 
 | стар път | ред. | присъда | нов път | прозорец | правило |
 | :---- | ---: | :---- | :---- | :---- | :---- |
-| proba/merki.test.ts | 275 | ПРЕНАПИСВАНЕ (механиката дословно; мерки и бюджети от A6) | proba/merki.test.ts + merki-golemi.test.ts | Я | ADR-084 |
+| proba/merki.test.ts | 275 | ПРЕНАПИСВАНЕ (механиката дословно; мерки и бюджети от A6) | tests/merki.test.ts | Я | ADR-084 |
 | proba/prohod.ts | 263 | ПРЕНАПИСВАНЕ (нови екрани) | proba/prohod.ts | всички | ADR-077 |
-| proba/razdeli/gant.ts | — | ПРЕНАПИСВАНЕ (раздел на стария проход · думите на новите екрани) | proba/razdeli/gant.ts | всички | — |
+| proba/razdeli/gant.ts | — | ПРЕНАПИСВАНЕ (раздел на стария проход · думите на новите екрани) | proba/razdeli/upravlenie.ts | всички | — |
 | proba/razdeli/ii.ts | — | ПРЕНАПИСВАНЕ (раздел на стария проход · думите на новите екрани) | proba/razdeli/ii.ts | всички | — |
 | proba/razdeli/imoti.ts | — | ПРЕНАПИСВАНЕ (раздел на стария проход · думите на новите екрани) | proba/razdeli/imoti.ts | всички | — |
 | proba/razdeli/infrastruktura.ts | — | ПРЕНАПИСВАНЕ (раздел на стария проход · думите на новите екрани) | proba/razdeli/infrastruktura.ts | всички | — |

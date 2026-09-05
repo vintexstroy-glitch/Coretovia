@@ -131,7 +131,7 @@ describe('от край до край · през Изпълнителя', () =>
     expect(nomer(iz, 'imoti', 'imot:k2')).toBe('1');
     expect(nomer(iz, 'obekti', 'obekt:k3')).toBe('1.1.1.27');
     const pred = uspeh(
-      iz.probvay('k4', 'imoti.popraviKletka', {
+      iz.probvay('k4', 'red.popraviKletka', {
         tablitsa: 'obekti',
         id: 'obekt:k3',
         kletki: { tsena: { stoynost_st: 25000000 } },
@@ -264,7 +264,7 @@ describe('предусловията · поименно', () => {
     // без нов Вид · отказ с имената на номенклатурите (и двете колони са „Състояние")
     expect(
       otkazat(
-        iz.probvay('p1', 'imoti.popraviKletka', {
+        iz.probvay('p1', 'red.popraviKletka', {
           tablitsa: 'obekti',
           id: 'obekt:k3',
           kletki: { kategoriya: { nomer: 2 } },
@@ -273,7 +273,7 @@ describe('предусловията · поименно', () => {
     ).toEqual(['„Състояние на Обект" е сменена — избери и „Вид на обект" от новата.']);
     // същата категория плюс друга клетка НЕ чисти Вида
     const sashta = uspeh(
-      iz.probvay('p0', 'imoti.popraviKletka', {
+      iz.probvay('p0', 'red.popraviKletka', {
         tablitsa: 'obekti',
         id: 'obekt:k3',
         kletki: { kategoriya: { nomer: 1 }, tsena: { stoynost_st: 100 } },
@@ -287,7 +287,7 @@ describe('предусловията · поименно', () => {
     ).not.toHaveProperty('vid');
     // с нов Вид от новата категория минава
     uspeh(
-      await iz.izpalni('p1', 'imoti.popraviKletka', {
+      await iz.izpalni('p1', 'red.popraviKletka', {
         tablitsa: 'obekti',
         id: 'obekt:k3',
         kletki: { kategoriya: { nomer: 2 }, vid: { nomer: 1 } },
@@ -296,17 +296,17 @@ describe('предусловията · поименно', () => {
     expect(nomer(iz, 'obekti', 'obekt:k3')).toBe('1.2.1.27');
     expect(
       otkazat(
-        iz.probvay('x', 'imoti.popraviKletka', {
+        iz.probvay('x', 'red.popraviKletka', {
           tablitsa: 'obekti',
           id: 'obekt:k3',
           kletki: { nomer: { chislo: 27 } },
         }),
       ).zashto,
     ).toEqual(['Нищо не се променя.']);
-    uspeh(await iz.izpalni('p2', 'imoti.izklyuchiRed', { tablitsa: 'obekti', id: 'obekt:k3' }));
+    uspeh(await iz.izpalni('p2', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }));
     expect(
       otkazat(
-        iz.probvay('x', 'imoti.popraviKletka', {
+        iz.probvay('x', 'red.popraviKletka', {
           tablitsa: 'obekti',
           id: 'obekt:k3',
           kletki: { nomer: { chislo: 1 } },
@@ -318,18 +318,138 @@ describe('предусловията · поименно', () => {
   it('Имот с живи редове под себе си не се изключва · изключен се връща · два пъти не', async () => {
     const { iz } = await nachalo();
     expect(
-      otkazat(await iz.izpalni('i1', 'imoti.izklyuchiRed', { tablitsa: 'imoti', id: 'imot:k2' }))
+      otkazat(await iz.izpalni('i1', 'red.izklyuchi', { tablitsa: 'imoti', id: 'imot:k2' }))
         .zashto[0],
     ).toMatch(/живи редове под себе си \(1 в „obekti"\)/);
-    uspeh(await iz.izpalni('i2', 'imoti.izklyuchiRed', { tablitsa: 'obekti', id: 'obekt:k3' }));
+    uspeh(await iz.izpalni('i2', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }));
     expect(zhiviteRedove(iz.ogledalo().tablitsi.get('obekti')!)).toEqual([]);
     expect(
-      otkazat(await iz.izpalni('i3', 'imoti.izklyuchiRed', { tablitsa: 'obekti', id: 'obekt:k3' }))
+      otkazat(await iz.izpalni('i3', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }))
         .zashto,
     ).toEqual(['Редът вече е изключен.']);
-    uspeh(await iz.izpalni('i4', 'imoti.izklyuchiRed', { tablitsa: 'imoti', id: 'imot:k2' }));
-    uspeh(await iz.izpalni('i5', 'imoti.varniRed', { tablitsa: 'imoti', id: 'imot:k2' }));
+    uspeh(await iz.izpalni('i4', 'red.izklyuchi', { tablitsa: 'imoti', id: 'imot:k2' }));
+    uspeh(await iz.izpalni('i5', 'red.varni', { tablitsa: 'imoti', id: 'imot:k2' }));
     expect(redKato(iz.ogledalo().tablitsi.get('imoti')!, 0).izklyuchen).toBe(false);
+  });
+});
+
+describe('задачата на Управление (ADR-005)', () => {
+  const zadacha = (kam: string, oshte: Record<string, unknown> = {}) => ({
+    kletki: {
+      kam: { tekst: kam },
+      vid: { nomer: 1 },
+      ime: { tekst: 'Сондаж' },
+      ot: { tekst: '2026-09-10' },
+      do: { tekst: '2026-09-12' },
+      otsenka: { nomer: 1 },
+      byudzhet: { stoynost_st: 25000000 },
+      ...oshte,
+    },
+  });
+
+  it('под Имот · под Обект · под Бизнес · родител без ред или изключен се отказва с думи', async () => {
+    const { iz } = await nachalo();
+    uspeh(
+      await iz.izpalni('b1', 'imoti.dobaviBiznes', {
+        kletki: {
+          imot: { tekst: 'imot:k2' },
+          sastoyanie: { nomer: 1 },
+          nomer: { chislo: 1 },
+          ...PRAZEN_OBEKT,
+          drugi: null,
+        },
+      }),
+    );
+    uspeh(await iz.izpalni('z1', 'upravlenie.dobaviZadacha', zadacha('imot:k2')));
+    uspeh(await iz.izpalni('z2', 'upravlenie.dobaviZadacha', zadacha('obekt:k3')));
+    uspeh(await iz.izpalni('z3', 'upravlenie.dobaviZadacha', zadacha('biznes:b1')));
+    const tv = iz.ogledalo().tablitsi.get('zadachi')!;
+    expect(zhiviteRedove(tv)).toHaveLength(3);
+    expect(tv.id.slice(0, 3)).toEqual(['zadacha:z1', 'zadacha:z2', 'zadacha:z3']);
+    expect(redKato(tv, 0).kletki['kam']).toEqual({ tekst: 'imot:k2' });
+    const otkaz = (tovar: unknown) =>
+      otkazat(iz.probvay('x', 'upravlenie.dobaviZadacha', tovar)).zashto.join(' ');
+    expect(otkaz(zadacha('imot:nyama'))).toMatch(
+      /Няма ред „imot:nyama" в „imoti" · „obekti" · „biznesi"/,
+    );
+    expect(otkaz(zadacha('zadacha:z1'))).toMatch(
+      /трябва да сочи ред от „imoti" или „obekti" или „biznesi"/,
+    );
+    expect(otkaz(zadacha('imot:k2', { do: { tekst: '2026-09-01' } }))).toMatch(
+      /Краят \(2026-09-01\) е преди началото \(2026-09-10\)/,
+    );
+    expect(otkaz(zadacha('imot:k2', { ot: { tekst: '10.09.2026' } }))).toMatch(
+      /не е дата ГГГГ-ММ-ДД/,
+    );
+    expect(otkaz(zadacha('imot:k2', { vid: { nomer: 9 } }))).toMatch(/Няма № 9 в „Вид на задача"/);
+    expect(otkaz(zadacha('imot:k2', { ime: null }))).toMatch(/kletki\.ime: очаква се object/);
+  });
+
+  it('родител с живи задачи не се изключва · изключената задача освобождава · клетката се поправя на място', async () => {
+    const { iz } = await nachalo();
+    uspeh(await iz.izpalni('z1', 'upravlenie.dobaviZadacha', zadacha('obekt:k3')));
+    expect(
+      otkazat(await iz.izpalni('i1', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }))
+        .zashto[0],
+    ).toMatch(/живи редове под себе си \(1 в „zadachi"\)/);
+    uspeh(
+      await iz.izpalni('p1', 'red.popraviKletka', {
+        tablitsa: 'zadachi',
+        id: 'zadacha:z1',
+        kletki: { do: { tekst: '2026-09-30' }, otsenka: null },
+      }),
+    );
+    const tv = iz.ogledalo().tablitsi.get('zadachi')!;
+    expect(redKato(tv, 0).kletki['do']).toEqual({ tekst: '2026-09-30' });
+    expect(redKato(tv, 0).kletki['otsenka']).toBeUndefined();
+    expect(
+      otkazat(
+        iz.probvay('x', 'red.popraviKletka', {
+          tablitsa: 'zadachi',
+          id: 'zadacha:z1',
+          kletki: { ot: { tekst: '2026-10-01' } },
+        }),
+      ).zashto[0],
+    ).toMatch(/Краят \(2026-09-30\) е преди началото \(2026-10-01\)/);
+    uspeh(await iz.izpalni('i2', 'red.izklyuchi', { tablitsa: 'zadachi', id: 'zadacha:z1' }));
+    uspeh(await iz.izpalni('i3', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }));
+  });
+
+  it('десният бутон върху Имот, Обект или Бизнес ОТВАРЯ чернова с родителя · върху задача го няма', async () => {
+    const { iz } = await nachalo();
+    const desni = (tablitsa: string, id: string) =>
+      iz.butoniZa('upravlenie', { tablitsa, id }).filter((b) => b.myasto === 'desen-buton');
+    const naImota = desni('imoti', 'imot:k2');
+    expect(naImota.map((b) => [b.klyuch, b.razreshena, b.otvaryaChernova])).toEqual([
+      ['upravlenie.dobaviZadacha', true, true],
+      ['red.izklyuchi', false, false],
+      ['red.varni', false, false],
+      ['obshto.storno', true, false],
+    ]);
+    expect(naImota[0]?.tovar).toEqual({
+      kletki: {
+        kam: { tekst: 'imot:k2' },
+        vid: null,
+        ime: null,
+        ot: null,
+        do: null,
+        otsenka: null,
+        byudzhet: null,
+      },
+    });
+    expect(desni('obekti', 'obekt:k3')[0]?.klyuch).toBe('upravlenie.dobaviZadacha');
+    uspeh(await iz.izpalni('z1', 'upravlenie.dobaviZadacha', zadacha('obekt:k3')));
+    expect(desni('zadachi', 'zadacha:z1').map((b) => b.klyuch)).toEqual([
+      'red.izklyuchi',
+      'red.varni',
+      'obshto.storno',
+    ]);
+    // в прозореца Имоти задачата не се предлага · командата е на Управление
+    expect(
+      iz
+        .butoniZa('imoti', { tablitsa: 'imoti', id: 'imot:k2' })
+        .some((b) => b.klyuch === 'upravlenie.dobaviZadacha'),
+    ).toBe(false);
   });
 });
 
@@ -363,12 +483,15 @@ describe('сторното и разписката', () => {
     const tovar = {
       otpechatak: otpechatakNaModela(MODEL),
       kursor: o.kursori.get(KNIGA)!,
-      redove: { imoti: 1, obekti: 1, biznesi: 0 },
+      redove: { imoti: 1, obekti: 1, biznesi: 0, zadachi: 0 },
       iznesenoNa: '2026-09-05T12:30:00.000Z',
     };
     expect(
       otkazat(
-        iz.probvay('x', 'kniga.iznesi', { ...tovar, redove: { imoti: 2, obekti: 1, biznesi: 0 } }),
+        iz.probvay('x', 'kniga.iznesi', {
+          ...tovar,
+          redove: { imoti: 2, obekti: 1, biznesi: 0, zadachi: 0 },
+        }),
       ).zashto[0],
     ).toMatch(/imoti 2 ≠ 1/);
     expect(
@@ -421,12 +544,12 @@ describe('сторното и разписката', () => {
     const { iz } = await nachalo();
     iz.zatvori('инцидент');
     expect(
-      otkazat(await iz.izpalni('z1', 'imoti.izklyuchiRed', { tablitsa: 'obekti', id: 'obekt:k3' }))
+      otkazat(await iz.izpalni('z1', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }))
         .zashto,
     ).toEqual(['Вратата е спряна: инцидент']);
     expect(iz.ogledalo().tablitsi.get('obekti')!.broy).toBe(1);
     iz.otvori();
-    uspeh(await iz.izpalni('z1', 'imoti.izklyuchiRed', { tablitsa: 'obekti', id: 'obekt:k3' }));
+    uspeh(await iz.izpalni('z1', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:k3' }));
   });
 });
 

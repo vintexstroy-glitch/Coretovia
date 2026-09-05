@@ -18,11 +18,11 @@ const KOGATO = '2026-09-05T14:00:00.000Z';
 const PRAZNO = fold([], MODEL, KOGATO);
 
 describe('неговата Книга · мострата без служебен лист', () => {
-  it('трите таблици се разпознават по лента и глава · без ключове', async () => {
+  it('четирите таблици се разпознават по лента и глава · без ключове', async () => {
     const kniga = await prochetiKniga(await napishiKniga(MOSTRA));
     const p = razpoznayKnigata(kniga, PRAZNO, KOGATO);
     expect(p.sluzhebno).toBeNull();
-    expect([...p.tablitsi.keys()]).toEqual(['imoti', 'obekti', 'biznesi']);
+    expect([...p.tablitsi.keys()]).toEqual(['imoti', 'obekti', 'biznesi', 'zadachi']);
     const imoti = p.tablitsi.get('imoti')!;
     expect(imoti.sKlyuchove).toBe(false);
     expect(imoti.redNaGlavata).toBe(5);
@@ -40,6 +40,44 @@ describe('неговата Книга · мострата без служебе�
     expect(obekti.redove).toHaveLength(28);
     expect(obekti.redove[0]?.grupa?.red).toBe(17);
     expect(p.tablitsi.get('biznesi')!.redove.map((r) => r.nomeratsiya)).toEqual(['2.3.1', '2.3.2']);
+    for (const s of p.sverki) expect(s.nared, s.kakvo).toBe(true);
+  });
+
+  it('Управление · девет родителя и девет задачи · ред 20 е и двете · задачата носи групата си', async () => {
+    const kniga = await prochetiKniga(await napishiKniga(MOSTRA));
+    const p = razpoznayKnigata(kniga, PRAZNO, KOGATO);
+    const z = p.tablitsi.get('zadachi')!;
+    expect(z.sKlyuchove).toBe(false);
+    expect(z.redNaGlavata).toBe(17);
+    expect(z.grupi.map((g) => [g.red, g.nomerVKnigata, g.imotIme])).toEqual([
+      [20, '1', 'Герман'],
+      [21, '2.1.1', 'Гара Яна'],
+      [23, '3.1', 'Студентски Град'],
+      [24, '3.1.1.1', ''],
+      [26, '3.1.1.27', ''],
+      [29, '3.2', 'Студентски Град'],
+      [30, '3.1.2.20', ''],
+      [32, '4', 'Панчарево'],
+      [34, '2.3.1', 'Гара Яна'],
+    ]);
+    expect(z.redove).toHaveLength(9);
+    // слятата клетка E · „Дело / Сондаж" → видът по думата, името дословно
+    const parva = z.redove[0]!;
+    expect(parva.adres).toBe('A20');
+    expect(parva.grupa?.red).toBe(20);
+    expect(parva.kletki.find((k) => k.kolona === 'vid')?.stoynost).toEqual({ nomer: 1 });
+    expect(parva.kletki.find((k) => k.kolona === 'ime')?.stoynost).toEqual({ tekst: 'Сондаж' });
+    expect(z.redove.map((r) => r.grupa?.nomerVKnigata)).toEqual([
+      '1',
+      '2.1.1',
+      '3.1.1.1',
+      '3.1.1.27',
+      '3.1.1.27',
+      '3.1.2.20',
+      '4',
+      '2.3.1',
+      '2.3.1',
+    ]);
     for (const s of p.sverki) expect(s.nared, s.kakvo).toBe(true);
   });
 

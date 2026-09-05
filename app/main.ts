@@ -114,7 +114,30 @@ async function main(): Promise<void> {
     return porta.ogledalo().stopanin === '' ? 'profil' : 'imoti';
   };
 
+  // Рисуването НЕ се преплита: смяната на възела гони фокуса от старото поле, а
+  // неговият `change` иска ново рисуване по средата на започнатото. Вложената
+  // заявка се запомня и се изпълнява ВЕДНЪЖ, след като текущото свърши — иначе
+  // външното рисуване довършва в откачен възел и екранът остава празен.
+  let risuva = false;
+  let pak = false;
   function narisuvay(): void {
+    if (risuva) {
+      pak = true;
+      return;
+    }
+    risuva = true;
+    try {
+      narisuvayVednazh();
+    } finally {
+      risuva = false;
+    }
+    if (pak) {
+      pak = false;
+      narisuvay();
+    }
+  }
+
+  function narisuvayVednazh(): void {
     const o = porta.ogledalo();
     vest.textContent =
       o.broySabitiya === 0

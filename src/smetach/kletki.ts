@@ -9,12 +9,14 @@
  */
 
 import type { Kletka } from '../model/kletka.js';
-import { tablitsata } from '../model/model.js';
+import type { Kolona } from '../model/kolona.js';
+import { tablitsata, tablitsaNaVrazkata } from '../model/model.js';
 import { poNomer } from '../model/nomenklatura.js';
 import { kolonaNa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { kletkaNa } from '../ogledalo/tablitsa.js';
 import { pishi } from '../yadro/pari.js';
+import { nomerNaRed, tekstNaNomera } from './nomeratsiya.js';
 
 const SPRYANA = ' · спряна';
 
@@ -97,11 +99,22 @@ export function dumiNaKletka(
       return s.spryana ? `${s.tekst}${SPRYANA}` : s.tekst;
     }
     case 'vrazka':
-      return 'tekst' in k && opis.vrazka !== undefined ? imeNaReda(o, opis.vrazka, k.tekst) : '';
+      return 'tekst' in k ? imeNaVrazkata(o, opis, k.tekst) : '';
     case 'tekst':
     case 'data':
       return 'tekst' in k ? k.tekst : '';
     case 'nomeratsiya':
       return '';
   }
+}
+
+/** Името на реда, към който сочи връзка · таблицата е по префикса на id-то. */
+export function imeNaVrazkata(o: Ogledalo, kol: Kolona, id: string): string {
+  const t = tablitsaNaVrazkata(o.model, kol, id);
+  if (t === undefined) return id;
+  const ime = imeNaReda(o, t.klyuch, id);
+  if (ime !== id || t.nomeratsiya === undefined) return ime;
+  // Обект и Бизнес нямат име · номерът им е адресът (3.1.1.27)
+  const i = o.tablitsi.get(t.klyuch)?.indeks.get(id);
+  return i === undefined ? id : tekstNaNomera(nomerNaRed(o, t.klyuch, i));
 }

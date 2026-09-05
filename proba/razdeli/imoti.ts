@@ -206,7 +206,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     (await tekstoveNa(p, '[data-tochka]')).map((t) => t.split('\n')[0]).join(' · '),
     'Изключи реда · Върни реда · Сторно на последната промяна',
   );
-  await p.click('[data-tochka="imoti.izklyuchiRed"]');
+  await p.click('[data-tochka="red.izklyuchi"]');
   await p.waitForFunction(() =>
     document.querySelector('[data-sverka="obekti"]')?.textContent?.startsWith('живи 0'),
   );

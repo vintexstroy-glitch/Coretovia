@@ -1,5 +1,5 @@
 /**
- * ОСТАНАЛИТЕ ЧЕТИРИ ПРОЗОРЦИ · името, „идва с резен N" и думите му (правило 12:
+ * ОСТАНАЛИТЕ ТРИ ПРОЗОРЦИ · името, „идва с резен N" и думите му (правило 12:
  * липсващото се казва, не се крие). Редът на резените има един дом —
  * `docs/03-plan.md`; числата тук са преписани оттам и `tests/rezenite.test.ts` ги сверява.
  */
@@ -14,7 +14,6 @@ import { dumiteHTML } from './profil.js';
 /** С кой резен идва прозорецът · по `docs/03-plan.md`. */
 export const REZEN_NA_PROZORETSA: Readonly<Partial<Record<KlyuchNaProzorets, number>>> =
   Object.freeze({
-    upravlenie: 3,
     smetki: 3,
     sluzhiteli: 4,
     prodazhbi: 5,

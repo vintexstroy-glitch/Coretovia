@@ -18,7 +18,13 @@ export function otpechatakNaModela(m: Model): string {
   for (const t of [...m.tablitsi.values()].sort((a, b) => a.klyuch.localeCompare(b.klyuch))) {
     const koloni = t.koloni
       .map((k) =>
-        [k.klyuch, k.vid, k.nomenklatura ?? '', k.vrazka ?? '', k.zatvorena ? 'z' : ''].join(':'),
+        [
+          k.klyuch,
+          k.vid,
+          k.nomenklatura ?? '',
+          (k.vrazka ?? []).join('+'),
+          k.zatvorena ? 'z' : '',
+        ].join(':'),
       )
       .join(' ');
     const nomeratsiya = (t.nomeratsiya?.segmenti ?? [])

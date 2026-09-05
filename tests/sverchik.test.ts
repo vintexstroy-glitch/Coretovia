@@ -431,7 +431,7 @@ describe('променена Книга', () => {
     const ro = redPoKlyuch(imoti, 'obekt:o1');
     imoti.redove[ro]![5] = 99999.5;
     // междувременно в програмата цената става 1,00
-    await zapishi('p1', 'imoti.popraviKletka', {
+    await zapishi('p1', 'red.popraviKletka', {
       tablitsa: 'obekti',
       id: 'obekt:o1',
       kletki: { tsena: { stoynost_st: 100 } },
@@ -503,7 +503,7 @@ describe('променена Книга', () => {
       aktor: () => 'sluzhitel@example.bg',
       sega: () => '2026-09-05T15:30:00.000Z',
     });
-    const r = await sluzhitel.izpalni('s1', 'imoti.popraviKletka', {
+    const r = await sluzhitel.izpalni('s1', 'red.popraviKletka', {
       tablitsa: 'obekti',
       id: 'obekt:o1',
       kletki: { tsena: { stoynost_st: 200 } },
@@ -554,7 +554,7 @@ describe('променена Книга', () => {
     // с ключ · Имотът е преименуван в програмата след износа · родителят остава, цената влиза
     const { iz: iz2, zapishi: zapishi2 } = await nashata();
     const l2 = listove(iz2);
-    await zapishi2('p1', 'imoti.popraviKletka', {
+    await zapishi2('p1', 'red.popraviKletka', {
       tablitsa: 'imoti',
       id: 'imot:i1',
       kletki: { ime: { tekst: 'Гара Яна (ЖК)' } },
@@ -689,7 +689,7 @@ describe('променена Книга', () => {
 });
 
 describe('неговата Книга · мострата срещу празно Огледало', () => {
-  it('35 предложения · петте Имота · обектите под групите сочат Имота по номер · Бизнесите по име · 5.1.1.x под 5.2 е бележка', async () => {
+  it('44 предложения · петте Имота · обектите под групите сочат Имота по номер · Бизнесите по име · деветте задачи на Управление · 5.1.1.x под 5.2 е бележка', async () => {
     const { iz } = await otvori();
     await iz.izpalni('k0', 'stopanin.otkriy', { imeyl: STOPANIN });
     const o = iz.ogledalo();
@@ -699,19 +699,24 @@ describe('неговата Книга · мострата срещу празн�
       KOGATO,
     );
     const vidove = otchet.predlozheniya.map((p) => p.vid);
-    expect(vidove.filter((v) => v === 'nov-red')).toHaveLength(35);
+    expect(vidove.filter((v) => v === 'nov-red')).toHaveLength(44);
+    expect(
+      otchet.predlozheniya.filter((p) => p.vid === 'nov-red' && p.tablitsa === 'zadachi'),
+    ).toHaveLength(9);
     expect(otchet.nahodki.filter((n) => n.stepen === 'greshka')).toEqual([]);
     expect(
       otchet.nahodki.filter((n) => n.kakvo.startsWith('Номерът „5.1.1.')).map((n) => n.adres),
     ).toEqual(['A42', 'A43', 'A44', 'A45', 'A46', 'A47', 'A48']);
     const obekt = otchet.predlozheniya.find((p) => p.vid === 'nov-red' && p.tablitsa === 'obekti')!;
-    expect(obekt.vid === 'nov-red' && obekt.kletki['imot']).toEqual({ tekst: `${PREDLOZHENIE}1` });
+    expect(obekt.vid === 'nov-red' && obekt.kletki['imot']).toEqual({
+      tekst: `${PREDLOZHENIE}1:imot`,
+    });
     expect(obekt.zavisiOt).toEqual([1]);
     const biznes = otchet.predlozheniya.find(
       (p) => p.vid === 'nov-red' && p.tablitsa === 'biznesi',
     )!;
     expect(biznes.vid === 'nov-red' && biznes.kletki['imot']).toEqual({
-      tekst: `${PREDLOZHENIE}1`,
+      tekst: `${PREDLOZHENIE}1:imot`,
     });
   });
 
@@ -727,12 +732,13 @@ describe('неговата Книга · мострата срещу празн�
     const vsichki = new Set(otchet.predlozheniya.map((_p, i) => i));
     const r = await izpalniPredlozheniyata(iz, otchet.predlozheniya, vsichki, idNa, KOGATO);
     expect(r.otkaz).toBeNull();
-    expect(r.prieti).toBe(35);
+    expect(r.prieti).toBe(44);
     expect(r.sverka.nared).toBe(true);
     const sled = iz.ogledalo();
     expect(zhiviteRedove(sled.tablitsi.get('imoti')!)).toHaveLength(5);
     expect(zhiviteRedove(sled.tablitsi.get('obekti')!)).toHaveLength(28);
     expect(zhiviteRedove(sled.tablitsi.get('biznesi')!)).toHaveLength(2);
+    expect(zhiviteRedove(sled.tablitsi.get('zadachi')!)).toHaveLength(9);
     const nomera = zhiviteRedove(sled.tablitsi.get('obekti')!).map((i) =>
       tekstNaNomera(nomerNaRed(sled, 'obekti', i)),
     );
@@ -746,7 +752,7 @@ describe('неговата Книга · мострата срещу празн�
     ).toEqual(['2.3.1', '2.3.2']);
     // „Приеми" втори път със СЪЩИТЕ ключове (правило 5) · нищо ново
     const vtori = await izpalniPredlozheniyata(iz, otchet.predlozheniya, vsichki, idNa, KOGATO);
-    expect(vtori.povtoreni).toBe(35);
+    expect(vtori.povtoreni).toBe(44);
     expect(iz.ogledalo().broySabitiya).toBe(sled.broySabitiya);
     // същият файл втори път · Сверчикът вече не предлага нищо · нашата Книга също
     const pak = sveri(
@@ -757,5 +763,140 @@ describe('неговата Книга · мострата срещу празн�
     expect(pak.predlozheniya.filter((p) => p.vid !== 'popravka')).toEqual([]);
     const nashata = await sveriListove(iz, listove(iz));
     expect(nashata.predlozheniya).toEqual([]);
+  });
+});
+
+describe('Управление · задачите през Книгата (ADR-005)', () => {
+  const UPR = PROZORTSI.find((p) => p.klyuch === 'upravlenie')!.list;
+  const KL = 18;
+
+  async function sZadachi() {
+    const { iz, zapishi } = await nashata();
+    const zadacha = (
+      id: string,
+      kam: string,
+      vid: number,
+      ime: string,
+      oshte: Record<string, unknown> = {},
+    ) =>
+      zapishi(id, 'upravlenie.dobaviZadacha', {
+        kletki: {
+          kam: { tekst: kam },
+          vid: { nomer: vid },
+          ime: { tekst: ime },
+          ot: null,
+          do: null,
+          otsenka: null,
+          byudzhet: null,
+          ...oshte,
+        },
+      });
+    await zadacha('z1', 'imot:i1', 1, 'Сондаж', {
+      ot: { tekst: '2026-09-10' },
+      do: { tekst: '2026-09-12' },
+      byudzhet: { stoynost_st: 25000000 },
+    });
+    await zadacha('z2', 'obekt:o1', 2, 'Брокер');
+    return { iz, zapishi };
+  }
+
+  it('износ → внос = нула предложения · и със задачи', async () => {
+    const { iz } = await sZadachi();
+    const otchet = await sveriListove(iz, listove(iz));
+    expect(otchet.predlozheniya).toEqual([]);
+    expect(otchet.nahodki).toEqual([]);
+    for (const s of otchet.sverki) expect(s.nared, s.kakvo).toBe(true);
+  });
+
+  it('сменен бюджет и край → поправка · дописана задача под Обект без ключ → нов ред към него · махната → изключване', async () => {
+    const { iz } = await sZadachi();
+    const l = listove(iz);
+    const upr = l.find((x) => x.ime === UPR)!;
+    const rz1 = upr.redove.findIndex((r) => r[KL] === 'zadacha:z1');
+    upr.redove[rz1]![9] = 300000; // J · бюджетът
+    upr.redove[rz1]![5] = '2026-09-10 / 2026-09-30'; // F · краят
+    // дописана задача под Обекта · веднага под груповия му ред · само E
+    const ro1 = upr.redove.findIndex((r) => r[KL] === 'grupa:obekt:o1');
+    const nov: (typeof upr.redove)[number] = [];
+    nov[4] = 'Дело / СМР';
+    nov[6] = 'Спешно';
+    upr.redove.splice(ro1 + 1, 0, nov);
+    // z2 изчезва
+    const rz2 = upr.redove.findIndex((r) => r[KL] === 'zadacha:z2');
+    upr.redove.splice(rz2, 1);
+    const otchet = await sveriListove(iz, l);
+    expect(otchet.nahodki.filter((n) => n.stepen === 'greshka')).toEqual([]);
+    expect(
+      otchet.predlozheniya.map((p) => ['tablitsa' in p ? p.tablitsa : '', p.vid, p.poPodrazbirane]),
+    ).toEqual([
+      ['zadachi', 'popravka', true],
+      ['zadachi', 'nov-red', true],
+      ['zadachi', 'izklyuchi', false],
+    ]);
+    const popravka = otchet.predlozheniya[0]!;
+    expect(popravka.vid === 'popravka' && popravka.kletki).toEqual({
+      do: { tekst: '2026-09-30' },
+      byudzhet: { stoynost_st: 30000000 },
+    });
+    const novRed = otchet.predlozheniya[1]!;
+    expect(novRed.vid === 'nov-red' && novRed.kletki).toEqual({
+      kam: { tekst: 'obekt:o1' },
+      vid: { nomer: 1 },
+      ime: { tekst: 'СМР' },
+      otsenka: { nomer: 2 },
+    });
+    expect(novRed.zashto).toBe('Нова задача: към 2.1.1.27 · Вид Дело · име СМР · Оценка Спешно.');
+    expect(otchet.predlozheniya[2]!.zashto).toMatch(/„Брокер" го няма в Книгата/);
+    // приемат се и трите · Огледалото: z1 поправена · нова под Обекта · z2 изключена
+    const r = await izpalniPredlozheniyata(
+      iz,
+      otchet.predlozheniya,
+      new Set([0, 1, 2]),
+      idNa,
+      KOGATO,
+    );
+    expect(r.otkaz).toBeNull();
+    expect(r.prieti).toBe(3);
+    const sled = iz.ogledalo();
+    const tv = sled.tablitsi.get('zadachi')!;
+    expect(zhiviteRedove(tv)).toHaveLength(2);
+    // същата Книга втори път · новата задача без ключ се разпознава по родител · вид · име · начало
+    const pak = await sveriListove(iz, l);
+    expect(pak.predlozheniya).toEqual([]);
+    expect(pak.nahodki.map((n) => n.kakvo)).toEqual([
+      'Редът няма ключ — разпознат по родител · вид · име · начало.',
+    ]);
+  });
+
+  it('задача без ключ под НОВ Имот от същата Книга → сочи предложението му', async () => {
+    const { iz } = await sZadachi();
+    const l = listove(iz);
+    const upr = l.find((x) => x.ime === UPR)!;
+    // нов Имот в Имоти (без ключ) · и групов ред за него в Управление със задача
+    const imoti = l.find((x) => x.ime === IMOTI)!;
+    const ri2 = redPoKlyuch(imoti, 'imot:i2');
+    imoti.redove.splice(ri2 + 1, 0, [null, 'Панчарево', 'УПИ']);
+    const sbor = upr.redove.findIndex((r) => r[0] === 'сбор');
+    const grupa: (typeof upr.redove)[number] = ['3', 'Панчарево', 'УПИ'];
+    const zad: (typeof upr.redove)[number] = [];
+    zad[4] = 'Преписка / [лице]';
+    upr.redove.splice(sbor - 1, 0, grupa, zad);
+    const otchet = await sveriListove(iz, l);
+    expect(otchet.nahodki.filter((n) => n.stepen === 'greshka')).toEqual([]);
+    const vidove = otchet.predlozheniya.map((p) => ['tablitsa' in p ? p.tablitsa : '', p.vid]);
+    expect(vidove).toEqual([
+      ['imoti', 'nov-red'],
+      ['zadachi', 'nov-red'],
+    ]);
+    const z = otchet.predlozheniya[1]!;
+    expect(z.vid === 'nov-red' && z.kletki['kam']).toEqual({ tekst: `${PREDLOZHENIE}0:imot` });
+    expect(z.zavisiOt).toEqual([0]);
+    const r = await izpalniPredlozheniyata(iz, otchet.predlozheniya, new Set([0, 1]), idNa, KOGATO);
+    expect(r.prieti).toBe(2);
+    const tv = iz.ogledalo().tablitsi.get('zadachi')!;
+    const nova = zhiviteRedove(tv)
+      .map((i) => tv.id[i])
+      .find((id) => id !== 'zadacha:z1' && id !== 'zadacha:z2')!;
+    expect(nova).toBe('zadacha:kniga-test:1');
   });
 });

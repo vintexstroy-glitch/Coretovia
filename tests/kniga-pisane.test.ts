@@ -73,7 +73,7 @@ async function knigata() {
   await obekt('o3', 'imot:i3', 2, 1, 11);
   await obekt('o4', 'imot:i2', 1, 4, 1);
   await obekt('o5', 'imot:i2', 1, 4, 2);
-  await zapishi('x1', 'imoti.izklyuchiRed', { tablitsa: 'obekti', id: 'obekt:o5' });
+  await zapishi('x1', 'red.izklyuchi', { tablitsa: 'obekti', id: 'obekt:o5' });
   const biznes = (id: string, imot: string, sastoyanie: number, nomer: number) =>
     zapishi(id, 'imoti.dobaviBiznes', {
       kletki: {
@@ -113,6 +113,7 @@ async function iznesena() {
 
 const IMOTI = PROZORTSI.find((p) => p.klyuch === 'imoti')!.list;
 const NASTROYKI = PROZORTSI.find((p) => p.klyuch === 'nastroyki')!.list;
+const UPRAVLENIE = PROZORTSI.find((p) => p.klyuch === 'upravlenie')!.list;
 
 describe('Книгата на изход', () => {
   it('осем листа в реда му + служебният, скрит · сверката на всеки лист затваря', async () => {
@@ -124,7 +125,7 @@ describe('Книгата на изход', () => {
     expect(procheteno.listove.map((l) => l.skrit)).toEqual([...PROZORTSI.map(() => false), true]);
     expect(kniga.sverki).toHaveLength(9);
     for (const s of kniga.sverki) expect(s.nared, s.kakvo).toBe(true);
-    expect(kniga.redove).toEqual({ imoti: 3, obekti: 4, biznesi: 3 });
+    expect(kniga.redove).toEqual({ imoti: 3, obekti: 4, biznesi: 3, zadachi: 0 });
   });
 
   it('инструкциите му стоят дословно · на неговите редове в непостроените прозорци', async () => {
@@ -310,6 +311,7 @@ describe('Книгата на изход', () => {
       ['imoti', IMOTI, 3],
       ['obekti', IMOTI, 4],
       ['biznesi', IMOTI, 3],
+      ['zadachi', UPRAVLENIE, 0],
     ]);
     expect(tablitsi[0]?.[3]).toBe('A6:J8');
     const nomenklaturi = s.kletki.filter((r) => r[0] === 'nomenklatura');
@@ -336,5 +338,133 @@ describe('Книгата на изход', () => {
       }
     }
     expect(proverni).toBe(10);
+  });
+});
+
+describe('листът УправлениеДелаПреписки (ADR-005)', () => {
+  /** Книгата с три задачи · под Имот · под Обект · под Обект с бюджет и дати */
+  async function sZadachi() {
+    const iz = await knigata();
+    const zapishi = async (id: string, klyuch: string, tovar: unknown) => {
+      const r = await iz.izpalni(id, klyuch, tovar);
+      if ('otkaz' in r) throw new Error(r.zashto.join(' | '));
+    };
+    const zadacha = (
+      id: string,
+      kam: string,
+      vid: number,
+      ime: string,
+      oshte: Record<string, unknown> = {},
+    ) =>
+      zapishi(id, 'upravlenie.dobaviZadacha', {
+        kletki: {
+          kam: { tekst: kam },
+          vid: { nomer: vid },
+          ime: { tekst: ime },
+          ot: null,
+          do: null,
+          otsenka: null,
+          byudzhet: null,
+          ...oshte,
+        },
+      });
+    await zadacha('z1', 'imot:i1', 1, 'Сондаж', {
+      ot: { tekst: '2026-09-10' },
+      do: { tekst: '2026-09-12' },
+      otsenka: { nomer: 1 },
+      byudzhet: { stoynost_st: 25000000 },
+    });
+    await zadacha('z2', 'obekt:o1', 2, 'Брокер', { ot: { tekst: '2026-11-03' } });
+    await zadacha('z3', 'obekt:o1', 1, 'СМР', { byudzhet: { stoynost_st: 115 } });
+    const o = iz.ogledalo();
+    const kursor = o.kursori.get(KNIGA)!;
+    const kniga = knigataOtOgledaloto(o, kursor, KOGATO);
+    const procheteno = await prochetiKniga(await napishiKniga(kniga.listove));
+    return { kniga, list: procheteno.listove.find((l) => l.ime === UPRAVLENIE)! };
+  }
+
+  it('инструкции · Бутони с думите му · две глави · „филтър" · дървото с ключове · такт · СБОР', async () => {
+    const { kniga, list } = await sZadachi();
+    const k = list.kletki;
+    expect(kniga.redove['zadachi']).toBe(3);
+    // 1–12 инструкциите му · 13 лентата Бутони · 14–15 бутоните със сливанията му
+    expect(k[0]?.[1]).toBe('/Добави Дело/(Дело към Имот или към Обект)');
+    expect(k[12]?.[0]).toBe('Бутони');
+    expect(list.slivaniya).toContain('A13:R13');
+    expect(k[13]?.[0]).toMatch(/^Отвори\(/);
+    // слятата клетка носи думата и в двете си клетки при четене
+    expect(k[13]?.slice(11, 13)).toEqual(['Период', 'Период']);
+    expect(k[14]?.slice(11, 13)).toEqual(['начало ', 'край']);
+    expect(k[14]?.slice(14, 18)).toEqual(['ден', 'месец', 'тримесечие', 'година']);
+    expect(list.slivaniya).toContain('A14:A15');
+    expect(list.slivaniya).toContain('L14:M14');
+    expect(list.slivaniya).toContain('O14:R14');
+    // 16 двете ленти · 17 главите му + „такт" ×8 + Ключ в S · 18 подглавите · 19 „филтър"
+    expect(k[15]?.[0]).toBe('ОБЕКТИ');
+    expect(k[15]?.[9]).toBe('Диаграма Гант (Календар)');
+    expect(k[16]?.slice(0, 10)).toEqual([
+      '№',
+      'име Имот',
+      ' Състояние за Имот или Състояние на Обект',
+      '№',
+      ' Задачи(нещо като състояние за Делата, Срещите и Преписките).',
+      'Дата',
+      'Оценка',
+      'площ',
+      'цена',
+      'Бюджет Дела/ Бюджет Сметки',
+    ]);
+    expect(k[16]?.slice(10, 18)).toEqual(Array.from({ length: 8 }, () => 'такт'));
+    expect(k[16]?.[18]).toBe('Ключ');
+    expect(k[17]?.[5]).toBe('Начало/Край');
+    // тактът · осем месеца от предишния · KOGATO е 05.09.2026 → авг 2026 … мар 2027
+    expect(k[17]?.slice(10, 18)).toEqual([
+      'авг 26',
+      'сеп 26',
+      'окт 26',
+      'ное 26',
+      'дек 26',
+      'яну 27',
+      'фев 27',
+      'мар 27',
+    ]);
+    expect(k[18]?.slice(0, 3)).toEqual([null, 'филтър', 'филтър']);
+    expect(list.skritiKoloni).toEqual([19]);
+    // дървото · Имотът е групов ред с ключ · задачата под него · слетите клетки · ■ в такта
+    expect(k[19]?.slice(0, 3)).toEqual(['1', 'Герман', 'ПИ']);
+    expect(k[19]?.[18]).toBe('grupa:imot:i1');
+    expect(k[20]?.slice(4, 7)).toEqual([
+      'Дело / Сондаж',
+      '2026-09-10 / 2026-09-12',
+      'Спешно и Важно',
+    ]);
+    expect(k[20]?.[9]).toBe(250000);
+    expect(k[20]?.slice(10, 18)).toEqual([null, '■', null, null, null, null, null, null]);
+    expect(k[20]?.[18]).toBe('zadacha:z1');
+    const o1 = k.findIndex((r) => r[18] === 'grupa:obekt:o1');
+    expect(k[o1]?.slice(0, 4)).toEqual(['3.1.1.27', 'Студентски Град', 'апартамент', 27]);
+    // под Обекта · по началото: Брокер (ноември) е след СМР (без дата)? не — без дата е последно
+    expect(k[o1 + 1]?.slice(4, 6)).toEqual(['Среща / Брокер', '2026-11-03']);
+    expect(k[o1 + 1]?.slice(10, 18)).toEqual([null, null, null, '■', null, null, null, null]);
+    expect(k[o1 + 2]?.[4]).toBe('Дело / СМР');
+    expect(k[o1 + 2]?.[9]).toBe(1.15);
+    // СБОР · брой задачи · бюджетът · по такт, по началото на задачата
+    const sbor = k.findIndex((r) => r[0] === 'сбор');
+    expect(sbor).toBeGreaterThan(o1 + 2);
+    expect(k[sbor]?.[1]).toBe(3);
+    expect(k[sbor]?.[9]).toBe(250001.15);
+    expect((k[sbor] ?? []).slice(10, 18).filter((v) => v !== null && v !== undefined)).toEqual([
+      250000,
+    ]);
+    expect(k[sbor]?.[11]).toBe(250000);
+    // отключени са редовете със задачи (E..S) и празният ред след дървото; главите и групите — не
+    expect(list.otklyucheni).toContain('E21');
+    expect(list.otklyucheni).toContain('S21');
+    expect(list.otklyucheni).not.toContain('A20');
+    expect(list.otklyucheni).not.toContain('E20');
+    expect(list.otklyucheniRedove).toContain(21);
+    expect(list.otklyucheniRedove).not.toContain(20);
+    expect(list.otklyucheniRedove).toContain(sbor);
+    for (const s of kniga.sverki) expect(s.nared, s.kakvo).toBe(true);
   });
 });

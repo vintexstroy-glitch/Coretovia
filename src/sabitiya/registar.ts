@@ -121,14 +121,14 @@ export const SABITIYA: Readonly<Record<TipSabitie, Proverka>> = Object.freeze({
         n.push(`Колона „${kolona.ime}" носи „${slot}", а клетката е „${slotNaKletka(kletka)}".`);
         continue;
       }
-      if (kolona.vid === 'vrazka' && 'tekst' in kletka) {
-        const kam = kolona.vrazka === undefined ? undefined : model.tablitsi.get(kolona.vrazka);
-        if (
-          kam !== undefined &&
-          kletka.tekst !== '' &&
-          !kletka.tekst.startsWith(`${kam.sashtnost}:`)
-        ) {
-          n.push(`Връзката „${kolona.ime}" трябва да сочи ред от „${kam.klyuch}".`);
+      if (kolona.vid === 'vrazka' && 'tekst' in kletka && kletka.tekst !== '') {
+        const pozvoleni = (kolona.vrazka ?? [])
+          .map((v) => model.tablitsi.get(v))
+          .filter((t) => t !== undefined);
+        if (!pozvoleni.some((t) => kletka.tekst.startsWith(`${t.sashtnost}:`))) {
+          n.push(
+            `Връзката „${kolona.ime}" трябва да сочи ред от „${pozvoleni.map((t) => t.klyuch).join('" или „')}".`,
+          );
         }
       }
     }

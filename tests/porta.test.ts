@@ -31,7 +31,7 @@ describe('Портата', () => {
     const samoChete: PortaZaChetene = iz;
     // @ts-expect-error — агентът не пише: PortaZaChetene няма izpalni (K3)
     expect(typeof samoChete.izpalni).toBe('function');
-    expect(samoChete.katalog()).toHaveLength(14);
+    expect(samoChete.katalog()).toHaveLength(15);
     expect(samoChete.ogledalo().stopanin).toBe('');
   });
 
@@ -71,8 +71,8 @@ describe('Портата', () => {
       .butoniZa('imoti', { tablitsa: 'imoti', id: 'imot:k1' })
       .filter((b) => b.myasto === 'desen-buton');
     expect(desni.map((b) => [b.klyuch, b.razreshena, b.zashto])).toEqual([
-      ['imoti.izklyuchiRed', true, ''],
-      ['imoti.varniRed', false, 'Редът не е изключен.'],
+      ['red.izklyuchi', true, ''],
+      ['red.varni', false, 'Редът не е изключен.'],
       ['obshto.storno', true, ''],
     ]);
     expect(desni[0]?.tovar).toEqual({ tablitsa: 'imoti', id: 'imot:k1' });

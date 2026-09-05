@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { REZEN_NA_PROZORETSA } from '../app/prozorets/ostanalite.js';
 import { REZEN_NA_AGENTITE } from '../src/model/agenti.js';
-import { PROZORTSI } from '../src/model/osnova.js';
+import { BUTONI_NA_UPRAVLENIE, PROZORTSI } from '../src/model/osnova.js';
 
 describe('резените по прозорец', () => {
   const plan = readFileSync('docs/03-plan.md', 'utf8');
@@ -26,11 +26,27 @@ describe('резените по прозорец', () => {
     }
   });
 
-  it('четирите построени прозореца нямат „идва с резен"', () => {
-    for (const k of ['profil', 'imoti', 'ii', 'nastroyki']) {
+  it('петте построени прозореца нямат „идва с резен"', () => {
+    for (const k of ['profil', 'imoti', 'ii', 'nastroyki', 'upravlenie']) {
       expect(REZEN_NA_PROZORETSA).not.toHaveProperty(k);
     }
-    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(4);
+    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(3);
+  });
+
+  it('бутоните на Управление, които „идват с резен N", сочат ред от плана с темата си', () => {
+    const idvat = BUTONI_NA_UPRAVLENIE.filter((b) => b.deystvie.vid === 'idva');
+    expect(idvat.map((b) => b.klyuch)).toEqual([
+      'otvori',
+      'zapazi',
+      'skriy-razhodi',
+      'skriy-prihodi',
+    ]);
+    for (const b of idvat) {
+      const rezen = b.deystvie.vid === 'idva' ? b.deystvie.rezen : 0;
+      const zaglavie = redove.get(String(rezen)) ?? '';
+      // Отвори/Запази → редът с Отвори/Запази · Скрий Приходи/Разходи → редът със Сметки
+      expect(zaglavie, `${b.klyuch} → резен ${rezen}`).toMatch(/Отвори\/Запази|Сметки/);
+    }
   });
 
   it('четиримата агенти без модел сочат реда „ИИ" на плана', () => {

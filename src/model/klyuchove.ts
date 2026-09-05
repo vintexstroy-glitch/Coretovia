@@ -32,6 +32,8 @@ export const VID = Object.freeze({
   imot: 'imot',
   obekt: 'obekt',
   biznes: 'biznes',
+  /** ред от таблицата Задачи на Управление · Дело · Среща · Преписка · Проект */
+  zadacha: 'zadacha',
   /** една номенклатура · id = ключът ѝ · всички стойности живеят на този адрес */
   nomenklatura: 'nomenklatura',
   stopanin: 'stopanin',

@@ -23,20 +23,28 @@
 
 import type { Kletka } from '../model/kletka.js';
 import { type Kolona, slotNaKolonata } from '../model/kolona.js';
-import { tablitsata } from '../model/model.js';
+import { tablitsaNaId, tablitsata } from '../model/model.js';
 import { type Belezi, podravni, type ZhivaNomenklatura } from '../model/nomenklatura.js';
 import { DUMI_OT_KNIGATA } from '../model/dumi-ot-knigata.js';
-import { NOMENKLATURA, PROZORTSI, SLUZHEBEN_LIST } from '../model/osnova.js';
-import { koloniNaReda, type Tablitsa } from '../model/tablitsa.js';
+import {
+  type GlavaNaOblika,
+  NOMENKLATURA,
+  OBLIK_NA_UPRAVLENIE,
+  PROZORTSI,
+  SLUZHEBEN_LIST,
+} from '../model/osnova.js';
+import { kolonaNa, koloniNaReda, slyataNa, type Tablitsa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { kletkaNa, zhiviteRedove } from '../ogledalo/tablitsa.js';
 import type { Kursor } from '../sabitiya/tovari.js';
 import { otSuma } from '../yadro/pari.js';
 import { sverka, type Sverka } from '../yadro/sverka.js';
 import {
+  FILTAR,
   GLAVI_NA_NOMENKLATURITE,
   GRUPA,
   KLYUCH,
+  SBOR,
   NOMENKLATURI,
   RAZDELITEL_NA_GRUPATA,
   SLUZHEBNO,
@@ -79,6 +87,11 @@ export interface ProchetenaGrupa {
   readonly imotIme: string;
   readonly kategoriya: number | null;
   readonly kategoriyaTekst: string;
+  /** родителят на редовете под групата · жив id (от ключа или по име) · `null` = не е жив */
+  readonly roditelId: string | null;
+  readonly roditelTablitsa: string | null;
+  /** текстът в A на груповия ред · `2.1` · `3.1.1.27` · за родител, роден в същата Книга */
+  readonly nomerVKnigata: string;
 }
 
 export interface ProchetenRed {
@@ -195,6 +208,30 @@ function segmenti(tekst: string): number[] {
   const t = tekst.trim();
   if (!/^\d+(\.\d+)*$/.test(t)) return [];
   return t.split('.').map(Number);
+}
+
+/** Датата като ГГГГ-ММ-ДД · приема и неговото ДД.ММ.ГГГГ · иначе `null`. */
+function dataOt(v: string): string | null {
+  const t = v.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return Number.isNaN(Date.parse(`${t}T00:00:00Z`)) ? null : t;
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(t);
+  if (m === null) return null;
+  const iso = `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`;
+  return Number.isNaN(Date.parse(`${iso}T00:00:00Z`)) ? null : iso;
+}
+
+/** Слятата клетка · дели се по ПЪРВИЯ разделител (интервалите около него не се броят). */
+function razdeli(
+  v: ProchetenaStoynost | undefined,
+  razdelitel: string,
+): [ProchetenaStoynost, ProchetenaStoynost] {
+  const t = v === null || v === undefined ? '' : String(v);
+  const r = razdelitel.trim();
+  const i = t.indexOf(r);
+  if (r === '' || i < 0) return [t.trim() === '' ? null : t.trim(), null];
+  const lyavo = t.slice(0, i).trim();
+  const dyasno = t.slice(i + r.length).trim();
+  return [lyavo === '' ? null : lyavo, dyasno === '' ? null : dyasno];
 }
 
 function chislo(v: ProchetenaStoynost): number | null {
@@ -314,8 +351,15 @@ class Chetets {
           ...(imoti.length > 1 ? { dvusmislen: imoti.length } : {}),
         };
       }
+      case 'data': {
+        const d = dataOt(String(v));
+        if (d === null) {
+          this.nahodka(list, adres, `„${v}" не е дата (ГГГГ-ММ-ДД или ДД.ММ.ГГГГ).`);
+          return { ...osnova, stoynost: undefined };
+        }
+        return { ...osnova, stoynost: { tekst: d } };
+      }
       case 'tekst':
-      case 'data':
         // NFC още тук (правило 11): NFD „й" от друга клавиатура не е промяна
         return { ...osnova, stoynost: { tekst: String(v).normalize('NFC').trim() } };
       case 'nomeratsiya':
@@ -347,6 +391,9 @@ class Chetets {
         imotIme,
         kategoriya: Number(kat) || null,
         kategoriyaTekst,
+        roditelId: imotId,
+        roditelTablitsa: 'imoti',
+        nomerVKnigata: tekstNa(kletki[0]),
       };
     }
     const seg = segmenti(tekstNa(kletki[0]));
@@ -369,20 +416,30 @@ class Chetets {
         'beleshka',
       );
     }
+    const imotId = imoti.length === 1 ? (imoti[0] ?? null) : null;
     return {
       red,
-      imotId: imoti.length === 1 ? (imoti[0] ?? null) : null,
+      imotId,
       imotNomer: seg[0] ?? null,
       imotIme,
       // непозната дума в C не се замества от числото в A · групата води само когато е четима
       kategoriya: nameren?.nomer ?? (kategoriyaTekst === '' ? (seg[1] ?? null) : null),
       kategoriyaTekst,
+      roditelId: imotId,
+      roditelTablitsa: 'imoti',
+      nomerVKnigata: tekstNa(kletki[0]),
     };
   }
 
-  /** Една таблица от Модела · намерена по лента и глава. */
-  tablitsa(t: Tablitsa, l: ProchetenList): ProchetenaTablitsa | null {
-    const koloni = koloniNaReda(t);
+  /**
+   * Лентата и главата на таблица · по МЯСТО · `null` в списъка = главата не се сравнява
+   * (колона A) · `null` като резултат = не е разпозната, и находката е казана.
+   */
+  lentaIGlava(
+    t: Tablitsa,
+    l: ProchetenList,
+    glavi: readonly (string | null)[],
+  ): { redNaGlavata: number; jKlyuch: number } | null {
     const imeNaLentata = podravni(t.ime);
     const redNaLentata = l.kletki.findIndex((r) => tekstNa(r[0]) === imeNaLentata);
     if (redNaLentata < 0) {
@@ -393,11 +450,11 @@ class Chetets {
     const glava = l.kletki[redNaGlavata] ?? [];
     // главите по МЯСТО · разминаването е находка, не пренареждане
     let razminati = 0;
-    for (const [j, k] of koloni.entries()) {
-      if (k.vid === 'nomeratsiya') continue;
-      if (tekstNa(glava[j]) !== podravni(k.ime)) razminati += 1;
+    for (const [j, g] of glavi.entries()) {
+      if (g === null) continue;
+      if (tekstNa(glava[j]) !== podravni(g)) razminati += 1;
     }
-    if (razminati * 2 > koloni.length) {
+    if (razminati * 2 > glavi.length) {
       this.nahodka(
         l.ime,
         `ред ${redNaGlavata + 1}`,
@@ -412,7 +469,33 @@ class Chetets {
         `${razminati} глави под „${t.ime}" са сменени · чета по място.`,
         'beleshka',
       );
-    const jKlyuch = glava.findIndex((g) => tekstNa(g) === KLYUCH);
+    return { redNaGlavata, jKlyuch: glava.findIndex((g) => tekstNa(g) === KLYUCH) };
+  }
+
+  /**
+   * Краят на таблицата: празен ред, лента на друга таблица или негова инструкция —
+   * дописаното в празния ред не превръща инструкциите на следващата таблица в данни.
+   */
+  krayatNaTablitsata(t: Tablitsa): { lenti: Set<string>; instruktsii: Set<string> } {
+    const lenti = new Set<string>();
+    for (const dr of this.o.model.tablitsi.values())
+      if (dr.prozorets === t.prozorets) lenti.add(podravni(dr.ime));
+    for (const lenta of PROZORTSI.find((p) => p.klyuch === t.prozorets)?.lenti ?? [])
+      lenti.add(podravni(lenta));
+    const instruktsii = new Set(DUMI_OT_KNIGATA[t.prozorets].map((d) => podravni(d.tekst)));
+    return { lenti, instruktsii };
+  }
+
+  /** Една таблица от Модела · намерена по лента и глава. */
+  tablitsa(t: Tablitsa, l: ProchetenList): ProchetenaTablitsa | null {
+    const koloni = koloniNaReda(t);
+    const lg = this.lentaIGlava(
+      t,
+      l,
+      koloni.map((k) => (k.vid === 'nomeratsiya' ? null : k.ime)),
+    );
+    if (lg === null) return null;
+    const { redNaGlavata, jKlyuch } = lg;
     const sKlyuchove = jKlyuch >= 0;
     const redove: ProchetenRed[] = [];
     const grupi: ProchetenaGrupa[] = [];
@@ -430,12 +513,7 @@ class Chetets {
       : -1;
     // краят на таблицата: празен ред, лента на друга таблица или негова инструкция —
     // дописаното в празния ред не превръща инструкциите на следващата таблица в данни
-    const lenti = new Set<string>();
-    for (const dr of this.o.model.tablitsi.values())
-      if (dr.prozorets === t.prozorets) lenti.add(podravni(dr.ime));
-    for (const lenta of PROZORTSI.find((p) => p.klyuch === t.prozorets)?.lenti ?? [])
-      lenti.add(podravni(lenta));
-    const instruktsii = new Set(DUMI_OT_KNIGATA[t.prozorets].map((d) => podravni(d.tekst)));
+    const { lenti, instruktsii } = this.krayatNaTablitsata(t);
     for (let i = redNaGlavata + 1; i < l.kletki.length; i += 1) {
       const kletki = l.kletki[i] ?? [];
       if (ePrazen(kletki.slice(0, Math.max(koloni.length, jKlyuch + 1)))) break;
@@ -506,6 +584,15 @@ class Chetets {
           procheteni.push({ kolona: kol.klyuch, adres: adresNaKletkata, stoynost: undefined });
           continue;
         }
+        const sl = slyataNa(t, kol.klyuch);
+        if (sl !== undefined) {
+          const [lyavo, dyasno] = razdeli(surovi[j], sl.razdelitel);
+          procheteni.push(this.kletka(l.ime, red, kol, j, lyavo, belezi));
+          const opashka = kolonaNa(t, sl.opashka);
+          if (opashka !== undefined)
+            procheteni.push(this.kletka(l.ime, red, opashka, j, dyasno, belezi));
+          continue;
+        }
         procheteni.push(this.kletka(l.ime, red, kol, j, surovi[j], belezi));
       }
       predishni = izprazen ? predishni : surovi;
@@ -527,6 +614,132 @@ class Chetets {
         sKlyuch + bezKlyuch + grupi.length + nechetimi,
         this.kogato,
         'обходени = с ключ + без ключ + групови + нечетими',
+      ),
+    );
+    return {
+      klyuch: t.klyuch,
+      list: l.ime,
+      redNaGlavata: redNaGlavata + 1,
+      sKlyuchove,
+      redove,
+      grupi,
+    };
+  }
+
+  /**
+   * ДЪРВОТО на Управление · родители (групови редове от трите таблици на Имоти) и
+   * задачи под тях · по неговия облик (десетте глави · подглавите · ред „филтър").
+   * Родител: ред с номер в A (с ключ `grupa:` — по ключа); задача: ред с текст в
+   * колоната на задачата под текущия родител; неговият ред 20 („1 Герман ПИ 1 Дело /
+   * Сондаж") носи и двете. Другите клетки на родителя (C · D · H · I) са преписи от
+   * листа ИмотиОбектиБизнеси и не се четат — изворът им е там.
+   */
+  darvo(t: Tablitsa, l: ProchetenList, oblik: readonly GlavaNaOblika[]): ProchetenaTablitsa | null {
+    const lg = this.lentaIGlava(
+      t,
+      l,
+      oblik.map((g) => (g.ot === 'nomeratsiya' ? null : g.glava)),
+    );
+    if (lg === null) return null;
+    const { redNaGlavata, jKlyuch } = lg;
+    const sKlyuchove = jKlyuch >= 0;
+    const jZadacha = oblik.findIndex((g) => g.ot === 'zadacha');
+    const jIme = oblik.findIndex((g) => g.ot === 'roditel' && g.kolona === 'ime');
+    let i = redNaGlavata + 1;
+    if (t.podglava !== undefined) i += 1;
+    if (
+      t.redFiltar === true &&
+      (l.kletki[i] ?? []).some((c) => tekstNa(c).toLowerCase() === FILTAR)
+    )
+      i += 1;
+    const { lenti, instruktsii } = this.krayatNaTablitsata(t);
+    const redove: ProchetenRed[] = [];
+    const grupi: ProchetenaGrupa[] = [];
+    let tekushta: ProchetenaGrupa | null = null;
+    let obhodeni = 0;
+    let samoGrupovi = 0;
+    let sKlyuch = 0;
+    let bezKlyuch = 0;
+    let drugi = 0;
+    let nechetimi = 0;
+    for (; i < l.kletki.length; i += 1) {
+      const kletki = l.kletki[i] ?? [];
+      if (ePrazen(kletki.slice(0, Math.max(oblik.length, jKlyuch + 1)))) break;
+      if (lenti.has(tekstNa(kletki[0])) || instruktsii.has(tekstNa(kletki[1]))) break;
+      // редът СБОР затваря дървото · той е сметка, не ред с данни
+      if (tekstNa(kletki[0]).toLowerCase() === SBOR) break;
+      obhodeni += 1;
+      const red = i + 1;
+      const klyuch = sKlyuchove ? tekstNa(kletki[jKlyuch]) || null : null;
+      const nomeratsiya = tekstNa(kletki[0]);
+      const eGrupov = klyuch?.startsWith(GRUPA) === true || (klyuch === null && nomeratsiya !== '');
+      if (eGrupov) {
+        const roditelId = klyuch?.startsWith(GRUPA) === true ? klyuch.slice(GRUPA.length) : null;
+        const roditelTablitsa =
+          roditelId === null ? null : (tablitsaNaId(this.o.model, roditelId)?.klyuch ?? null);
+        tekushta = {
+          red,
+          imotId: roditelTablitsa === 'imoti' ? roditelId : null,
+          imotNomer: null,
+          imotIme: jIme >= 0 ? tekstNa(kletki[jIme]) : '',
+          kategoriya: null,
+          kategoriyaTekst: '',
+          roditelId: roditelTablitsa === null ? null : roditelId,
+          roditelTablitsa,
+          nomerVKnigata: nomeratsiya,
+        };
+        grupi.push(tekushta);
+      }
+      const eZadacha =
+        tekstNa(kletki[jZadacha]) !== '' || (klyuch !== null && !klyuch.startsWith(GRUPA));
+      if (!eZadacha) {
+        if (eGrupov) samoGrupovi += 1;
+        else drugi += 1;
+        continue;
+      }
+      if (tekushta === null) {
+        this.nahodka(
+          l.ime,
+          `ред ${red}`,
+          'Задачата не е под Имот, Обект или Бизнес — не може да се прочете.',
+        );
+        nechetimi += 1;
+        continue;
+      }
+      const procheteni: ProchetenaKletka[] = [];
+      for (const [j, g] of oblik.entries()) {
+        if (g.ot !== 'zadacha' || g.kolona === undefined) continue;
+        const kol = kolonaNa(t, g.kolona);
+        if (kol === undefined) continue;
+        const sl = slyataNa(t, kol.klyuch);
+        if (sl !== undefined) {
+          const [lyavo, dyasno] = razdeli(kletki[j], sl.razdelitel);
+          procheteni.push(this.kletka(l.ime, red, kol, j, lyavo, {}));
+          const opashka = kolonaNa(t, sl.opashka);
+          if (opashka !== undefined)
+            procheteni.push(this.kletka(l.ime, red, opashka, j, dyasno, {}));
+        } else procheteni.push(this.kletka(l.ime, red, kol, j, kletki[j], {}));
+      }
+      // връзката към родителя не е клетка · идва от групата · Сверчикът я разрешава
+      const klyuchNaZadachata = klyuch?.startsWith(GRUPA) === true ? null : klyuch;
+      redove.push({
+        red,
+        adres: `A${red}`,
+        klyuch: klyuchNaZadachata,
+        nomeratsiya: '',
+        grupa: tekushta,
+        kletki: procheteni,
+      });
+      if (klyuchNaZadachata !== null) sKlyuch += 1;
+      else bezKlyuch += 1;
+    }
+    this.sverki.push(
+      sverka(
+        `четене · ${l.ime} · ${t.klyuch}`,
+        obhodeni,
+        samoGrupovi + sKlyuch + bezKlyuch + drugi + nechetimi,
+        this.kogato,
+        'обходени = само групови + задачи с ключ + без ключ + други + нечетими',
       ),
     );
     return {
@@ -721,7 +934,10 @@ export function razpoznayKnigata(
     }
     for (const t of o.model.tablitsi.values()) {
       if (t.prozorets !== p.klyuch) continue;
-      const pt = ch.tablitsa(tablitsata(o.model, t.klyuch), l);
+      const pt =
+        p.klyuch === 'upravlenie'
+          ? ch.darvo(tablitsata(o.model, t.klyuch), l, OBLIK_NA_UPRAVLENIE)
+          : ch.tablitsa(tablitsata(o.model, t.klyuch), l);
       if (pt !== null) tablitsi.set(t.klyuch, pt);
     }
   }

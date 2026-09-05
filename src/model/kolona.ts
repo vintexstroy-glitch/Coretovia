@@ -27,8 +27,12 @@ export interface Kolona {
   readonly vid: VidKolona;
   /** ключът на номенклатурата · само при `izbor` */
   readonly nomenklatura?: string;
-  /** ключът на таблицата, към която сочи · само при `vrazka` */
-  readonly vrazka?: string;
+  /**
+   * таблиците, към които може да сочи · само при `vrazka` · коя точно казва
+   * ПРЕФИКСЪТ на id-то (`imot:` · `obekt:` · `biznes:`), защото `idNaRed` го носи;
+   * Обектът сочи само Имот (`['imoti']`), Задачата — Имот, Обект или Бизнес
+   */
+  readonly vrazka?: readonly string[];
   /** за `izbor` с номерация по белег · кой белег се взима от коя колона на същия ред */
   readonly belegOt?: string;
   readonly zadalzhitelna: boolean;
@@ -38,6 +42,8 @@ export interface Kolona {
   readonly merka?: 'kvsm';
   /** думата ни е, не негова · за износа и за Заданието (правило 17) */
   readonly nashaDuma?: boolean;
+  /** кратка дума за разписките и екрана, когато главата му е дълга · главата остава негова */
+  readonly kratko?: string;
 }
 
 /** Кой слот носи клетката на тази колона · `undefined` за затворените. */

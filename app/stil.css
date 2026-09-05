@@ -388,3 +388,221 @@ details.sverki summary {
   max-width: 40rem;
   white-space: normal;
 }
+
+/* ═══ Управление · залепената част · дървото · Гантът (ADR-005) ═══ */
+.zalepeno {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--fon);
+  padding: 0.35rem 0 0.4rem;
+  border-bottom: 1px solid var(--linija);
+}
+
+.poleta-s-tsifri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.pole-s-tsifra {
+  display: flex;
+  flex-direction: column;
+  min-width: 6.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--linija);
+  border-radius: 6px;
+  background: var(--hartiya);
+}
+
+.pole-s-tsifra .tsifra {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pole-s-tsifra .ime {
+  color: var(--sivo);
+  font-size: 0.75rem;
+}
+
+.butoni-malki {
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.malak,
+button.malak,
+.pole.malak {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+  min-height: 1.8rem;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+label.malak.buton-grupa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: none;
+  padding: 0 0.3rem;
+  border: 1px solid var(--linija);
+  border-radius: 6px;
+  background: var(--hartiya);
+  color: var(--sivo);
+}
+
+label.malak.buton-grupa .pole.malak {
+  min-height: 1.4rem;
+  padding: 0 0.3rem;
+}
+
+.upravlenie-tyalo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.darvo-blok {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.gant-blok {
+  flex: 1 1 24rem;
+  min-width: 12rem;
+}
+
+.gant-skrol {
+  overflow-x: auto;
+  margin-top: 0.25rem;
+  border: 1px solid var(--linija);
+  background: var(--hartiya);
+}
+
+.reshetka.darvo th.podglava {
+  font-weight: 400;
+  font-size: 0.75rem;
+  white-space: normal;
+  max-width: 14rem;
+}
+
+.reshetka.darvo tr.filtar td {
+  padding: 0.15rem 0.3rem;
+  background: var(--zhalto);
+}
+
+.reshetka.darvo .filtar-duma,
+.reshetka.darvo .sbor-duma {
+  color: var(--sivo);
+  font-size: 0.8rem;
+}
+
+.reshetka.darvo .pole.filtar {
+  width: 100%;
+  min-width: 3rem;
+}
+
+.reshetka.darvo tr.red {
+  height: 1.9rem;
+  white-space: nowrap;
+}
+
+.reshetka.darvo tfoot tr.sbor td {
+  background: var(--zebra);
+  border-top: 2px solid var(--linija);
+  font-weight: 600;
+}
+
+.reshetka.darvo tr.roditel.nivo-0 td {
+  background: var(--zeleno);
+  color: #fff;
+  font-weight: 600;
+}
+
+.reshetka.darvo tr.roditel.nivo-1 td {
+  background: var(--zeleno-svetlo);
+  font-weight: 600;
+}
+
+.reshetka.darvo .sbor-kletka {
+  white-space: nowrap;
+}
+
+.reshetka.darvo .sbor-stoynost {
+  margin-left: 0.3rem;
+}
+
+.reshetka.darvo tr.zadacha td:first-child {
+  padding-left: 1.5rem;
+}
+
+.dumite-blok {
+  margin-top: 1rem;
+  color: var(--sivo);
+}
+
+/* ═══ Гантът · SVG ═══ */
+.gant .gant-kolona {
+  fill: transparent;
+  stroke: var(--linija);
+  stroke-width: 0.5;
+}
+
+.gant .gant-kolona.dnes {
+  fill: var(--zeleno-svetlo);
+}
+
+.gant .gant-nadpis {
+  font-size: 10px;
+  fill: var(--sivo);
+}
+
+.gant .gant-red {
+  stroke: var(--linija);
+  stroke-width: 0.5;
+}
+
+.gant .gant-lenta {
+  fill: var(--zeleno);
+}
+
+.gant .gant-lenta.zhalto {
+  fill: #d9a400;
+}
+
+.gant .gant-lenta.cherveno,
+.gant .gant-lenta.prosrocheno,
+.gant .gant-lenta.speshno {
+  fill: #c0392b;
+}
+
+.gant .gant-lenta.prosrocheno {
+  opacity: 0.6;
+}
+
+.gant .gant-dnes-liniya {
+  stroke: #c0392b;
+  stroke-width: 1.5;
+}
+
+.gant .gant-sbor-fon {
+  fill: var(--zebra);
+}
+
+.gant .gant-sbor,
+.gant .gant-broy {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--mastilo);
+}
+
+.gant .gant-broy {
+  font-weight: 400;
+  fill: var(--sivo);
+}

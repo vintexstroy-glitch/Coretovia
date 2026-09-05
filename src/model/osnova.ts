@@ -1,6 +1,7 @@
 /**
- * ОСНОВАТА · осемте прозореца на Книгата, преписани от нея (ADR-001 §2), и
- * таблиците, колоните и номенклатурите на резен 1 (ADR-003).
+ * ОСНОВАТА · осемте прозореца на Книгата, преписани от нея (ADR-001 §2),
+ * таблиците, колоните и номенклатурите на резен 1 (ADR-003), задачите и
+ * бутоните на Управление от резен 3 (ADR-005).
  *
  * Негови думи (05.09.2026): „Всеки шийт от ексела е равен на прозорец от
  * програмата. Само това и нищо повече или по малко." (`zadanie/00`; „шийт" е негово „шиит")
@@ -281,7 +282,7 @@ function vrazkaKamImot(): Kolona {
     klyuch: 'imot',
     ime: 'име Имот',
     vid: 'vrazka',
-    vrazka: 'imoti',
+    vrazka: ['imoti'],
     zadalzhitelna: true,
     zatvorena: false,
   });
@@ -364,7 +365,230 @@ const BIZNESI: Tablitsa = Object.freeze({
   grupirane: [{ kolona: 'imot' }],
 });
 
-export const TABLITSI: readonly Tablitsa[] = Object.freeze([IMOTI, OBEKTI, BIZNESI]);
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ЗАДАЧИТЕ на УправлениеДелаПреписки · неговите глави (ред 17 · подглави ред 18).
+ *
+ * „Дело към Имот или към Обект" (B1–B3) — и Проект към Бизнес (A34–E36):
+ * родителят е ЕДИН от трите реда на Имоти, затова връзката сочи трите таблици и
+ * префиксът на id-то казва коя. Клетката E20 при него е „Дело / Сондаж" — вид и
+ * име в една клетка; F18 „Начало/Край" — две дати в една. В Модела са по две
+ * колони (видът е замразен номер, редовете пазят номера), в Книгата — слети.
+ * Задачата няма номерация: неговите редове със задачи имат празно A.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+const ZADACHI_KOLONI: readonly Kolona[] = [
+  {
+    klyuch: 'kam',
+    ime: 'име Имот',
+    vid: 'vrazka',
+    vrazka: ['imoti', 'obekti', 'biznesi'],
+    zadalzhitelna: true,
+    zatvorena: false,
+    kratko: 'към',
+  },
+  {
+    ...izbor(
+      'vid',
+      ' Задачи(нещо като състояние за Делата, Срещите и Преписките).',
+      NOMENKLATURA.vidNaZadacha,
+    ),
+    kratko: 'Вид',
+  },
+  // главата му E17 е за ВИДА; името е опашката на слятата клетка · нашата дума
+  { ...tekst('ime', 'име на задачата', true), nashaDuma: true, kratko: 'име' },
+  {
+    klyuch: 'ot',
+    ime: 'Дата',
+    vid: 'data',
+    zadalzhitelna: false,
+    zatvorena: false,
+    kratko: 'Начало',
+  },
+  {
+    klyuch: 'do',
+    ime: 'Край',
+    vid: 'data',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'otsenka',
+    ime: 'Оценка',
+    vid: 'izbor',
+    nomenklatura: NOMENKLATURA.otsenka,
+    zadalzhitelna: false,
+    zatvorena: false,
+  },
+  {
+    klyuch: 'byudzhet',
+    ime: 'Бюджет Дела/ Бюджет Сметки',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+  },
+];
+
+const ZADACHI: Tablitsa = Object.freeze({
+  klyuch: 'zadachi',
+  ime: 'ОБЕКТИ',
+  prozorets: 'upravlenie',
+  sashtnost: 'zadacha',
+  koloni: ZADACHI_KOLONI,
+  slyati: [
+    { kolona: 'vid', opashka: 'ime', razdelitel: ' / ' },
+    { kolona: 'ot', opashka: 'do', razdelitel: ' / ' },
+  ],
+  podglava: {
+    vid: 'Дело, Среща, Преписка(редактират се и премахват и създават от Настройки в Нуменклатури)',
+    ot: 'Начало/Край',
+    otsenka: 'Спешно и Важно(червн цвят в Календара(Диагарамата Хант)',
+  },
+  redFiltar: true,
+});
+
+/**
+ * ОБЛИКЪТ НА ЛИСТА УправлениеДелаПреписки · неговите десет глави (ред 17), с
+ * подглавите им (ред 18), и откъде идва всяка клетка: от РОДИТЕЛЯ (реда на Имот ·
+ * Обект · Бизнес, който е групов ред в дървото) или от ЗАДАЧАТА под него. Родителят
+ * „Състояние" е състоянието на Имота, видът на Обекта (неговото C24 „апартамент")
+ * или състоянието на Бизнеса; „име Имот" на Обект и Бизнес е името на Имота им.
+ * След десетте идват тактовете на Ганта (K17:R17 „такт") и скритата колона „Ключ".
+ */
+export interface GlavaNaOblika {
+  readonly glava: string;
+  readonly podglava?: string;
+  readonly ot: 'nomeratsiya' | 'roditel' | 'zadacha';
+  /** колоната на Модела · при родител: ключът в таблицата на Имотите · при задача: в ZADACHI */
+  readonly kolona?: string;
+}
+
+export const OBLIK_NA_UPRAVLENIE: readonly GlavaNaOblika[] = [
+  { glava: '№', ot: 'nomeratsiya' },
+  { glava: 'име Имот', ot: 'roditel', kolona: 'ime' },
+  {
+    glava: ' Състояние за Имот или Състояние на Обект',
+    podglava:
+      'За Имот и за Обект са различни Състояние. Долу ги пише. (редактират се и премахват и създават от Настройки в Нуменклатури)',
+    ot: 'roditel',
+    kolona: 'sastoyanie',
+  },
+  { glava: '№', ot: 'roditel', kolona: 'nomer' },
+  {
+    glava: ' Задачи(нещо като състояние за Делата, Срещите и Преписките).',
+    podglava:
+      'Дело, Среща, Преписка(редактират се и премахват и създават от Настройки в Нуменклатури)',
+    ot: 'zadacha',
+    kolona: 'vid',
+  },
+  { glava: 'Дата', podglava: 'Начало/Край', ot: 'zadacha', kolona: 'ot' },
+  {
+    glava: 'Оценка',
+    podglava: 'Спешно и Важно(червн цвят в Календара(Диагарамата Хант)',
+    ot: 'zadacha',
+    kolona: 'otsenka',
+  },
+  { glava: 'площ', podglava: 'м2', ot: 'roditel', kolona: 'plosht' },
+  { glava: 'цена', podglava: 'знак(Евро)', ot: 'roditel', kolona: 'tsena' },
+  { glava: 'Бюджет Дела/ Бюджет Сметки', ot: 'zadacha', kolona: 'byudzhet' },
+];
+
+/** Неговата дума за колоните на Ганта в листа (K17:R17) · и колко са при него. */
+export const TAKT_GLAVA = 'такт';
+export const BROY_TAKT_KOLONI_V_KNIGATA = 8;
+
+/**
+ * БУТОНИТЕ на прозореца · неговите думи от ред 14–15 на Управление (същите на
+ * Сметки ред 12–13), дословно · и какво прави всеки ДНЕС. Бутонът е данни, не
+ * код: „идва с резен N" се казва на глас (правило 12); менюто расте само от
+ * Настройки (правило 19) — затова „Добавяне на Състояние" отваря Настройки.
+ * Всички са с ЕДИН малък размер, и над всеки стои поле с цифра (негово, 05.09).
+ */
+export type DeystvieNaButon =
+  | { readonly vid: 'komanda'; readonly klyuch: string }
+  | { readonly vid: 'ekran'; readonly klyuch: string }
+  | { readonly vid: 'kniga' }
+  | { readonly vid: 'nastroyki' }
+  | { readonly vid: 'idva'; readonly rezen: number; readonly dumi?: string };
+
+export interface ButonNaProzoretsa {
+  readonly klyuch: string;
+  /** неговата клетка · дословно · лицето на бутона е до първата скоба */
+  readonly ime: string;
+  /** втори ред при него (L15 · M15 · O15:R15) · неговите думи */
+  readonly izbor?: readonly string[];
+  readonly deystvie: DeystvieNaButon;
+}
+
+export const BUTONI_NA_UPRAVLENIE: readonly ButonNaProzoretsa[] = [
+  {
+    klyuch: 'otvori',
+    ime: 'Отвори(запазен по рано модел или таблица за създаване на празна таблица и после вкарване на функционалност. Предложи начин наклрая на кода за най голяма лекота и функционалност по познат модел от ексел).)',
+    deystvie: { vid: 'idva', rezen: 6 },
+  },
+  {
+    klyuch: 'zapazi',
+    ime: 'Запази(записваш експерименталния модел за периоди напред)',
+    deystvie: { vid: 'idva', rezen: 6 },
+  },
+  {
+    klyuch: 'dobavyane',
+    ime: 'Добавяне(падащо меню за Имот, Обект, Кредит, Среща)',
+    deystvie: { vid: 'ekran', klyuch: 'dobavyane' },
+  },
+  {
+    klyuch: 'svali-fayl',
+    ime: 'Свалифайл (различни таблици в ПДФ и в Ексел или за Никроинвест файл или за Нап)',
+    deystvie: { vid: 'kniga' },
+  },
+  {
+    klyuch: 'dobavyane-na-sastoyanie',
+    ime: 'Добавяне на Състояние Дела от падащо меню се избира: Дела, Срещи, Преписки или се избира ФУнкция на парите в Приход и Разход: ВИждане, Смятане или Въвеждане.',
+    deystvie: { vid: 'nastroyki' },
+  },
+  { klyuch: 'skriy-dela', ime: 'Скрий Дела', deystvie: { vid: 'ekran', klyuch: 'skriy-dela' } },
+  // резен 3 е ТОЗИ резен · думите казват коя му половина, за да не значи „вече е тук"
+  {
+    klyuch: 'skriy-razhodi',
+    ime: 'Скрий Разходи',
+    deystvie: { vid: 'idva', rezen: 3, dumi: 'идва със Сметки · втората половина на резен 3' },
+  },
+  {
+    klyuch: 'skriy-prihodi',
+    ime: 'Скрий Приходи',
+    deystvie: { vid: 'idva', rezen: 3, dumi: 'идва със Сметки · втората половина на резен 3' },
+  },
+  {
+    klyuch: 'skriy-tablitsa',
+    ime: 'Скрий Таблица',
+    deystvie: { vid: 'ekran', klyuch: 'skriy-tablitsa' },
+  },
+  {
+    klyuch: 'skriy-diagrama',
+    ime: 'Скрий Диаграма',
+    deystvie: { vid: 'ekran', klyuch: 'skriy-diagrama' },
+  },
+  { klyuch: 'obnovi', ime: 'Обнови', deystvie: { vid: 'ekran', klyuch: 'obnovi' } },
+  {
+    klyuch: 'period',
+    ime: 'Период',
+    izbor: ['начало ', 'край'],
+    deystvie: { vid: 'ekran', klyuch: 'period' },
+  },
+  {
+    klyuch: 'nachalo-sega',
+    ime: 'Начало Сега',
+    deystvie: { vid: 'ekran', klyuch: 'nachalo-sega' },
+  },
+  {
+    klyuch: 'takt',
+    ime: 'Времеви Такт Диаграма',
+    izbor: ['ден', 'месец', 'тримесечие', 'година'],
+    deystvie: { vid: 'ekran', klyuch: 'takt' },
+  },
+];
+
+export const TABLITSI: readonly Tablitsa[] = Object.freeze([IMOTI, OBEKTI, BIZNESI, ZADACHI]);
 
 /** МОДЕЛЪТ на резен 1 · единственият екземпляр в кода. */
 export const MODEL: Model = Object.freeze({

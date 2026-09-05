@@ -10,6 +10,7 @@
  */
 
 import type { ProzoretsVOsnovata } from './klyuchove.js';
+import type { Kolona } from './kolona.js';
 import type { Nomenklatura } from './nomenklatura.js';
 import type { Tablitsa } from './tablitsa.js';
 
@@ -65,11 +66,21 @@ export function proveriModela(m: Model): readonly string[] {
       } else if (k.nomenklatura !== undefined) {
         nahodki.push(`${adres(k.klyuch)} носи номенклатура, а не е избор.`);
       }
-      if (k.vid === 'vrazka' && (k.vrazka === undefined || !m.tablitsi.has(k.vrazka))) {
+      if (
+        k.vid === 'vrazka' &&
+        (k.vrazka === undefined ||
+          k.vrazka.length === 0 ||
+          k.vrazka.some((v) => !m.tablitsi.has(v)))
+      ) {
         nahodki.push(`${adres(k.klyuch)} е връзка към непозната таблица.`);
       }
       if (k.vid === 'nomeratsiya' && !k.zatvorena) {
         nahodki.push(`${adres(k.klyuch)} е номерация, а не е затворена.`);
+      }
+    }
+    for (const sl of t.slyati ?? []) {
+      if (!klyuchove.has(sl.kolona) || !klyuchove.has(sl.opashka) || sl.razdelitel === '') {
+        nahodki.push(`Таблица „${t.klyuch}" слива непозната колона или без разделител.`);
       }
     }
     if (t.roditel !== undefined) {
@@ -123,4 +134,21 @@ export function proveriModela(m: Model): readonly string[] {
     }
   }
   return nahodki;
+}
+
+/**
+ * ТАБЛИЦАТА ПО ID-ТО НА РЕДА · префиксът е видът на същността (`idNaRed`):
+ * `obekt:…` → таблицата със същност `obekt`. Връзка към няколко таблици се
+ * разрешава оттук, без втора колона „коя таблица".
+ */
+export function tablitsaNaId(m: Model, id: string): Tablitsa | undefined {
+  const vid = id.split(':')[0] ?? '';
+  for (const t of m.tablitsi.values()) if (t.sashtnost === vid) return t;
+  return undefined;
+}
+
+/** Таблицата, към която сочи една връзка · по префикса на id-то, сред позволените. */
+export function tablitsaNaVrazkata(m: Model, kol: Kolona, id: string): Tablitsa | undefined {
+  const t = tablitsaNaId(m, id);
+  return t !== undefined && (kol.vrazka ?? []).includes(t.klyuch) ? t : undefined;
 }

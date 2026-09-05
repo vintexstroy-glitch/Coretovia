@@ -27,7 +27,8 @@ import { ekraniraj } from './obshto.js';
 
 const SPRYANA_DUMA = ' · спряна';
 
-function kletkaHTML(o: Ogledalo, tablitsa: string, k: Kolona, r: Red): string {
+/** Една клетка · и за дървото на Управление, което има свои глави, но същите клетки. */
+export function kletkaHTML(o: Ogledalo, tablitsa: string, k: Kolona, r: Red): string {
   if (k.vid === 'nomeratsiya') {
     return `<td class="kletka nomer" data-kolona="${k.klyuch}" translate="no">${tekstNaNomera(nomerNaRed(o, tablitsa, r.i))}</td>`;
   }

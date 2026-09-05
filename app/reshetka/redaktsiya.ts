@@ -4,7 +4,7 @@
  *
  * Двоен клик или F2/Enter отваря поле НА МЯСТОТО на клетката; Enter записва и
  * слиза един ред; Escape отказва; клик другаде (blur) е отказ. ЗАПИСВА ЧОВЕКЪТ,
- * ЯВНО: единствено Enter пише. Записът минава през `imoti.popraviKletka` на
+ * ЯВНО: единствено Enter пише. Записът минава през `red.popraviKletka` на
  * Портата — сторно + ново, със следа, никакъв презапис (правило 1).
  *
  * КОЯ клетка се отваря, се ОБЯВЯВА (правило 16): `data-redakt` носят само
@@ -20,6 +20,7 @@ import { kolonaNa } from '../../src/model/tablitsa.js';
 import type { Ogledalo } from '../../src/ogledalo/ogledalo.js';
 import { redKato, zhiviteRedove } from '../../src/ogledalo/tablitsa.js';
 import { imeNaReda } from '../../src/smetach/kletki.js';
+import { nomerNaRed, tekstNaNomera } from '../../src/smetach/nomeratsiya.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import { otSuma, pishiVPole } from '../../src/yadro/pari.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
@@ -61,7 +62,6 @@ function kvsmZaPole(kvsm: number): string {
 /** Полето за една колона · по вида ѝ · с текущата стойност. */
 export function poleZaKolona(
   o: Ogledalo,
-  tablitsa: string,
   kol: Kolona,
   tekusht: Kletka | null,
   red: Readonly<Record<string, Kletka>>,
@@ -85,11 +85,14 @@ export function poleZaKolona(
     s.className = 'pole';
     s.dataset['kolona'] = kol.klyuch;
     s.append(new Option('—', ''));
-    const roditel = kol.vrazka === undefined ? undefined : o.tablitsi.get(kol.vrazka);
-    if (roditel !== undefined && kol.vrazka !== undefined) {
+    // всички позволени таблици · с номера, за да се различават Имот, Обект и Бизнес
+    for (const tab of kol.vrazka ?? []) {
+      const roditel = o.tablitsi.get(tab);
+      if (roditel === undefined) continue;
       for (const i of zhiviteRedove(roditel)) {
         const id = roditel.id[i] ?? '';
-        s.append(new Option(imeNaReda(o, kol.vrazka, id), id));
+        const nomer = tekstNaNomera(nomerNaRed(o, tab, i));
+        s.append(new Option(`${nomer === '' ? '' : `${nomer} · `}${imeNaReda(o, tab, id)}`, id));
       }
     }
     s.value = tekusht !== null && 'tekst' in tekusht ? tekusht.tekst : '';
@@ -180,7 +183,7 @@ export function zakachiRedaktsiya(koren: HTMLElement, k: KonteksNaEkrana): void 
     const i = tv?.indeks.get(beleg.id);
     if (kol === undefined || tv === undefined || i === undefined) return;
     const red = redKato(tv, i);
-    const pole = poleZaKolona(o, beleg.tablitsa, kol, red.kletki[kol.klyuch] ?? null, red.kletki);
+    const pole = poleZaKolona(o, kol, red.kletki[kol.klyuch] ?? null, red.kletki);
     td.replaceChildren(pole);
     pole.focus();
     if (pole instanceof HTMLInputElement) pole.select();
@@ -198,7 +201,7 @@ export function zakachiRedaktsiya(koren: HTMLElement, k: KonteksNaEkrana): void 
       const sledvashta = sasedna(td, 'ArrowDown');
       // ПРЕДИ записа: прерисуването идва от абонамента ВЪТРЕ в izpalni и чете белега тогава.
       fokusSled = sledvashta?.dataset['redakt'] ?? td.dataset['redakt'] ?? null;
-      const r = await k.porta.izpalni(crypto.randomUUID(), 'imoti.popraviKletka', {
+      const r = await k.porta.izpalni(crypto.randomUUID(), 'red.popraviKletka', {
         tablitsa: beleg.tablitsa,
         id: beleg.id,
         kletki: { [beleg.kolona]: kletka },

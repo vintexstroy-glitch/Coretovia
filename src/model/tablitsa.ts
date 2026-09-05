@@ -50,6 +50,20 @@ export interface Grupa {
   readonly vKletkataNa?: string;
 }
 
+/**
+ * СЛЯТА КЛЕТКА · две колони на Модела в ЕДНА клетка на Книгата.
+ *
+ * Неговото E20 „Дело / Сондаж" е вид + име, F18 „Начало/Край" е две дати. В
+ * Модела видът е НОМЕР, а името — текст (редовете пазят номера, не думата), затова
+ * са две колони; в Книгата се пишат като `‹колона›‹разделител›‹опашка›` и се четат
+ * по ПЪРВИЯ разделител. Опашката НЯМА своя колона в Книгата и на екрана.
+ */
+export interface Slyata {
+  readonly kolona: string;
+  readonly opashka: string;
+  readonly razdelitel: string;
+}
+
 export interface Tablitsa {
   readonly klyuch: string;
   /** лентата в Книгата · дословно */
@@ -62,6 +76,11 @@ export interface Tablitsa {
   readonly nomeratsiya?: Nomeratsiya;
   /** в реда на вложеност · Обекти: Имот, после Категория */
   readonly grupirane?: readonly Grupa[];
+  readonly slyati?: readonly Slyata[];
+  /** втори ред глави в Книгата · неговите подглави (Управление ред 18) · по колона */
+  readonly podglava?: Readonly<Record<string, string>>;
+  /** ред „филтър" под главите в Книгата (Управление B19:R19 · Сметки B17:W17) */
+  readonly redFiltar?: boolean;
 }
 
 export function kolonaNa(t: Tablitsa, klyuch: string): Kolona | undefined {
@@ -73,5 +92,11 @@ export function koloniNaReda(t: Tablitsa): readonly Kolona[] {
   const vChuzhdaKletka = new Set(
     (t.grupirane ?? []).filter((g) => g.vKletkataNa !== undefined).map((g) => g.kolona),
   );
+  for (const s of t.slyati ?? []) vChuzhdaKletka.add(s.opashka);
   return t.koloni.filter((k) => !vChuzhdaKletka.has(k.klyuch));
+}
+
+/** Слятата клетка, в която колоната е ГЛАВА · `undefined`, ако стои сама. */
+export function slyataNa(t: Tablitsa, kolona: string): Slyata | undefined {
+  return (t.slyati ?? []).find((s) => s.kolona === kolona);
 }

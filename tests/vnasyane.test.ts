@@ -78,8 +78,8 @@ describe('преводът към команда', () => {
       'nastroyki.spriStoynost',
       'nastroyki.varniStoynost',
       'imoti.sazdayImot',
-      'imoti.popraviKletka',
-      'imoti.izklyuchiRed',
+      'red.popraviKletka',
+      'red.izklyuchi',
     ]);
     // трите таблици на прозореца · три команди за нов ред
     for (const [tablitsa, klyuch] of [
@@ -159,7 +159,7 @@ describe('пробването и изпълнението', () => {
         vid: 'nov-red',
         tablitsa: 'obekti',
         kletki: {
-          imot: { tekst: `${PREDLOZHENIE}1` },
+          imot: { tekst: `${PREDLOZHENIE}1:imot` },
           kategoriya: { nomer: 1 },
           vid: { nomer: 1 },
           nomer: { chislo: 1 },

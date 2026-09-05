@@ -1,6 +1,6 @@
 /**
  * ОСЕМТЕ ПРОЗОРЕЦА · кой файл рисува кой ключ · един дом (правило 14).
- * Четири са построени (Профил · Имоти · ИИ · Настройки); другите четири казват кога идват.
+ * Пет са построени (Профил · Имоти · ИИ · Настройки · Управление); другите три казват кога идват.
  */
 
 import type { KlyuchNaProzorets } from '../../src/model/klyuchove.js';
@@ -10,6 +10,7 @@ import { narisuvayImoti } from './imoti.js';
 import { narisuvayNastroyki } from './nastroyki.js';
 import { narisuvayOstanalite } from './ostanalite.js';
 import { narisuvayProfil } from './profil.js';
+import { narisuvayUpravlenie } from './upravlenie.js';
 
 export function narisuvayProzorets(klyuch: KlyuchNaProzorets, k: KonteksNaEkrana): void {
   switch (klyuch) {
@@ -24,6 +25,9 @@ export function narisuvayProzorets(klyuch: KlyuchNaProzorets, k: KonteksNaEkrana
       return;
     case 'ii':
       narisuvayII(k);
+      return;
+    case 'upravlenie':
+      narisuvayUpravlenie(k);
       return;
     default:
       narisuvayOstanalite(k, klyuch);

@@ -6,14 +6,9 @@
  */
 
 import type { Komanda, Myasto } from './komanda.js';
-import {
-  imotiDobaviBiznes,
-  imotiDobaviObekt,
-  imotiIzklyuchiRed,
-  imotiPopraviKletka,
-  imotiSazdayImot,
-  imotiVarniRed,
-} from './prozortsi/imoti.js';
+import { imotiDobaviBiznes, imotiDobaviObekt, imotiSazdayImot } from './prozortsi/imoti.js';
+import { redIzklyuchi, redPopraviKletka, redVarni } from './prozortsi/red.js';
+import { upravlenieDobaviZadacha } from './prozortsi/upravlenie.js';
 import { knigaIznesi, knigaVnesi } from './prozortsi/kniga.js';
 import {
   nastroykiDobaviStoynost,
@@ -39,9 +34,10 @@ export const KATALOG: readonly KoyaDaE[] = Object.freeze([
   imotiSazdayImot,
   imotiDobaviObekt,
   imotiDobaviBiznes,
-  imotiPopraviKletka,
-  imotiIzklyuchiRed,
-  imotiVarniRed,
+  upravlenieDobaviZadacha,
+  redPopraviKletka,
+  redIzklyuchi,
+  redVarni,
   obshtoStorno,
   knigaIznesi,
   knigaVnesi,

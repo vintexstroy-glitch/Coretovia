@@ -17,6 +17,8 @@ import {
   PROZORTSI,
   SLUZHEBEN_LIST,
   TABLITSI,
+  BUTONI_NA_UPRAVLENIE,
+  OBLIK_NA_UPRAVLENIE,
 } from '../src/model/osnova.js';
 import { poIzbor, shemaNaReda, strogObekt } from '../src/model/shema.js';
 import { koloniNaReda } from '../src/model/tablitsa.js';
@@ -26,9 +28,9 @@ describe('основата на резен 1', () => {
     expect(proveriModela(MODEL)).toEqual([]);
   });
 
-  it('три таблици на един прозорец · с неговите глави, дословно', () => {
-    expect(TABLITSI.map((t) => t.klyuch)).toEqual(['imoti', 'obekti', 'biznesi']);
-    for (const t of TABLITSI) expect(t.prozorets).toBe('imoti');
+  it('три таблици на Имоти и една на Управление · с неговите глави, дословно', () => {
+    expect(TABLITSI.map((t) => t.klyuch)).toEqual(['imoti', 'obekti', 'biznesi', 'zadachi']);
+    expect(TABLITSI.map((t) => t.prozorets)).toEqual(['imoti', 'imoti', 'imoti', 'upravlenie']);
     const glavi = (k: string): string[] => koloniNaReda(tablitsata(MODEL, k)).map((c) => c.ime);
     expect(glavi('imoti')).toEqual([
       '№',
@@ -60,6 +62,112 @@ describe('основата на резен 1', () => {
       'папка в драйва',
       'адрес в гугъл карти',
       'други(при нужда)',
+    ]);
+  });
+
+  it('задачите на Управление · връзка към три таблици · слети клетки · подглави · ред „филтър"', () => {
+    const z = tablitsata(MODEL, 'zadachi');
+    expect(z.prozorets).toBe('upravlenie');
+    expect(z.sashtnost).toBe('zadacha');
+    expect(z.nomeratsiya).toBeUndefined();
+    expect(z.koloni.map((k) => [k.klyuch, k.vid, k.zadalzhitelna])).toEqual([
+      ['kam', 'vrazka', true],
+      ['vid', 'izbor', true],
+      ['ime', 'tekst', true],
+      ['ot', 'data', false],
+      ['do', 'data', false],
+      ['otsenka', 'izbor', false],
+      ['byudzhet', 'evro', false],
+    ]);
+    expect(z.koloni[0]?.vrazka).toEqual(['imoti', 'obekti', 'biznesi']);
+    expect(z.koloni.map((k) => k.kratko)).toEqual([
+      'към',
+      'Вид',
+      'име',
+      'Начало',
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    // слятата клетка · две колони в една · опашката няма своя колона в Книгата
+    expect(z.slyati).toEqual([
+      { kolona: 'vid', opashka: 'ime', razdelitel: ' / ' },
+      { kolona: 'ot', opashka: 'do', razdelitel: ' / ' },
+    ]);
+    expect(koloniNaReda(z).map((k) => k.klyuch)).toEqual([
+      'kam',
+      'vid',
+      'ot',
+      'otsenka',
+      'byudzhet',
+    ]);
+    expect(z.podglava?.['ot']).toBe('Начало/Край');
+    expect(z.redFiltar).toBe(true);
+  });
+
+  it('неговите десет глави на Управление · и четиринайсетте му бутона, дословно', () => {
+    expect(OBLIK_NA_UPRAVLENIE.map((g) => g.glava)).toEqual([
+      '№',
+      'име Имот',
+      ' Състояние за Имот или Състояние на Обект',
+      '№',
+      ' Задачи(нещо като състояние за Делата, Срещите и Преписките).',
+      'Дата',
+      'Оценка',
+      'площ',
+      'цена',
+      'Бюджет Дела/ Бюджет Сметки',
+    ]);
+    expect(OBLIK_NA_UPRAVLENIE.map((g) => g.ot)).toEqual([
+      'nomeratsiya',
+      'roditel',
+      'roditel',
+      'roditel',
+      'zadacha',
+      'zadacha',
+      'zadacha',
+      'roditel',
+      'roditel',
+      'zadacha',
+    ]);
+    expect(BUTONI_NA_UPRAVLENIE).toHaveLength(14);
+    expect(BUTONI_NA_UPRAVLENIE.map((b) => b.ime.split('(')[0]!.trim())).toEqual([
+      'Отвори',
+      'Запази',
+      'Добавяне',
+      'Свалифайл',
+      'Добавяне на Състояние Дела от падащо меню се избира: Дела, Срещи, Преписки или се избира ФУнкция на парите в Приход и Разход: ВИждане, Смятане или Въвеждане.',
+      'Скрий Дела',
+      'Скрий Разходи',
+      'Скрий Приходи',
+      'Скрий Таблица',
+      'Скрий Диаграма',
+      'Обнови',
+      'Период',
+      'Начало Сега',
+      'Времеви Такт Диаграма',
+    ]);
+    expect(BUTONI_NA_UPRAVLENIE.find((b) => b.klyuch === 'takt')?.izbor).toEqual([
+      'ден',
+      'месец',
+      'тримесечие',
+      'година',
+    ]);
+    expect(BUTONI_NA_UPRAVLENIE.map((b) => b.deystvie.vid)).toEqual([
+      'idva',
+      'idva',
+      'ekran',
+      'kniga',
+      'nastroyki',
+      'ekran',
+      'idva',
+      'idva',
+      'ekran',
+      'ekran',
+      'ekran',
+      'ekran',
+      'ekran',
+      'ekran',
     ]);
   });
 
@@ -222,7 +330,7 @@ describe('проверката на Модела хваща счупена ос�
           klyuch: 'y',
           ime: 'y',
           vid: 'vrazka' as const,
-          vrazka: 'nyama',
+          vrazka: ['nyama'],
           zadalzhitelna: false,
           zatvorena: false,
         },

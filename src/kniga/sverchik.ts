@@ -38,15 +38,16 @@
  */
 
 import type { Kletka, Kletki } from '../model/kletka.js';
-import { slotNaKolonata } from '../model/kolona.js';
+import { VID } from '../model/klyuchove.js';
+import { type Kolona, slotNaKolonata } from '../model/kolona.js';
 import { tablitsata } from '../model/model.js';
 import { type Belezi, podravni, poNomer, sledvashtNomer } from '../model/nomenklatura.js';
 import { otpechatakNaModela } from '../model/otpechatak.js';
 import { PREDLOZHENIE, type Predlozhenie, type Razlika } from '../model/predlozhenie.js';
-import { koloniNaReda, type Tablitsa } from '../model/tablitsa.js';
+import type { Tablitsa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { kletkaNa, redKato, zhiviteRedove } from '../ogledalo/tablitsa.js';
-import { dumiNaKletka, imeNaReda } from '../smetach/kletki.js';
+import { dumiNaKletka, imeNaReda, imeNaVrazkata } from '../smetach/kletki.js';
 import { nomerNaRed, nomerOtKletki, tekstNaNomera } from '../smetach/nomeratsiya.js';
 import { sverka, type Sverka } from '../yadro/sverka.js';
 import type {
@@ -91,6 +92,11 @@ class Sverchik {
   /** новите Имоти · по номер в Книгата и по сведено име → индекс на предложението */
   readonly noviImotiPoNomer = new Map<number, number>();
   readonly noviImotiPoIme = new Map<string, number>();
+  /** всеки нов ред · по номера му в Книгата (A) → предложението и видът му · за родител на задача */
+  readonly noviRedovePoNomer = new Map<
+    string,
+    { readonly indeks: number; readonly sashtnost: string }
+  >();
 
   constructor(
     readonly o: Ogledalo,
@@ -293,6 +299,26 @@ class Sverchik {
     return po;
   }
 
+  /** Живите редове без номерация (задачите) · по ключа от задължителните клетки и началото. */
+  poBezNomer(t: Tablitsa): Map<string, string[]> {
+    const tv = this.o.tablitsi.get(t.klyuch);
+    const po = new Map<string, string[]>();
+    if (tv === undefined || t.nomeratsiya !== undefined) return po;
+    for (const i of zhiviteRedove(tv)) {
+      const k = klyuchBezNomer(t, redKato(tv, i).kletki);
+      if (k === null) continue;
+      po.set(k, [...(po.get(k) ?? []), tv.id[i] ?? '']);
+    }
+    return po;
+  }
+
+  /** живите Имоти по сведено име · веднъж на сверка */
+  private imotiPoImeSmetnati: Map<string, string[]> | null = null;
+  imotiPoIme(): Map<string, string[]> {
+    this.imotiPoImeSmetnati ??= this.poIme(tablitsata(this.o.model, 'imoti'));
+    return this.imotiPoImeSmetnati;
+  }
+
   /** Живите редове по сведено име · за редове без ключ, където номерът е позиция. */
   poIme(t: Tablitsa): Map<string, string[]> {
     const tv = this.o.tablitsi.get(t.klyuch);
@@ -308,16 +334,45 @@ class Sverchik {
     return po;
   }
 
-  /** Имотът на ред от Обекти/Бизнеси · жив id или предложение за нов Имот в същата Книга. */
+  /**
+   * Родителят на ред · Имотът на Обект/Бизнес или Имотът/Обектът/Бизнесът на задача ·
+   * жив id, или предложение за нов ред в същата Книга (`@predlozhenie:N:‹вид›`).
+   */
   roditel(
     t: Tablitsa,
     r: ProchetenRed,
     kletka: ProchetenaKletka | undefined,
+    kol: Kolona,
   ): { readonly kletka: Kletka; readonly zavisiOt: number[] } | null {
     if (kletka?.stoynost !== undefined && kletka.stoynost !== null)
       return { kletka: kletka.stoynost, zavisiOt: [] };
     const ime = kletka?.nepoznatRoditel ?? r.grupa?.imotIme ?? '';
-    if (r.grupa?.imotId) return { kletka: { tekst: r.grupa.imotId }, zavisiOt: [] };
+    if (r.grupa?.roditelId) return { kletka: { tekst: r.grupa.roditelId }, zavisiOt: [] };
+    // родител, роден в СЪЩАТА Книга · по номера му в A на груповия ред
+    const nomerVKnigata = r.grupa?.nomerVKnigata ?? '';
+    const novRoditel = nomerVKnigata === '' ? undefined : this.noviRedovePoNomer.get(nomerVKnigata);
+    if (
+      novRoditel !== undefined &&
+      (kol.vrazka ?? []).some((v) => tablitsata(this.o.model, v).sashtnost === novRoditel.sashtnost)
+    ) {
+      return {
+        kletka: { tekst: `${PREDLOZHENIE}${novRoditel.indeks}:${novRoditel.sashtnost}` },
+        zavisiOt: [novRoditel.indeks],
+      };
+    }
+    // жив родител по номера в A · Обект/Бизнес по кортежа · Имот по позиция, ако и името съвпада
+    if (nomerVKnigata !== '' && r.grupa?.imotNomer === null) {
+      for (const v of kol.vrazka ?? []) {
+        const zhiv = this.poKortezh(v).get(nomerVKnigata);
+        if (zhiv === undefined) continue;
+        if (
+          v === 'imoti' &&
+          (ime === '' || podravni(imeNaReda(this.o, 'imoti', zhiv)) !== podravni(ime))
+        )
+          continue;
+        return { kletka: { tekst: zhiv }, zavisiOt: [] };
+      }
+    }
     if (kletka?.dvusmislen !== undefined) {
       this.nahodka(
         t.ime,
@@ -333,14 +388,33 @@ class Sverchik {
     const poIme = ime === '' ? undefined : this.noviImotiPoIme.get(podravni(ime));
     const indeks = poNomerVKnigata ?? poIme;
     if (indeks !== undefined)
-      return { kletka: { tekst: `${PREDLOZHENIE}${indeks}` }, zavisiOt: [indeks] };
+      return { kletka: { tekst: `${PREDLOZHENIE}${indeks}:imot` }, zavisiOt: [indeks] };
     // по позиция (`2.1` → живият Имот № 2) САМО когато и името му съвпада · позицията не е адрес
     if (r.grupa?.imotNomer != null && ime !== '') {
       const zhiv = this.poKortezh('imoti').get(String(r.grupa.imotNomer));
       if (zhiv !== undefined && podravni(imeNaReda(this.o, 'imoti', zhiv)) === podravni(ime))
         return { kletka: { tekst: zhiv }, zavisiOt: [] };
     }
-    this.nahodka(t.ime, r.adres, `Имотът „${ime}" го няма — редът не влиза без него.`);
+    // жив Имот по ИМЕ · както се разпознава Имот без ключ · едно име = той; повече = двусмислено
+    if (ime !== '' && (kol.vrazka ?? []).includes('imoti')) {
+      const ids = this.imotiPoIme().get(podravni(ime)) ?? [];
+      if (ids.length === 1) return { kletka: { tekst: ids[0]! }, zavisiOt: [] };
+      if (ids.length > 1) {
+        this.nahodka(
+          t.ime,
+          r.adres,
+          `„${ime}" е име на ${ids.length} живи Имота — по име не се знае кой; редът не влиза без ключ.`,
+        );
+        return null;
+      }
+    }
+    this.nahodka(
+      t.ime,
+      r.adres,
+      ime === ''
+        ? `Родителят (${nomerVKnigata || '—'}) го няма — редът не влиза без него.`
+        : `Имотът „${ime}" го няма — редът не влиза без него.`,
+    );
     return null;
   }
 
@@ -377,8 +451,8 @@ class Sverchik {
         // сред живите) — нищо за казване; друго име — то е старо, Имотът е преименуван
         const zhivRoditel = zhivi[kol.klyuch];
         const imeNaZhiviya =
-          zhivRoditel !== undefined && 'tekst' in zhivRoditel && kol.vrazka !== undefined
-            ? podravni(imeNaReda(this.o, kol.vrazka, zhivRoditel.tekst))
+          zhivRoditel !== undefined && 'tekst' in zhivRoditel
+            ? podravni(imeNaVrazkata(this.o, kol, zhivRoditel.tekst))
             : '';
         if (imeNaZhiviya !== pk.nepoznatRoditel) {
           this.nahodka(
@@ -391,7 +465,7 @@ class Sverchik {
         continue;
       }
       if (kol.vid === 'vrazka') {
-        const rod = this.roditel(t, r, pk);
+        const rod = this.roditel(t, r, pk, kol);
         if (rod === null) {
           nevlyaza = true;
           continue;
@@ -488,6 +562,7 @@ class Sverchik {
    * вид · №) или името, където номерът е позиция · за да не влязат два еднакви.
    */
   klyuchVavFayla(t: Tablitsa, kletki: Kletki): string | null {
+    if (t.nomeratsiya === undefined) return klyuchBezNomer(t, kletki);
     if (sPozitsiya(t)) {
       const kol = kolonaNaImeto(t);
       const k = kol === undefined ? undefined : kletki[kol];
@@ -552,7 +627,30 @@ class Sverchik {
     poKortezh: Map<string, string>,
     poIme: Map<string, string[]>,
     videni: Set<string>,
+    bezNomer: { readonly po: Map<string, string[]>; readonly kletki: Kletki } | null,
   ): string | null | undefined {
+    if (bezNomer !== null) {
+      // без номерация (задачите): същият родител · вид · име · начало = същата задача;
+      // иначе всеки внос на същата Книга би удвоявал задачите (правило 5)
+      const k = klyuchBezNomer(t, bezNomer.kletki);
+      const ids = (k === null ? [] : (bezNomer.po.get(k) ?? [])).filter((id) => !videni.has(id));
+      if (ids.length === 0) return null;
+      if (ids.length > 1) {
+        this.nahodka(
+          list,
+          r.adres,
+          `Същата задача стои ${ids.length} пъти в програмата — без ключ не се знае коя; редът не влиза.`,
+        );
+        return undefined;
+      }
+      this.nahodka(
+        list,
+        r.adres,
+        `Редът няма ключ — разпознат по родител · вид · име · начало.`,
+        'beleshka',
+      );
+      return ids[0]!;
+    }
     if (!sPozitsiya(t)) {
       const kortezh = this.kortezhNaReda(t, r);
       if (kortezh === null || !poKortezh.has(kortezh)) return null;
@@ -598,10 +696,15 @@ class Sverchik {
         if (d.vid !== 'izklyuchi' || d.tablitsa === p.tablitsa) continue;
         const t = this.o.model.tablitsi.get(d.tablitsa);
         const tv = this.o.tablitsi.get(d.tablitsa);
-        if (t?.roditel?.tablitsa !== p.tablitsa || tv === undefined) continue;
+        if (t === undefined || tv === undefined) continue;
         const di = tv.indeks.get(d.id);
-        const rod = di === undefined ? null : kletkaNa(tv, di, t.roditel.kolona);
-        if (rod !== null && 'tekst' in rod && rod.tekst === p.id) detsa.push(j);
+        if (di === undefined) continue;
+        // дете е ред, чиято връзка (Имот · родител на задача) сочи изключвания
+        for (const k of t.koloni) {
+          if (k.vid !== 'vrazka' || !(k.vrazka ?? []).includes(p.tablitsa)) continue;
+          const rod = kletkaNa(tv, di, k.klyuch);
+          if (rod !== null && 'tekst' in rod && rod.tekst === p.id) detsa.push(j);
+        }
       }
       if (detsa.length > 0) this.predlozheniya[i] = { ...p, zavisiOt: detsa };
     }
@@ -613,6 +716,7 @@ class Sverchik {
     if (pt === undefined || tv === undefined) return;
     const poKortezh = this.poKortezh(t.klyuch);
     const poIme = this.poIme(t);
+    const poBezNomer = this.poBezNomer(t);
     const videni = new Set<string>();
     const noviVavFayla = new Map<string, string>();
     let poznati = 0;
@@ -620,6 +724,7 @@ class Sverchik {
     let nevlezli = 0;
     for (const r of pt.redove) {
       let id: string | null | undefined = null;
+      let smetnati: ReturnType<Sverchik['kletkiNaReda']> | null = null;
       if (r.klyuch !== null) {
         if (tv.indeks.has(r.klyuch) && !videni.has(r.klyuch)) id = r.klyuch;
         else
@@ -631,7 +736,20 @@ class Sverchik {
               : `Ключът на реда сочи ред, който го няма — чета го като нов ред.`,
             'beleshka',
           );
-      } else id = this.razpoznay(t, r, pt.list, poKortezh, poIme, videni);
+      } else {
+        // редът без номерация · клетките му (с родителя) се смятат тук и служат и на новия ред
+        let bezNomer: { readonly po: Map<string, string[]>; readonly kletki: Kletki } | null = null;
+        if (t.nomeratsiya === undefined) {
+          const kn = this.kletkiNaReda(t, r, null);
+          if (kn.nevlyaza) {
+            nevlezli += 1;
+            continue;
+          }
+          smetnati = kn;
+          bezNomer = { po: poBezNomer, kletki: kn.kletki };
+        }
+        id = this.razpoznay(t, r, pt.list, poKortezh, poIme, videni, bezNomer);
+      }
       if (id === undefined) {
         nevlezli += 1;
         continue;
@@ -718,7 +836,7 @@ class Sverchik {
         });
         continue;
       }
-      const { kletki, zavisiOt, nevlyaza } = this.kletkiNaReda(t, r, null);
+      const { kletki, zavisiOt, nevlyaza } = smetnati ?? this.kletkiNaReda(t, r, null);
       if (nevlyaza) {
         nevlezli += 1;
         continue;
@@ -730,7 +848,7 @@ class Sverchik {
           this.nahodka(
             pt.list,
             r.adres,
-            `Същият ${sPozitsiya(t) ? 'Имот по име' : 'номер'} вече е нов ред в Книгата (${parvi}) — вторият не влиза.`,
+            `${t.nomeratsiya === undefined ? 'Същата задача' : sPozitsiya(t) ? 'Същият Имот по име' : 'Същият номер'} вече е нов ред в Книгата (${parvi}) — вторият не влиза.`,
           );
           nevlezli += 1;
           continue;
@@ -746,11 +864,13 @@ class Sverchik {
         nomerVKnigata,
         adres: r.adres,
         list: pt.list,
-        zashto: `Нов ред в „${t.ime}"${r.nomeratsiya === '' ? '' : ` (${r.nomeratsiya} в Книгата)`}: ${opisNaKletkite(this.o, t, kletki)}.`,
+        zashto: `${t.sashtnost === VID.zadacha ? 'Нова задача' : `Нов ред в „${t.ime}"`}${r.nomeratsiya === '' ? '' : ` (${r.nomeratsiya} в Книгата)`}: ${opisNaKletkite(this.o, t, kletki)}.`,
         poPodrazbirane: true,
         zavisiOt,
       });
       novi += 1;
+      if (r.nomeratsiya !== '')
+        this.noviRedovePoNomer.set(r.nomeratsiya, { indeks, sashtnost: t.sashtnost });
       if (t.klyuch === 'imoti') {
         if (nomerVKnigata !== null) this.noviImotiPoNomer.set(nomerVKnigata, indeks);
         const ime = kletki['ime'];
@@ -811,20 +931,39 @@ class Sverchik {
   }
 }
 
+/**
+ * Ключът на ред БЕЗ номерация (задачите) · задължителните клетки + първата дата ·
+ * същият ключ разпознава живия ред и лови двойника във файла.
+ */
+function klyuchBezNomer(t: Tablitsa, kletki: Kletki): string | null {
+  const parvaData = t.koloni.find((k) => k.vid === 'data')?.klyuch;
+  const chasti = t.koloni
+    .filter((k) => slotNaKolonata(k) !== undefined && (k.zadalzhitelna || k.klyuch === parvaData))
+    .map((k) => {
+      const v = kletki[k.klyuch];
+      if (v === undefined || v === null) return '';
+      const s = String(Object.values(v)[0] ?? '');
+      return 'tekst' in v && k.vid === 'tekst' ? podravni(s) : s;
+    });
+  return chasti.every((c) => c === '') ? null : chasti.join('|');
+}
+
 function opisNaKletkite(o: Ogledalo, t: Tablitsa, kletki: Kletki): string {
   const chasti: string[] = [];
   const sled = Object.fromEntries(Object.entries(kletki).filter(([, v]) => v !== null)) as Record<
     string,
     Kletka
   >;
-  for (const kol of koloniNaReda(t)) {
+  // всички колони със слот · и опашката на слятата (името на задачата), не само редът на Книгата
+  for (const kol of t.koloni) {
+    if (slotNaKolonata(kol) === undefined) continue;
     const k = kletki[kol.klyuch];
     if (k === undefined || k === null) continue;
     const dumi =
       'tekst' in k && k.tekst.startsWith(PREDLOZHENIE)
         ? k.tekst
         : dumiNaKletka(o, t.klyuch, kol.klyuch, k, sled);
-    if (dumi !== '') chasti.push(`${kol.ime} ${dumi}`);
+    if (dumi !== '') chasti.push(`${kol.kratko ?? kol.ime} ${dumi}`);
   }
   return chasti.join(' · ');
 }

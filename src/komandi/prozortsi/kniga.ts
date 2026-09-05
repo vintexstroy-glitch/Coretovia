@@ -42,7 +42,7 @@ const iznesi: Komanda<TovarIznesi> = {
   ime: 'Запази книгата',
   opisanie:
     'Записва разписката за изнесена Книга: отпечатък на Модела, курсор и живи редове по таблица.',
-  prozortsi: ['imoti', 'nastroyki'],
+  prozortsi: ['imoti', 'nastroyki', 'upravlenie'],
   stepen: 'pishe',
   myasto: 'sluzhebna',
   proizvezhda: [TIP.knigaIznesena],

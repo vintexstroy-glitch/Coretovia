@@ -50,6 +50,8 @@ export interface Buton {
   readonly klyuch: string;
   readonly ime: string;
   readonly myasto: Myasto;
+  /** отваря чернова с товара, вместо да изпълни */
+  readonly otvaryaChernova: boolean;
   readonly razreshena: boolean;
   /** думите, когато не е разрешена · празно иначе (правило 12: отказът се казва) */
   readonly zashto: string;
@@ -71,15 +73,19 @@ export function butoniZa(
       if (izbran === undefined) continue;
       const tovar = komanda.otIzbora(izbran, k);
       if (tovar === null) continue;
+      // черновата се проверява при записа, не при отварянето: празните ѝ клетки не са отказ
       const dumi = otkrita
-        ? komanda.predusloviya
-            .map((p) => p.proveri(tovar, k))
-            .filter((x): x is string => x !== null)
+        ? komanda.otvaryaChernova === true
+          ? []
+          : komanda.predusloviya
+              .map((p) => p.proveri(tovar, k))
+              .filter((x): x is string => x !== null)
         : [NE_E_OTKRITA];
       butoni.push({
         klyuch: komanda.klyuch,
         ime: komanda.ime,
         myasto: komanda.myasto,
+        otvaryaChernova: komanda.otvaryaChernova === true,
         razreshena: dumi.length === 0,
         zashto: dumi.join(' '),
         tovar,
@@ -96,6 +102,7 @@ export function butoniZa(
       klyuch: komanda.klyuch,
       ime: komanda.ime,
       myasto: komanda.myasto,
+      otvaryaChernova: false,
       razreshena,
       zashto,
       tovar: null,
