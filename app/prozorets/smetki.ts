@@ -41,6 +41,7 @@ import {
 } from '../../src/smetach/smetki.js';
 import { ddsat, type MesetsNaDdsa } from '../../src/smetach/dds.js';
 import { nahodkiteNaNap, NIVA } from '../../src/smetach/nahodki-nap.js';
+import { mozheDaRedaktira } from '../../src/smetach/pravo.js';
 import { koloniNaTakta } from '../../src/smetach/vreme.js';
 import { pishi, pishiVPole } from '../../src/yadro/pari.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
@@ -49,9 +50,8 @@ import { gantSVG, type RedNaGanta } from '../reshetka/gant-svg.js';
 import { ekraniraj } from '../reshetka/obshto.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
 import { podtaboveHTML, tekushtPodtab, zakachiPodtabove } from '../reshetka/podtabove.js';
-import { fokusiraySled, pokazhiGreshka, zakachiRedaktsiya } from '../reshetka/redaktsiya.js';
-import { kletkaHTML } from '../reshetka/reshetka.js';
-import { zakachiZebrata } from '../reshetka/zebra.js';
+import { pokazhiGreshka } from '../reshetka/redaktsiya.js';
+import { kletkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
 import {
   gantIDumiHTML,
   izpalniOtMenyuto,
@@ -143,8 +143,12 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
     { klyuch: 'nap-nahodki', ime: 'находки НАП', dumi: String(nap.nahodki.length) },
   ];
 
+  // ПРАВОТО стеснява „Вкарване": неговото D19 дава на Помощник Управителя точно
+  // трите секции; който няма правото, ГЛЕДА (правило 23 · ADR-008)
+  const mozhePriVkarvane = v.sektsii.every((sek) => mozheDaRedaktira(o, k.aktor(), sek.tekst));
+
   /** Един ред с пари · клетките са редактируеми на място, както в дървото. */
-  const redHTML = (r: RedNaEkrana): string => {
+  const redHTML = (r: RedNaEkrana, samoGledane = false): string => {
     const red = redKato(tv!, r.i);
     const tds = KOLONI.map((klyuch) => {
       const kol = kolonaNa(t, klyuch);
@@ -154,24 +158,27 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
         const dumi = kl !== null && 'tekst' in kl ? imeNaVrazkata(o, kol, kl.tekst) : '';
         return `<td class="kletka vrazka" data-kolona="kam" data-redakt="${TABLITSA}·${ekraniraj(r.id)}·kam" tabindex="0" translate="no">${ekraniraj(dumi)}</td>`;
       }
-      return kletkaHTML(o, TABLITSA, kol, red);
+      return kletkaHTML(o, TABLITSA, kol, red, samoGledane);
     }).join('');
     return `<tr class="red" data-id="${ekraniraj(r.id)}" data-tablitsa="${TABLITSA}" data-seq="${red.seq}">${tds}</tr>`;
   };
 
-  const sektsiyaHTML = (sek: Sektsiya): string =>
+  const sektsiyaHTML = (sek: Sektsiya, samoGledane = false): string =>
     `<tr class="grupata sektsiya" data-sektsiya="${sek.strana}·${sek.nomer}">
         <td colspan="${KOLONI.length - 1}" translate="no">${ekraniraj(sek.tekst)}</td>
         <td class="evro" data-sbor-sektsiya="${sek.strana}·${sek.nomer}" translate="no">${ekraniraj(pishi(sek.sbor))}</td>
       </tr>${sek.redove
         .map((r) =>
-          redHTML({
-            id: r.id,
-            i: r.i,
-            mesets: r.mesets,
-            suma: r.suma_st,
-            ime: sek.tekst,
-          }),
+          redHTML(
+            {
+              id: r.id,
+              i: r.i,
+              mesets: r.mesets,
+              suma: r.suma_st,
+              ime: sek.tekst,
+            },
+            samoGledane,
+          ),
         )
         .join('')}`;
 
@@ -201,7 +208,7 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
       <h2 class="lenta" translate="no">${ekraniraj(IMENA_NA_STRANITE[strana])}</h2>
       <table class="reshetka smetki" data-reshetka="${strana}">
         <thead><tr>${glaviHTML}</tr></thead>
-        <tbody class="tablitsa">${sektsii.map(sektsiyaHTML).join('')}${ddsHTML(strana)}</tbody>
+        <tbody class="tablitsa">${sektsii.map((sek) => sektsiyaHTML(sek)).join('')}${ddsHTML(strana)}</tbody>
         <tfoot><tr class="sbor"><td colspan="${KOLONI.length - 1}">ОБЩ ${ekraniraj(IMENA_NA_STRANITE[strana])}</td><td class="evro" data-sbor="${strana}" translate="no">${ekraniraj(pishi(sbor))}</td></tr></tfoot>
       </table>
     </section>`;
@@ -327,9 +334,14 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
         <section class="tablitsa-blok" data-blok="vkarvane">
           <h2 class="lenta" translate="no">Вкарване</h2>
           <p class="pod-tablitsata">Заплати Кеш · Фактури Кеш · Фактури Карта на едно място (негово, 05.09). Правото на Помощник Управителя идва с резен 4.</p>
+          <p class="pod-tablitsata" data-vkarvane-pravo>${
+            mozhePriVkarvane
+              ? 'Имаш право да вкарваш тук.'
+              : 'Ти само гледаш тук · правото за вкарване е на Помощник Управителя (лист Служители).'
+          }</p>
           <table class="reshetka smetki" data-reshetka="vkarvane">
             <thead><tr>${glaviHTML}</tr></thead>
-            <tbody class="tablitsa">${v.sektsii.map(sektsiyaHTML).join('')}</tbody>
+            <tbody class="tablitsa">${v.sektsii.map((sek) => sektsiyaHTML(sek, !mozhePriVkarvane)).join('')}</tbody>
             <tfoot><tr class="sbor"><td colspan="${KOLONI.length - 1}">ОБЩ Вкарване</td><td class="evro" data-sbor="vkarvane" translate="no">${ekraniraj(pishi(v.sbor))}</td></tr></tfoot>
           </table>
         </section>
@@ -338,9 +350,7 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
       ${gantIDumiHTML(p.lenti[2] ?? '', DUMI_OT_KNIGATA.smetki)}`
     }`;
 
-  zakachiZebrata(k.tyalo);
-  zakachiRedaktsiya(k.tyalo, k);
-  fokusiraySled(k.tyalo);
+  zakachiReshetkata(k);
   zakachiPodtabove(k.tyalo, PAMET.podtab, k.prerisuvay);
   if (podtab === 'smetki') narisuvayGanta(k, [...s.prihod, ...s.razhod], mesets);
   k.tyalo.querySelector<HTMLFormElement>('[data-dds-forma]')?.addEventListener('submit', (e) => {

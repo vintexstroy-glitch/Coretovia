@@ -23,12 +23,21 @@ import {
   podrediPoNomer,
   tekstNaNomera,
 } from '../../src/smetach/nomeratsiya.js';
+import type { KonteksNaEkrana } from '../kontekst.js';
 import { ekraniraj } from './obshto.js';
+import { fokusiraySled, zakachiRedaktsiya } from './redaktsiya.js';
+import { zakachiZebrata } from './zebra.js';
 
 const SPRYANA_DUMA = ' · спряна';
 
 /** Една клетка · и за дървото на Управление, което има свои глави, но същите клетки. */
-export function kletkaHTML(o: Ogledalo, tablitsa: string, k: Kolona, r: Red): string {
+export function kletkaHTML(
+  o: Ogledalo,
+  tablitsa: string,
+  k: Kolona,
+  r: Red,
+  bezRedaktsiya = false,
+): string {
   if (k.vid === 'nomeratsiya') {
     return `<td class="kletka nomer" data-kolona="${k.klyuch}" translate="no">${tekstNaNomera(nomerNaRed(o, tablitsa, r.i))}</td>`;
   }
@@ -40,9 +49,10 @@ export function kletkaHTML(o: Ogledalo, tablitsa: string, k: Kolona, r: Red): st
       ? ` data-st="${kletka.stoynost_st}"`
       : '';
   const spryana = dumi.endsWith(SPRYANA_DUMA);
-  const redakt = k.zatvorena
-    ? ''
-    : ` data-redakt="${tablitsa}·${ekraniraj(r.id)}·${k.klyuch}" tabindex="0"`;
+  const redakt =
+    k.zatvorena || bezRedaktsiya
+      ? ''
+      : ` data-redakt="${tablitsa}·${ekraniraj(r.id)}·${k.klyuch}" tabindex="0"`;
   const podskazka = spryana ? ' title="спряна от Настройки · старите редове я пазят"' : '';
   return `<td class="kletka ${k.vid}${spryana ? ' spryana' : ''}" data-kolona="${k.klyuch}" data-surovo="${ekraniraj(surovo)}"${st}${redakt}${podskazka} translate="no">${ekraniraj(dumi)}</td>`;
 }
@@ -81,4 +91,15 @@ export function reshetkaHTML(o: Ogledalo, tablitsa: string, pokazhiIzklyuchenite
     `<table class="reshetka" data-reshetka="${tablitsa}">${glava}<tbody class="tablitsa">${tyalo}</tbody></table>` +
     `<p class="pod-tablitsata" data-sverka="${tablitsa}">живи ${zhivi} · изключени ${izklyucheni} · всички ${tv.broy}</p>`
   );
+}
+
+/**
+ * ОБЩОТО ЗАКАЧАНЕ на един прозорец с решетка · зебрата, редакцията в клетка и
+ * фокусът след прерисуване. Четири прозореца правеха трите реда еднакво; домът
+ * им е един (правило 17).
+ */
+export function zakachiReshetkata(k: KonteksNaEkrana): void {
+  zakachiZebrata(k.tyalo);
+  zakachiRedaktsiya(k.tyalo, k);
+  fokusiraySled(k.tyalo);
 }

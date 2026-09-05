@@ -12,10 +12,14 @@ import type { KonteksNaEkrana } from '../kontekst.js';
 import { otvoriChernova } from '../reshetka/chernova.js';
 import { ekraniraj } from '../reshetka/obshto.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
-import { fokusiraySled, zakachiRedaktsiya } from '../reshetka/redaktsiya.js';
-import { reshetkaHTML } from '../reshetka/reshetka.js';
-import { zakachiZebrata } from '../reshetka/zebra.js';
-import { iznosVestHTML, izpalniOtMenyuto, zakachiDyasnoMenyu, zapaziKnigata } from './deystviya.js';
+import { reshetkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
+import {
+  butoniteHTML,
+  iznosVestHTML,
+  izpalniOtMenyuto,
+  zakachiDyasnoMenyu,
+  zapaziKnigata,
+} from './deystviya.js';
 import { dumiteHTML } from './profil.js';
 
 /** Кой бутон коя таблица отваря · трите му бутона, поименно. */
@@ -36,12 +40,7 @@ export function narisuvayImoti(k: KonteksNaEkrana): void {
 
   k.tyalo.innerHTML = `
     <div class="deystviya" data-deystviya>
-      ${butoni
-        .map(
-          (b) =>
-            `<button type="button" data-buton="${b.klyuch}" ${b.razreshena ? '' : 'disabled'} title="${ekraniraj(b.zashto)}">${ekraniraj(b.ime)}</button>`,
-        )
-        .join('')}
+      ${butoniteHTML(butoni)}
       <button type="button" class="vtorichen" data-zapazi-kniga>Запази книгата</button>
       <label class="otmetka"><input type="checkbox" data-pokazhi-izklyuchenite ${pokazhi ? 'checked' : ''}> покажи изключените</label>
     </div>
@@ -58,9 +57,7 @@ export function narisuvayImoti(k: KonteksNaEkrana): void {
       .join('')}
     ${iznosVestHTML()}`;
 
-  zakachiZebrata(k.tyalo);
-  zakachiRedaktsiya(k.tyalo, k);
-  fokusiraySled(k.tyalo);
+  zakachiReshetkata(k);
 
   for (const b of k.tyalo.querySelectorAll<HTMLButtonElement>('[data-buton]')) {
     b.addEventListener('click', () => {

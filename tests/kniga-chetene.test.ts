@@ -23,7 +23,16 @@ describe('неговата Книга · мострата без служебе�
     const p = razpoznayKnigata(kniga, PRAZNO, KOGATO);
     expect(p.sluzhebno).toBeNull();
     // „кеш" го няма: блокът е НАШ и в неговата Книга още не е бил (бележка, не грешка)
-    expect([...p.tablitsi.keys()]).toEqual(['imoti', 'obekti', 'biznesi', 'zadachi', 'dvizheniya']);
+    expect([...p.tablitsi.keys()]).toEqual([
+      'imoti',
+      'obekti',
+      'biznesi',
+      'zadachi',
+      'dvizheniya',
+      'stopani',
+      'sluzhiteli',
+      'dostap',
+    ]);
     const imoti = p.tablitsi.get('imoti')!;
     expect(imoti.sKlyuchove).toBe(false);
     expect(imoti.redNaGlavata).toBe(5);

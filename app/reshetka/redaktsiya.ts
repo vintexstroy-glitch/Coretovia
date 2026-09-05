@@ -21,6 +21,7 @@ import type { Ogledalo } from '../../src/ogledalo/ogledalo.js';
 import { redKato, zhiviteRedove } from '../../src/ogledalo/tablitsa.js';
 import { imeNaReda } from '../../src/smetach/kletki.js';
 import { nomerNaRed, tekstNaNomera } from '../../src/smetach/nomeratsiya.js';
+import { pravotoNaImeyla } from '../../src/smetach/pravo.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import { otSuma, pishiVPole } from '../../src/yadro/pari.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
@@ -177,6 +178,15 @@ export function zakachiRedaktsiya(koren: HTMLElement, k: KonteksNaEkrana): void 
     const beleg = razlozhiBeleg(td.dataset['redakt'] ?? '');
     if (beleg === null) return;
     const o = k.porta.ogledalo();
+    // ПРАВОТО стеснява преди полето да се отвори: оста „достъп до Секци Редове"
+    // на неговата Длъжност (правило 23 · ADR-050 · отказът се КАЗВА)
+    if (pravotoNaImeyla(o, k.aktor(), 'redove') !== 'redaktira') {
+      pokazhiGreshka(
+        k.tyalo,
+        'Ти само гледаш редовете · правото е на Длъжността ти (лист Служители).',
+      );
+      return;
+    }
     const t = tablitsata(MODEL, beleg.tablitsa);
     const kol = kolonaNa(t, beleg.kolona);
     const tv = o.tablitsi.get(beleg.tablitsa);

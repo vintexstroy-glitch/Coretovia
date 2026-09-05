@@ -510,6 +510,22 @@ class Chetets {
     return { lenti, instruktsii };
   }
 
+  /**
+   * БАЗОВ ли е този ред · картината на неговите начални редове (ADR-008).
+   *
+   * Пишат се без ключ; ако човекът не ги е пипал, четенето ги подминава — иначе
+   * всеки внос би предлагал пет „нови" реда, а неподвижната точка би паднала.
+   */
+  eBazov(t: Tablitsa, koloni: readonly Kolona[], kletki: readonly ProchetenaStoynost[]): boolean {
+    if (t.bazovi === undefined) return false;
+    return t.bazovi.some((bazov) =>
+      koloni.every((k, j) => {
+        if (k.vid === 'nomeratsiya') return true;
+        return podravni(String(kletki[j] ?? '')) === podravni(bazov[k.klyuch] ?? '');
+      }),
+    );
+  }
+
   /** Една таблица от Модела · намерена по лента и глава. */
   tablitsa(t: Tablitsa, l: ProchetenList): ProchetenaTablitsa | null {
     const koloni = koloniNaReda(t);
@@ -527,6 +543,7 @@ class Chetets {
     let nechetimi = 0;
     // сверката брои по ДВА пътя: обходените редове срещу класифицираните (правило 7)
     let obhodeni = 0;
+    let bazovi = 0;
     let sKlyuch = 0;
     let bezKlyuch = 0;
     // суровите клетки на предишния ред с данни · за слетите връзки (неговото B55:B56)
@@ -544,6 +561,10 @@ class Chetets {
       if (lenti.has(tekstNa(kletki[0])) || instruktsii.has(tekstNa(kletki[1]))) break;
       obhodeni += 1;
       const red = i + 1;
+      if (this.eBazov(t, koloni, kletki)) {
+        bazovi += 1;
+        continue;
+      }
       const klyuch = sKlyuchove ? tekstNa(kletki[jKlyuch]) || null : null;
       const nomeratsiya = tekstNa(kletki[0]);
       const seg = segmenti(nomeratsiya);
@@ -635,9 +656,9 @@ class Chetets {
       sverka(
         `четене · ${l.ime} · ${t.klyuch}`,
         obhodeni,
-        sKlyuch + bezKlyuch + grupi.length + nechetimi,
+        sKlyuch + bezKlyuch + grupi.length + bazovi + nechetimi,
         this.kogato,
-        'обходени = с ключ + без ключ + групови + нечетими',
+        'обходени = с ключ + без ключ + групови + базови + нечетими',
       ),
     );
     return {

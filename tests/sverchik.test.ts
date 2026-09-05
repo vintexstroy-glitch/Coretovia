@@ -689,7 +689,7 @@ describe('променена Книга', () => {
 });
 
 describe('неговата Книга · мострата срещу празно Огледало', () => {
-  it('44 предложения · петте Имота · обектите под групите сочат Имота по номер · Бизнесите по име · деветте задачи на Управление · 5.1.1.x под 5.2 е бележка', async () => {
+  it('50 предложения · петте Имота · деветте задачи · шестимата му хора · базовият Достъп НЕ се предлага', async () => {
     const { iz } = await otvori();
     await iz.izpalni('k0', 'stopanin.otkriy', { imeyl: STOPANIN });
     const o = iz.ogledalo();
@@ -699,7 +699,13 @@ describe('неговата Книга · мострата срещу празн�
       KOGATO,
     );
     const vidove = otchet.predlozheniya.map((p) => p.vid);
-    expect(vidove.filter((v) => v === 'nov-red')).toHaveLength(44);
+    expect(vidove.filter((v) => v === 'nov-red')).toHaveLength(50);
+    // Стопанинът му и петимата служители · а базовите редове на Достъпа са КАРТИНА
+    const poTablitsa = (klyuch: string) =>
+      otchet.predlozheniya.filter((x) => 'tablitsa' in x && x.tablitsa === klyuch);
+    expect(poTablitsa('stopani')).toHaveLength(1);
+    expect(poTablitsa('sluzhiteli')).toHaveLength(5);
+    expect(poTablitsa('dostap')).toEqual([]);
     expect(
       otchet.predlozheniya.filter((p) => p.vid === 'nov-red' && p.tablitsa === 'zadachi'),
     ).toHaveLength(9);
@@ -740,7 +746,7 @@ describe('неговата Книга · мострата срещу празн�
     const vsichki = new Set(otchet.predlozheniya.map((_p, i) => i));
     const r = await izpalniPredlozheniyata(iz, otchet.predlozheniya, vsichki, idNa, KOGATO);
     expect(r.otkaz).toBeNull();
-    expect(r.prieti).toBe(44);
+    expect(r.prieti).toBe(50);
     expect(r.sverka.nared).toBe(true);
     const sled = iz.ogledalo();
     expect(zhiviteRedove(sled.tablitsi.get('imoti')!)).toHaveLength(5);
@@ -760,7 +766,7 @@ describe('неговата Книга · мострата срещу празн�
     ).toEqual(['2.3.1', '2.3.2']);
     // „Приеми" втори път със СЪЩИТЕ ключове (правило 5) · нищо ново
     const vtori = await izpalniPredlozheniyata(iz, otchet.predlozheniya, vsichki, idNa, KOGATO);
-    expect(vtori.povtoreni).toBe(44);
+    expect(vtori.povtoreni).toBe(50);
     expect(iz.ogledalo().broySabitiya).toBe(sled.broySabitiya);
     // същият файл втори път · Сверчикът вече не предлага нищо · нашата Книга също
     const pak = sveri(

@@ -917,6 +917,142 @@ export const BUTONI_NA_UPRAVLENIE: readonly ButonNaProzoretsa[] = [
   },
 ];
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * СЛУЖИТЕЛИ · неговите четири блока (лист „Служители")
+ *
+ * Стопани (A2) и Служители (A6) са ДВЕ таблици с едни и същи колони, но с
+ * НЕГОВИТЕ различни глави: B3 „Име" срещу B7 „Име Служител". Достъпът (A15) е
+ * трета таблица: една Длъжност, четири оси. Програмата за Задачи (A23) е
+ * ИЗГЛЕД, не таблица — задачите вече живеят в Управление.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+function chovek(imeNaImeto: string): readonly Kolona[] {
+  return [
+    NOMERATSIYA_KOLONA,
+    tekst('ime', imeNaImeto, true),
+    tekst('telefon', 'телефон'),
+    tekst('imeyl', 'Имейл'),
+    tekst('adres', 'Адрес'),
+    {
+      klyuch: 'dlazhnost',
+      ime: 'Длъжност',
+      vid: 'izbor',
+      nomenklatura: NOMENKLATURA.dlazhnosti,
+      zadalzhitelna: false,
+      zatvorena: false,
+    },
+  ];
+}
+
+const STOPANI: Tablitsa = Object.freeze({
+  klyuch: 'stopani',
+  ime: 'Стопани свързани с Coretovia',
+  prozorets: 'sluzhiteli',
+  sashtnost: 'stopan',
+  koloni: chovek('Име'),
+  nomeratsiya: nomeratsiya({ ot: 'broyach' }),
+});
+
+const SLUZHITELI: Tablitsa = Object.freeze({
+  klyuch: 'sluzhiteli',
+  ime: 'Служители свързани с Coretovia',
+  prozorets: 'sluzhiteli',
+  sashtnost: 'sluzhitel',
+  koloni: chovek('Име Служител'),
+  nomeratsiya: nomeratsiya({ ot: 'broyach' }),
+});
+
+export interface DostapPoPodrazbirane extends Readonly<Record<string, string>> {
+  readonly dlazhnost: string;
+  readonly tabove: string;
+  readonly hedari: string;
+  readonly redove: string;
+  readonly zhurnal: string;
+}
+
+export const DOSTAP_PO_PODRAZBIRANE: readonly DostapPoPodrazbirane[] = [
+  {
+    dlazhnost: 'Стопанин',
+    tabove: 'Редактира всичко',
+    hedari: 'Редактира всичко',
+    redove: 'Редактира всичко',
+    zhurnal: 'Редактира всичко',
+  },
+  {
+    dlazhnost: 'Управител',
+    tabove: 'Редактира всичко',
+    hedari: 'Редактира всичко',
+    redove: 'Редактира всичко',
+    zhurnal: 'Вижда само всичко',
+  },
+  {
+    dlazhnost: 'Помощник Управител',
+    tabove: 'Вижда всичко',
+    hedari: 'Редактира  хедъри: Заплати, Фактури Кеш, Фактури Карта',
+    redove: 'Вижда само всичко',
+    zhurnal: 'Вижда само всичко',
+  },
+  {
+    dlazhnost: 'Служител',
+    tabove: 'Вижда само таб Служители',
+    hedari: 'Вижда само хедър: Програма за Задачи на Служители',
+    redove: 'Вижда само редовете с негови задачи: Личен Лист с Задачи',
+    zhurnal: 'Вижда само всичко',
+  },
+  {
+    dlazhnost: 'Наблюдател',
+    tabove: 'Вижда всичко',
+    hedari: 'Вижда само всичко',
+    redove: 'Вижда само всичко',
+    zhurnal: 'Вижда само всичко',
+  },
+];
+
+/**
+ * ДОСТЪПЪТ · една Длъжност, ЧЕТИРИ оси (неговите глави C16:F16) · и всяка ос е
+ * НЕГОВОТО изречение, дословно. Правото се чете от ПЪРВАТА дума („Редактира" ·
+ * „Вижда"), а остатъкът казва ОБХВАТА — така неговите думи остават неговите, а
+ * кодът пак има решима стойност (правило 23: правото само СТЕСНЯВА).
+ */
+const DOSTAP_KOLONI: readonly Kolona[] = [
+  NOMERATSIYA_KOLONA,
+  {
+    klyuch: 'dlazhnost',
+    ime: 'Длъжност',
+    vid: 'izbor',
+    nomenklatura: NOMENKLATURA.dlazhnosti,
+    zadalzhitelna: true,
+    zatvorena: false,
+    vKlyucha: true,
+  },
+  tekst('tabove', 'достъп до табове без Журнал'),
+  tekst('hedari', 'достъп до хедъри'),
+  tekst('redove', 'достъп до Секци Редове'),
+  tekst('zhurnal', 'Таб Журнал'),
+];
+
+const DOSTAP: Tablitsa = Object.freeze({
+  klyuch: 'dostap',
+  ime: 'Достъп на Длъжности за Служител',
+  prozorets: 'sluzhiteli',
+  sashtnost: 'dostap',
+  koloni: DOSTAP_KOLONI,
+  nomeratsiya: nomeratsiya({ ot: 'broyach' }),
+  bazovi: DOSTAP_PO_PODRAZBIRANE,
+});
+
+/** Осите на достъпа · ключът на колоната и неговата глава. */
+export const OSI_NA_DOSTAPA = ['tabove', 'hedari', 'redove', 'zhurnal'] as const;
+export type OsNaDostapa = (typeof OSI_NA_DOSTAPA)[number];
+
+/**
+ * БАЗОВИЯТ достъп · неговите пет реда (A17:F21), ДОСЛОВНО.
+ *
+ * Стоят в кода като базовите стойности на номенклатурите (ADR-003 решение 1):
+ * докато няма ред в таблицата за тази Длъжност, важи този; напише ли се ред,
+ * той бие. Така „Създаване на Длъжност с достъп" (неговото B14) расте от
+ * събития, а началото е неговото.
+ */
 export const TABLITSI: readonly Tablitsa[] = Object.freeze([
   IMOTI,
   OBEKTI,
@@ -925,6 +1061,9 @@ export const TABLITSI: readonly Tablitsa[] = Object.freeze([
   DVIZHENIYA,
   KESH,
   DDS,
+  STOPANI,
+  SLUZHITELI,
+  DOSTAP,
 ]);
 
 /** МОДЕЛЪТ на резен 1 · единственият екземпляр в кода. */

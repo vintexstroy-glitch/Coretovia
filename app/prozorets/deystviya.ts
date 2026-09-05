@@ -22,6 +22,21 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 /** думите за последния износ · живеят извън тялото, защото всеки запис го прерисува */
 let iznosVest = '';
 
+/**
+ * РЕДЪТ С БУТОНИ · един дом за всички прозорци.
+ *
+ * Забраненият бутон СТОИ и казва защо (правило 12 · правило 15: изключено не е
+ * липсващо); заглавието е думите на Портата, не наши.
+ */
+export function butoniteHTML(butoni: readonly Buton[]): string {
+  return butoni
+    .map(
+      (b) =>
+        `<button type="button" data-buton="${b.klyuch}" ${b.razreshena ? '' : 'disabled'} title="${ekraniraj(b.zashto)}">${ekraniraj(b.ime)}</button>`,
+    )
+    .join('');
+}
+
 export function iznosVestHTML(): string {
   return `<p class="vest" data-iznos-vest>${ekraniraj(iznosVest)}</p>`;
 }

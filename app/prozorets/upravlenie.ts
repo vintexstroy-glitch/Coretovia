@@ -68,9 +68,8 @@ import { gantSVG, type RedNaGanta } from '../reshetka/gant-svg.js';
 import { pokazhiMenyu } from '../reshetka/menyu.js';
 import { ekraniraj } from '../reshetka/obshto.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
-import { fokusiraySled, pokazhiGreshka, zakachiRedaktsiya } from '../reshetka/redaktsiya.js';
-import { kletkaHTML } from '../reshetka/reshetka.js';
-import { zakachiZebrata } from '../reshetka/zebra.js';
+import { pokazhiGreshka } from '../reshetka/redaktsiya.js';
+import { kletkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
 import { gantIDumiHTML, izpalniOtMenyuto, zakachiDyasnoMenyu, zapaziKnigata } from './deystviya.js';
 
 const PAMET = Object.freeze({
@@ -419,9 +418,7 @@ export function narisuvayUpravlenie(k: KonteksNaEkrana): void {
       </div>
       ${gantIDumiHTML(p.lenti[2] ?? 'Диаграма Гант', DUMI_OT_KNIGATA.upravlenie, !vizhda.diagrama)}`;
 
-  zakachiZebrata(k.tyalo);
-  zakachiRedaktsiya(k.tyalo, k);
-  fokusiraySled(k.tyalo);
+  zakachiReshetkata(k);
   narisuvayGanta(k, vidimi, takt, period, dnes);
 
   // ═══ филтърът · сметките · памет на екрана ═══

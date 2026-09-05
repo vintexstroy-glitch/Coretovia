@@ -83,6 +83,13 @@ export interface Tablitsa {
   readonly redFiltar?: boolean;
   /** таблицата е НАША (не е блок от неговата Книга) · липсата ѝ там е бележка, не грешка */
   readonly nashaTablitsa?: true;
+  /**
+   * БАЗОВИТЕ редове · неговите, от Книгата, докато никой не е записал свои.
+   * Пишат се в листа без ключ (картина, не данни) и четенето ги ПОЗНАВА: ред,
+   * еднакъв с базовия, не е нов. Промени ли се в Ексел, влиза като нов ред и
+   * оттам нататък записаният бие базовия (ADR-008).
+   */
+  readonly bazovi?: readonly Readonly<Record<string, string>>[];
 }
 
 export function kolonaNa(t: Tablitsa, klyuch: string): Kolona | undefined {

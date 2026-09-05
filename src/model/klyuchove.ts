@@ -40,6 +40,12 @@ export const VID = Object.freeze({
   kesh: 'kesh',
   /** ДДС за един месец · начислен · кредит · декларирано · платено (негово, 05.09 т.2) */
   dds: 'dds',
+  /** ред от таблицата „Стопани свързани с Coretovia" */
+  stopan: 'stopan',
+  /** ред от таблицата „Служители свързани с Coretovia" */
+  sluzhitel: 'sluzhitel',
+  /** ред от таблицата „Достъп на Длъжности за Служител" · четирите оси */
+  dostap: 'dostap',
   /** една номенклатура · id = ключът ѝ · всички стойности живеят на този адрес */
   nomenklatura: 'nomenklatura',
   stopanin: 'stopanin',

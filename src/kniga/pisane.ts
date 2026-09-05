@@ -41,6 +41,7 @@ import {
   OBLIK_NA_SMETKI,
   nachalataNaGlavite,
   shirinaNaOblika,
+  DOSTAP_PO_PODRAZBIRANE,
 } from '../model/osnova.js';
 import { otpechatakNaModela } from '../model/otpechatak.js';
 import { kolonaNa, koloniNaReda, slyataNa, type Tablitsa } from '../model/tablitsa.js';
@@ -57,6 +58,7 @@ import {
   podrediPoNomer,
   tekstNaNomera,
 } from '../smetach/nomeratsiya.js';
+import { dostapaNaDlazhnostta } from '../smetach/pravo.js';
 import { IMENA_NA_STRANITE, smetkite } from '../smetach/smetki.js';
 import { sverka, type Sverka } from '../yadro/sverka.js';
 import {
@@ -82,6 +84,10 @@ import {
   KLYUCH_KOLONA_SMETKI,
   SEKTSIYA,
   DUMI_ZA_OTCHETITE,
+  KLYUCH_KOLONA_SLUZHITELI,
+  DUMI_ZA_DLAZHNOST,
+  GLAVI_NA_PROGRAMATA,
+  DUMI_ZA_PROGRAMATA,
 } from './dumi.js';
 
 export interface KnigaZaIznos {
@@ -329,6 +335,7 @@ function novList(): {
   validatsii: ValidatsiyaOtSpisak[];
   otklyucheni: string[];
   otklyucheniRedove: number[];
+  zamraziPod: number | undefined;
 } {
   return {
     redove: [],
@@ -337,6 +344,7 @@ function novList(): {
     validatsii: [],
     otklyucheni: [],
     otklyucheniRedove: [],
+    zamraziPod: undefined,
   };
 }
 
@@ -347,6 +355,20 @@ interface MyastoNaTablitsa {
   readonly klyuchKolona: number;
   readonly redove: number;
 }
+
+/**
+ * ПИСАЧ НА ЛИСТ с няколко таблици · един подпис, един дом (правило 17).
+ *
+ * Сметки и Служители пишат по няколко таблици на един лист и връщат местата им
+ * за служебния лист. Подписът им е ЕДИН, затова се обявява веднъж.
+ */
+type PisachNaList = (
+  o: Ogledalo,
+  p: ProzoretsVOsnovata,
+  imeNaNastroykite: string,
+  podtablitsi: Map<string, Podtablitsa>,
+  kogato: string,
+) => { list: OpisNaList; mesta: MyastoNaTablitsa[]; sverka: Sverka };
 
 /** ИмотиОбектиБизнеси · трите таблици в неговия ред · инструкции · лента · глава · данни. */
 function listImoti(
@@ -890,17 +912,18 @@ function listUpravlenie(
  * НАКРАЯ, под всичките му редове: така нито един негов адрес не мърда. Блокът се
  * чете обратно с родовия четец (лента + глава по място).
  */
-function blokNaNashaTablitsa(
+/**
+ * ЛЕНТАТА и ГЛАВИТЕ на една таблица · слети над цялата ѝ ширина, с „Ключ" на
+ * своята колона. Един дом: всеки лист ги пише еднакво, иначе Книгата се чете
+ * различно на два листа (правило 17).
+ */
+function lentaIGlavi(
   l: ReturnType<typeof novList>,
-  o: Ogledalo,
   t: Tablitsa,
+  koloni: readonly Kolona[],
   KL: number,
-  sh: Shapka,
-  imeNaLista: string,
-): MyastoNaTablitsa {
-  const { redove, b, slivaniya, otklyucheni, otklyucheniRedove } = l;
-  const tv = o.tablitsi.get(t.klyuch);
-  const koloni = koloniNaReda(t);
+): void {
+  const { redove, b, slivaniya } = l;
   const rLenta = redove.length + 1;
   redove.push([glava(t.ime)]);
   slivaniya.push(`A${rLenta}:${bukvaNaKolona(koloni.length)}${rLenta}`);
@@ -909,6 +932,20 @@ function blokNaNashaTablitsa(
   glavi[KL - 1] = glava(KLYUCH);
   redove.push(glavi);
   b.glavi += 1;
+}
+
+function blokNaNashaTablitsa(
+  l: ReturnType<typeof novList>,
+  o: Ogledalo,
+  t: Tablitsa,
+  KL: number,
+  sh: Shapka,
+  imeNaLista: string,
+): MyastoNaTablitsa {
+  const { redove, b, otklyucheni, otklyucheniRedove } = l;
+  const tv = o.tablitsi.get(t.klyuch);
+  const koloni = koloniNaReda(t);
+  lentaIGlavi(l, t, koloni, KL);
   const parvi = redove.length + 1;
   let posleden = redove.length;
   if (tv !== undefined) {
@@ -949,13 +986,7 @@ function blokNaNashaTablitsa(
  * Подсборовете му по Имот вътре в секция (A38 „2.1 · ОБЩ Бюджет Сметки") не се
  * пишат: сборът е на СЕКЦИЯТА, а сборът по Имот идва с формулите (резен 6).
  */
-function listSmetki(
-  o: Ogledalo,
-  p: ProzoretsVOsnovata,
-  imeNaNastroykite: string,
-  podtablitsi: Map<string, Podtablitsa>,
-  kogato: string,
-): { list: OpisNaList; mesta: MyastoNaTablitsa[]; sverka: Sverka } {
+const listSmetki: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) => {
   const l = novList();
   const { redove, b, slivaniya, validatsii, otklyucheni, otklyucheniRedove } = l;
   const KL = KLYUCH_KOLONA_SMETKI;
@@ -1082,7 +1113,128 @@ function listSmetki(
     ],
     sverka: sverka(`износ · ${p.list}`, b.sbor, redove.length, kogato),
   };
-}
+};
+
+/**
+ * СЛУЖИТЕЛИ · листът му, дословно: Стопани (A2) · Служители (A6) · неговото B14
+ * „Създаване на Длъжност с достъп" · Достъп на Длъжности (A15) · и Програмата за
+ * Задачи (A23) като ИЗГЛЕД — броят задачи на всеки служител, не таблица за писане.
+ *
+ * Достъпът се пише ЦЯЛ: записаните редове и базовите му пет, които още ги няма
+ * като записи (ADR-008). Базовият ред отива в Книгата без ключ — допише ли се в
+ * него нещо, Сверчикът го чете като НОВ ред, и оттам нататък бие записаният.
+ */
+const listSluzhiteli: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) => {
+  const l = novList();
+  const { redove, b, slivaniya, validatsii, otklyucheni, otklyucheniRedove } = l;
+  const KL = KLYUCH_KOLONA_SLUZHITELI;
+  const posledna = bukvaNaKolona(KL);
+  const izvorNa = izvorNaValidatsiya(imeNaNastroykite, podtablitsi);
+  const mesta: MyastoNaTablitsa[] = [];
+  const tablitsi = ['stopani', 'sluzhiteli', 'dostap'].map((k) => tablitsata(o.model, k));
+
+  for (const [ti, t] of tablitsi.entries()) {
+    // неговото B14 стои НАД лентата на Достъпа · дума, не таблица
+    if (t.klyuch === 'dostap') {
+      redove.push([null, DUMI_ZA_DLAZHNOST]);
+      b.instruktsii += 1;
+    }
+    const koloni = koloniNaReda(t);
+    lentaIGlavi(l, t, koloni, KL);
+    const parviRed = redove.length + 1;
+    const tv = o.tablitsi.get(t.klyuch);
+    const nomerNa = new Map(podrediPoNomer(o, t.klyuch).map((r) => [r.i, r.nomer]));
+    if (tv !== undefined) {
+      for (const i of zhiviteRedove(tv)) {
+        const r = redKato(tv, i);
+        const red: Red = koloni.map((k) =>
+          k.vid === 'nomeratsiya'
+            ? tekstNaNomera(nomerNa.get(i) ?? [])
+            : kletkaZaExcel(o, t.klyuch, k.klyuch, r.kletki[k.klyuch] ?? null, r.kletki),
+        );
+        red[KL - 1] = r.id;
+        redove.push(red);
+        b.danni += 1;
+        otklyucheni.push(`A${redove.length}:${posledna}${redove.length}`);
+        otklyucheniRedove.push(redove.length);
+        for (const [ki, k] of koloni.entries()) {
+          if (k.vid !== 'izbor') continue;
+          const izvor = izvorNa(k.nomenklatura);
+          if (izvor !== undefined)
+            validatsii.push({ obhvat: `${bukvaNaKolona(ki + 1)}${redove.length}`, izvor });
+        }
+      }
+    }
+    // базовите пет реда на Достъпа · онези, които още не са записани (ADR-008)
+    if (t.klyuch === 'dostap') {
+      for (const d of DOSTAP_PO_PODRAZBIRANE) {
+        if (dostapaNaDlazhnostta(o, d.dlazhnost).zapisan) continue;
+        const red: Red = koloni.map((k) => {
+          if (k.vid === 'nomeratsiya') return '';
+          if (k.klyuch === 'dlazhnost') return d.dlazhnost;
+          return (d as unknown as Record<string, string>)[k.klyuch] ?? null;
+        });
+        redove.push(red);
+        b.danni += 1;
+        otklyucheni.push(`A${redove.length}:${posledna}${redove.length}`);
+        otklyucheniRedove.push(redove.length);
+      }
+    }
+    const posledenRed = redove.length;
+    otklyucheni.push(`A${redove.length + 1}:${posledna}${redove.length + 1}`);
+    otklyucheniRedove.push(redove.length + 1);
+    redove.push([]);
+    b.prazni += 1;
+    mesta.push({
+      klyuch: t.klyuch,
+      list: p.list,
+      klyuchKolona: KL,
+      obhvat: posledenRed >= parviRed ? `A${parviRed}:${posledna}${posledenRed}` : '',
+      redove: tv === undefined ? 0 : zhiviteRedove(tv).length,
+    });
+    if (ti === 0) l.zamraziPod = redove.length;
+  }
+
+  // ПРОГРАМАТА ЗА ЗАДАЧИ · изглед: по един ред на служител, с броя задачи
+  const rPrograma = redove.length + 1;
+  redove.push([glava(p.lenti[3] ?? '')]);
+  slivaniya.push(`A${rPrograma}:${bukvaNaKolona(GLAVI_NA_PROGRAMATA.length)}${rPrograma}`);
+  b.lenti += 1;
+  redove.push(GLAVI_NA_PROGRAMATA.map((g) => glava(g)));
+  b.glavi += 1;
+  const tvS = o.tablitsi.get('sluzhiteli');
+  const nomerNaSluzhitel = new Map(podrediPoNomer(o, 'sluzhiteli').map((r) => [r.i, r.nomer]));
+  if (tvS !== undefined) {
+    for (const i of zhiviteRedove(tvS)) {
+      const r = redKato(tvS, i);
+      const ime = r.kletki['ime'];
+      redove.push([
+        tekstNaNomera(nomerNaSluzhitel.get(i) ?? []),
+        ime !== undefined && 'tekst' in ime ? ime.tekst : '',
+        DUMI_ZA_PROGRAMATA,
+        DUMI_ZA_PROGRAMATA,
+      ]);
+      b.danni += 1;
+    }
+  }
+  redove.push([]);
+  b.prazni += 1;
+
+  const list: OpisNaList = {
+    ime: p.list,
+    redove,
+    slivaniya,
+    validatsii,
+    otklyucheni,
+    otklyucheniRedove,
+    zashtita: true,
+    skritiKoloni: [KL],
+    tekstoviKoloni: [1, 3],
+    shirini: { 1: 6, 2: 26, 3: 16, 4: 26, 5: 30, 6: 22 },
+    ...(l.zamraziPod === undefined ? {} : { zamraziPod: l.zamraziPod }),
+  };
+  return { list, mesta, sverka: sverka(`износ · ${p.list}`, b.sbor, redove.length, kogato) };
+};
 
 /** Служебният лист · какво трябва на резен 2, за да чете обратно без да гадае. */
 function listSluzheben(
@@ -1152,6 +1304,11 @@ export function knigataOtOgledaloto(o: Ogledalo, kursor: Kursor, kogato: string)
       listove.push(sm.list);
       sverki.push(sm.sverka);
       mesta.push(...sm.mesta);
+    } else if (p.klyuch === 'sluzhiteli') {
+      const sl = listSluzhiteli(o, p, nastroyki.list, n.podtablitsi, kogato);
+      listove.push(sl.list);
+      sverki.push(sl.sverka);
+      mesta.push(...sl.mesta);
     } else if (p.klyuch === 'ii') {
       const s = listII(p.list, p.lenti, kogato);
       listove.push(s.list);

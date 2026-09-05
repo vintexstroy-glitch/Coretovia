@@ -8,6 +8,7 @@
 
 import { DUMI_OT_KNIGATA } from '../../src/model/dumi-ot-knigata.js';
 import { prozoretsPoList, SLUZHEBEN_LIST } from '../../src/model/osnova.js';
+import { dostapaMi } from '../../src/smetach/pravo.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { ekraniraj } from '../reshetka/obshto.js';
@@ -17,6 +18,38 @@ export function dumiteHTML(dumi: readonly { nomer: string; tekst: string }[]): s
   return `<ol class="dumite" translate="no">${dumi
     .map((d) => `<li><span class="nomer">${ekraniraj(d.nomer)}</span> ${ekraniraj(d.tekst)}</li>`)
     .join('')}</ol>`;
+}
+
+/**
+ * ЛИЧНИ ДАННИ (Кой съм) · неговото B2 · и достъпът, който Длъжността дава.
+ *
+ * Данните НЕ се дублират: идват от реда му в „Стопани" или „Служители" (лист
+ * Служители), намерен по имейла, с който пише. Личният изглед само СТЕСНЯВА
+ * (правило 23) — затова тук се чете, не се редактира.
+ */
+function lichniteMiDanni(k: KonteksNaEkrana): string {
+  const o = k.porta.ogledalo();
+  const d = dostapaMi(o, k.aktor());
+  const redovete = d.osi
+    .map(
+      (x) =>
+        `<tr class="red" data-os="${ekraniraj(x.os)}"><td>${ekraniraj(x.os)}</td><td>${ekraniraj(x.pravo)}</td><td translate="no">${ekraniraj(x.dumi === '' ? '—' : x.dumi)}</td></tr>`,
+    )
+    .join('');
+  return `<section class="sektsiya" data-sektsiya="lichni">
+      <h2>Лични Данни (Кой съм) и Достъп</h2>
+      <p data-imeylat-mi translate="no">${ekraniraj(k.aktor())}</p>
+      <p data-dlazhnostta-mi>${
+        d.dlazhnost === ''
+          ? 'Нямаш ред в „Служители" · добави се там, за да ти важи Длъжност (лист Служители).'
+          : `Длъжност: ${ekraniraj(d.dlazhnost)}`
+      }</p>
+      <table class="tablitsa" data-dostapa-mi>
+        <thead><tr><th>ос</th><th>право</th><th>какво пише в Книгата</th></tr></thead>
+        <tbody>${redovete}</tbody>
+      </table>
+      <p class="pod-tablitsata">Личният изглед само СТЕСНЯВА (правило 23): каквото Длъжността не дава, не се отваря от тук.</p>
+    </section>`;
 }
 
 export function narisuvayProfil(k: KonteksNaEkrana): void {
@@ -36,6 +69,7 @@ export function narisuvayProfil(k: KonteksNaEkrana): void {
             <p class="greshka" data-greshka></p>
           </section>`
     }
+    ${otkrita ? lichniteMiDanni(k) : ''}
     ${dumiteHTML(DUMI_OT_KNIGATA.profil)}
     <section class="sektsiya" data-sektsiya="hranilishte">
       <h2>Хранилището</h2>
