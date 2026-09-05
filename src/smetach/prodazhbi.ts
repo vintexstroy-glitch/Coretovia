@@ -58,6 +58,15 @@ export interface Prodazhba {
   readonly strani: readonly StranaNaProdazhba[];
   /** двата остатъка са нула */
   readonly platena: boolean;
+  /**
+   * ПЛАТЕНА и дошъл Акт 16 · негово решение, 05.09: „Само Акт 16".
+   *
+   * Платена без Акт 16 е нормално състояние, не грешка: парите са дошли, актът
+   * още не. Затова двете стоят отделно и екранът казва кое липсва (правило 12).
+   */
+  readonly zavarshena: boolean;
+  /** главите на вноските, които завършват и още ги няма · дословно негови */
+  readonly chaka: readonly string[];
 }
 
 export interface TablitsaNaProdazhbite {
@@ -69,12 +78,14 @@ export interface TablitsaNaProdazhbite {
   readonly kvadratura: number;
   /** брой платени продажби */
   readonly platenite: number;
+  /** платените, при които е дошъл и Акт 16 */
+  readonly zavarshenite: number;
   /** сборът на остатъците по двете страни · колко още се чака */
   readonly ostatak: number;
   /**
-   * ЗАВЪРШЕНА е таблица с поне една продажба, в която всичко е платено; иначе е
-   * АКТИВНА (чака плащания). Празната таблица не е нито едното — тя е празна, и
-   * това се КАЗВА, вместо да мине за завършена (правило 12).
+   * ЗАВЪРШЕНА е таблица с поне една продажба, в която всяка е платена И с Акт 16
+   * (негово, 05.09); иначе е АКТИВНА — чака плащания или актове. Празната
+   * таблица не е нито едното: тя е празна, и това се КАЗВА (правило 12).
    */
   readonly sastoyanie: 'zavarshena' | 'aktivna' | 'prazna';
   readonly sverki: readonly Sverka[];
@@ -127,6 +138,11 @@ function prodazhbata(o: Ogledalo, t: Tablitsa, i: number, id: string): Prodazhba
     );
     return { strana, tsena, vneseno, ostatak: tsena - vneseno };
   });
+  const platena = strani.every((x) => x.ostatak === 0);
+  // вноските, които ЗАВЪРШВАТ продажбата · неговият Акт 16, в двата ѝ правописа
+  const chaka = t.koloni
+    .filter((k) => k.zavarshva === true && chislo(o, t.klyuch, i, k.klyuch) === 0)
+    .map((k) => k.ime.trim());
   return {
     i,
     id,
@@ -136,7 +152,9 @@ function prodazhbata(o: Ogledalo, t: Tablitsa, i: number, id: string): Prodazhba
     tsena: chislo(o, t.klyuch, i, 'tsena'),
     tsenaPoStrani: strani.reduce((s, x) => s + x.tsena, 0),
     strani,
-    platena: strani.every((x) => x.ostatak === 0),
+    platena,
+    zavarshena: platena && chaka.length === 0,
+    chaka,
   };
 }
 
@@ -180,6 +198,7 @@ function tablitsataNaProdazhbite(
     }
   }
   const platenite = redove.filter((r) => r.platena).length;
+  const zavarshenite = redove.filter((r) => r.zavarshena).length;
   const ostatak = redove.reduce((s, r) => s + r.strani.reduce((x, y) => x + y.ostatak, 0), 0);
   const sverki: Sverka[] = [];
   // цената, записана на реда, срещу сбора на двете ѝ страни · и нулата се пише
@@ -213,9 +232,10 @@ function tablitsataNaProdazhbite(
     obshto,
     kvadratura: redove.reduce((s, r) => s + r.kvadratura, 0),
     platenite,
+    zavarshenite,
     ostatak,
     sastoyanie:
-      redove.length === 0 ? 'prazna' : platenite === redove.length ? 'zavarshena' : 'aktivna',
+      redove.length === 0 ? 'prazna' : zavarshenite === redove.length ? 'zavarshena' : 'aktivna',
     sverki,
   };
 }

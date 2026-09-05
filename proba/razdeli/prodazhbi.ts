@@ -56,7 +56,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   await p.fill(`${ch} input[data-kolona="tsenaSmr"]`, '61 400');
   await p.fill(`${ch} input[data-kolona="pdBanka"]`, '20 000');
   await p.fill(`${ch} input[data-kolona="pdSmr"]`, '30 000');
-  await p.fill(`${ch} input[data-kolona="nsBanka"]`, '20 000');
+  await p.fill(`${ch} input[data-kolona="nsBanka"]`, '15 000');
   await p.fill(`${ch} input[data-kolona="nsSmr"]`, '31 400');
   await p.press(`${ch} input[data-kolona="apartament"]`, 'Enter');
   await p.waitForSelector('tr.red[data-tablitsa="prodazhbi"]');
@@ -77,17 +77,42 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     '845000 · 84,50',
   );
   proveri(
-    'двете проверки са НУЛА · продажбата е платена',
+    'проверката банка чака Акт 16 · кешът вече е нула',
+    `${await tekstNa(p, 'tr.red[data-tablitsa="prodazhbi"] td[data-kolona="proverkaBanka"]')} · ${await tekstNa(
+      p,
+      'tr.red[data-tablitsa="prodazhbi"] td[data-kolona="proverkaKesh"]',
+    )}`,
+    `5\u202F000,00\u202F€ · ${EVRO_NULA}`,
+  );
+  proveri(
+    'редът КАЗВА какво чака (негово, 05.09: „Само Акт 16")',
+    `${(await tekstNa(p, '[data-sastoyanie="prodazhbi"]')).startsWith('АКТИВНА')} · ${await p.$eval(
+      'tr.red[data-tablitsa="prodazhbi"]',
+      (e) => (e as HTMLElement).dataset['chaka'] ?? '',
+    )}`,
+    'true · АКТ 16',
+  );
+  // Акт 16 идва · и точно тогава таблицата ЗАВЪРШВА
+  await p.dblclick('tr.red[data-tablitsa="prodazhbi"] td[data-kolona="akt16"]');
+  await p.fill('tr.red[data-tablitsa="prodazhbi"] td[data-kolona="akt16"] input', '5 000');
+  await p.press('tr.red[data-tablitsa="prodazhbi"] td[data-kolona="akt16"] input', 'Enter');
+  await p.waitForFunction(() =>
+    (document.querySelector('[data-sastoyanie="prodazhbi"]')?.textContent ?? '').startsWith(
+      'ЗАВЪРШЕНА',
+    ),
+  );
+  proveri(
+    'таблицата ЗАВЪРШИ · всичко е платено и Акт 16 е дошъл',
+    await tekstNa(p, '[data-sastoyanie="prodazhbi"]'),
+    'ЗАВЪРШЕНА · всичко е платено и Акт 16 е дошъл · платени 1 от 1 · с Акт 16 1 · остатък 0,00\u202F€',
+  );
+  proveri(
+    'и двете проверки вече са НУЛА',
     `${await tekstNa(p, 'tr.red[data-tablitsa="prodazhbi"] td[data-kolona="proverkaBanka"]')} · ${await tekstNa(
       p,
       'tr.red[data-tablitsa="prodazhbi"] td[data-kolona="proverkaKesh"]',
     )}`,
     `${EVRO_NULA} · ${EVRO_NULA}`,
-  );
-  proveri(
-    'таблицата ЗАВЪРШИ · всичко е платено (негово, 05.09)',
-    (await tekstNa(p, '[data-sastoyanie="prodazhbi"]')).startsWith('ЗАВЪРШЕНА'),
-    true,
   );
   proveri(
     'полетата горе · една продажба, цената, внесеното и остатъкът',
@@ -134,8 +159,9 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   await p.fill(`${ch2} input[data-kolona="tsenaSmr"]`, '76 620');
   await p.fill(`${ch2} input[data-kolona="pdBanka"]`, '25 000');
   await p.fill(`${ch2} input[data-kolona="pdKesh"]`, '38 310');
-  await p.fill(`${ch2} input[data-kolona="nsBanka"]`, '25 000');
+  await p.fill(`${ch2} input[data-kolona="nsBanka"]`, '20 000');
   await p.fill(`${ch2} input[data-kolona="nsKesh"]`, '38 310');
+  await p.fill(`${ch2} input[data-kolona="akt16Banka"]`, '5 000');
   await p.press(`${ch2} input[data-kolona="apartament"]`, 'Enter');
   await p.waitForSelector('tr.red[data-tablitsa="prodazhbi2"]');
   proveri(

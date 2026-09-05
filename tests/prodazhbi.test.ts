@@ -101,8 +101,9 @@ const NEGOVIYAT_APARTAMENT = {
     tsenaSmr: { stoynost_st: 6140000 },
     pdBanka: { stoynost_st: 2000000 },
     pdSmr: { stoynost_st: 3000000 },
-    nsBanka: { stoynost_st: 2000000 },
+    nsBanka: { stoynost_st: 1500000 },
     nsSmr: { stoynost_st: 3140000 },
+    akt16: { stoynost_st: 500000 },
   },
 };
 
@@ -199,6 +200,8 @@ describe('проверката е СМЕТНАТА, не въведена', () =
       ['kesh', 6140000, 6140000, 0],
     ]);
     expect(r.platena).toBe(true);
+    // негово решение, 05.09: „Само Акт 16" · той е дошъл, значи и ЗАВЪРШЕНА
+    expect([r.zavarshena, r.chaka]).toEqual([true, []]);
     // записаната цена срещу сбора на двете страни · сверка, която затваря
     expect(r.tsena).toBe(r.tsenaPoStrani);
     expect(t.sverki.every((s) => s.nared)).toBe(true);
@@ -221,6 +224,23 @@ describe('проверката е СМЕТНАТА, не въведена', () =
     expect(t.sverki[0]?.nared).toBe(true);
   });
 
+  it('ПЛАТЕНА без Акт 16 не е ЗАВЪРШЕНА · и се казва какво чака (негово, 05.09)', async () => {
+    const { iz, zapishi } = await otvori();
+    await zapishi('p1', 'prodazhbi.dobaviParva', {
+      kletki: {
+        ...NEGOVIYAT_APARTAMENT.kletki,
+        nsBanka: { stoynost_st: 2000000 },
+        akt16: null,
+      },
+    });
+    const t = prodazhbite(iz.ogledalo(), KOGATO).tablitsi[0]!;
+    const r = t.redove[0]!;
+    // парите са дошли докрай · актът не
+    expect([r.platena, r.zavarshena, r.chaka]).toEqual([true, false, ['АКТ 16']]);
+    expect([t.platenite, t.zavarshenite, t.ostatak]).toEqual([1, 0, 0]);
+    expect(t.sastoyanie).toBe('aktivna');
+  });
+
   it('празната таблица не е завършена · тя е ПРАЗНА, и това се казва', async () => {
     const { iz } = await otvori();
     const v = prodazhbite(iz.ogledalo(), KOGATO);
@@ -241,12 +261,18 @@ describe('проверката е СМЕТНАТА, не въведена', () =
         tsenaSmr: { stoynost_st: 4452000 },
         pdBanka: { stoynost_st: 1500000 },
         pdSmr: { stoynost_st: 2226000 },
-        nsBanka: { stoynost_st: 1500000 },
+        nsBanka: { stoynost_st: 1000000 },
         nsSmr: { stoynost_st: 2226000 },
+        akt16: { stoynost_st: 500000 },
       },
     });
     const t = prodazhbite(iz.ogledalo(), KOGATO).tablitsi[0]!;
-    expect([t.redove.length, t.platenite, t.sastoyanie]).toEqual([2, 2, 'zavarshena']);
+    expect([t.redove.length, t.platenite, t.zavarshenite, t.sastoyanie]).toEqual([
+      2,
+      2,
+      2,
+      'zavarshena',
+    ]);
     // ОБЩО евро · неговият ред A58 · по колона
     expect(t.obshto['tsena']).toBe(17592000);
     expect(t.obshto['kvadratura']).toBe(1466000);
@@ -268,8 +294,9 @@ describe('втората таблица · цената следва от евр
         tsenaSmr: { stoynost_st: 7662000 },
         pdBanka: { stoynost_st: 2500000 },
         pdKesh: { stoynost_st: 3831000 },
-        nsBanka: { stoynost_st: 2500000 },
+        nsBanka: { stoynost_st: 2000000 },
         nsKesh: { stoynost_st: 3831000 },
+        akt16Banka: { stoynost_st: 500000 },
       },
     });
     const t = prodazhbite(iz.ogledalo(), KOGATO).tablitsi[1]!;

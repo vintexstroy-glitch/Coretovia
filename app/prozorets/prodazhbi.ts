@@ -41,8 +41,8 @@ const TABLITSA_NA_BUTONA: Readonly<Record<string, string>> = Object.freeze({
 
 const DUMI_NA_SASTOYANIETO: Readonly<Record<TablitsaNaProdazhbite['sastoyanie'], string>> =
   Object.freeze({
-    zavarshena: 'ЗАВЪРШЕНА · всичко е платено',
-    aktivna: 'АКТИВНА · чака плащания',
+    zavarshena: 'ЗАВЪРШЕНА · всичко е платено и Акт 16 е дошъл',
+    aktivna: 'АКТИВНА · чака плащания или Акт 16',
     prazna: 'празна · още няма продажби',
   });
 
@@ -95,7 +95,9 @@ export function narisuvayProdazhbi(k: KonteksNaEkrana): void {
         return kletkaHTML(o, t.klyuch, kol, red);
       })
       .join('');
-    return `<tr class="red${r.platena ? ' platena' : ''}" data-id="${ekraniraj(r.id)}" data-tablitsa="${t.klyuch}" data-seq="${red.seq}">${tds}</tr>`;
+    const klas = r.zavarshena ? ' zavarshena' : r.platena ? ' platena' : '';
+    const chaka = r.chaka.length === 0 ? '' : ` data-chaka="${ekraniraj(r.chaka.join(' · '))}"`;
+    return `<tr class="red${klas}"${chaka} data-id="${ekraniraj(r.id)}" data-tablitsa="${t.klyuch}" data-seq="${red.seq}">${tds}</tr>`;
   };
 
   /** Редът му „ОБЩО евро" · сборовете по колона, сметнати в цели центове. */
@@ -122,7 +124,11 @@ export function narisuvayProdazhbi(k: KonteksNaEkrana): void {
       .join('');
     return `<section class="tablitsa-blok" data-blok="${s.klyuch}">
         <h2 class="lenta" translate="no">${ekraniraj(s.ime)}</h2>
-        <p class="pod-tablitsata" data-sastoyanie="${s.klyuch}">${ekraniraj(DUMI_NA_SASTOYANIETO[s.sastoyanie])} · платени ${s.platenite} от ${s.redove.length} · остатък <span translate="no">${ekraniraj(pishi(s.ostatak))}</span></p>
+        <p class="pod-tablitsata" data-sastoyanie="${s.klyuch}">${ekraniraj(DUMI_NA_SASTOYANIETO[s.sastoyanie])} · платени ${s.platenite} от ${s.redove.length} · с Акт 16 ${s.zavarshenite} · остатък <span translate="no">${ekraniraj(pishi(s.ostatak))}</span>${
+          s.platenite > s.zavarshenite
+            ? ` · ${s.platenite - s.zavarshenite} платени чакат Акт 16`
+            : ''
+        }</p>
         <div class="pregled">
           <table class="reshetka prodazhbi" data-reshetka="${s.klyuch}">
             <thead><tr>${glavi}</tr></thead>
@@ -144,7 +150,7 @@ export function narisuvayProdazhbi(k: KonteksNaEkrana): void {
     <p class="greshka" data-greshka></p>
     ${dumiteHTML(DUMI_OT_KNIGATA.prodazhbi)}
     ${v.tablitsi.map(tablitsaHTML).join('')}
-    <p class="pod-tablitsata" data-proverkite>Проверката е СМЕТНАТА: цена минус вноските от същата страна. Нулата значи платено и се записва като сверка (правило 7). Колоната „Ключ" стои в ${ekraniraj(String(KLYUCH_KOLONA_PRODAZHBI))}-та колона на листа, скрита.</p>
+    <p class="pod-tablitsata" data-proverkite>Проверката е СМЕТНАТА: цена минус вноските от същата страна. Продажба с нулев остатък е ПЛАТЕНА; ЗАВЪРШЕНА е онази, при която е дошъл и Акт 16 (негово, 05.09). Нулата значи платено и се записва като сверка (правило 7). Колоната „Ключ" стои в ${ekraniraj(String(KLYUCH_KOLONA_PRODAZHBI))}-та колона на листа, скрита.</p>
     ${iznosVestHTML()}`;
 
   zakachiZebrata(k.tyalo);

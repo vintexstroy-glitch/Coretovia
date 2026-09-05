@@ -1113,12 +1113,13 @@ const PRINADLEZHNOSTI: readonly Kolona[] = [
   },
 ];
 
-/** Пари в продажба · с ролята и страната им. */
+/** Пари в продажба · с ролята и страната им · и дали ЗАВЪРШВАТ продажбата. */
 function pari(
   klyuch: string,
   ime: string,
   rolya: 'tsena' | 'vnoska' | 'proverka',
   strana: 'banka' | 'kesh',
+  zavarshva?: true,
 ): Kolona {
   return {
     klyuch,
@@ -1127,6 +1128,7 @@ function pari(
     zadalzhitelna: false,
     zatvorena: rolya === 'proverka',
     plashtane: { rolya, strana },
+    ...(zavarshva === undefined ? {} : { zavarshva }),
   };
 }
 
@@ -1142,7 +1144,7 @@ const PRODAZHBI_KOLONI: readonly Kolona[] = [
   pari('nsSmr', 'НС смр', 'vnoska', 'kesh'),
   pari('akt15Smr', 'Акт 15 смр', 'vnoska', 'kesh'),
   pari('akt15', 'Акт 15', 'vnoska', 'banka'),
-  pari('akt16', 'АКТ 16 ', 'vnoska', 'banka'),
+  pari('akt16', 'АКТ 16 ', 'vnoska', 'banka', true),
   pari('proverkaBanka', 'проверка банка', 'proverka', 'banka'),
   pari('proverkaKesh', 'проверка кеш', 'proverka', 'kesh'),
 ];
@@ -1165,7 +1167,7 @@ const PRODAZHBI2_KOLONI: readonly Kolona[] = [
   pari('nsBanka', 'НС банка', 'vnoska', 'banka'),
   pari('nsKesh', 'НС кеш', 'vnoska', 'kesh'),
   pari('akt15Banka', 'АКТ 15 банка', 'vnoska', 'banka'),
-  pari('akt16Banka', 'АКТ 16 банка ', 'vnoska', 'banka'),
+  pari('akt16Banka', 'АКТ 16 банка ', 'vnoska', 'banka', true),
   pari('proverkaBanka', 'проверка банка', 'proverka', 'banka'),
   pari('proverkaKesh', 'проверка кеш', 'proverka', 'kesh'),
 ];

@@ -76,6 +76,14 @@ export interface Kolona {
     readonly rolya: 'tsena' | 'vnoska' | 'proverka';
     readonly strana: StranaNaPlashtane;
   };
+  /**
+   * ВНОСКАТА, без която продажбата не е ЗАВЪРШЕНА · негово, 05.09: Акт 16.
+   *
+   * Остатъкът нула значи ПЛАТЕНА; завършена е онази, при която и този акт е
+   * дошъл. Двете не се сливат: платена без Акт 16 е нормално състояние, което
+   * се КАЗВА, а не грешка (правило 12).
+   */
+  readonly zavarshva?: true;
   readonly zadalzhitelna: boolean;
   /** затворена = сметка или пренесено · не се редактира от никого (правило 18) */
   readonly zatvorena: boolean;
