@@ -1,0 +1,13 @@
+{
+  "name": "Coretovia",
+  "short_name": "Coretovia",
+  "description": "Книгата е Заданието · осем прозореца · местно-първо, без сървър.",
+  "lang": "bg",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FBF8F3",
+  "theme_color": "#F6F2EA",
+  "icons": [{ "src": "./ikona.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

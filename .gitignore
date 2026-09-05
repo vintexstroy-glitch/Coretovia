@@ -1,0 +1,27 @@
+# Node
+node_modules/
+dist/
+*.log
+
+# Среда
+.env
+.env.*
+
+# Редактори · ОС
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ПОВЕРИТЕЛНОТО НЕ ВЛИЗА (правило 29)
+# Неговата Книга живее тук и в неговия Драйв; в хранилището влиза само мострата.
+kniga-lichna/
+*.xlsx
+!tests/mostri/Coretovia-mostra*.xlsx
+*.xlsb
+*.pdf
+!tests/mostri/*.pdf
+
+# работни файлове на прохода и на честността
+/proba/spanal.png
+/stroezh/.chestnost-proba.mjs

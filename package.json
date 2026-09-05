@@ -1,0 +1,40 @@
+{
+  "name": "coretovia",
+  "version": "0.0.1-skelet",
+  "private": true,
+  "type": "module",
+  "description": "Coretovia · Книгата е Заданието · осем прозореца, един Журнал, една Порта",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node stroezh/pechat-sw.mjs",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "proba": "npm run build && node proba/prohod.ts",
+    "chistota": "node stroezh/chistota.mjs",
+    "chestnost": "node stroezh/chestnost.mjs",
+    "sloeve": "depcruise --config .dependency-cruiser.cjs src app",
+    "litsenzi": "node stroezh/litsenzi.mjs",
+    "stil": "biome check .",
+    "mostra": "node stroezh/mostra-kniga.mjs",
+    "proverka": "npm run typecheck && npm test && npm run chistota && npm run chestnost && npm run sloeve && npm run litsenzi && npm run stil"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "@types/node": "24.13.3",
+    "dependency-cruiser": "18.2.0",
+    "fake-indexeddb": "6.2.5",
+    "knip": "6.34.0",
+    "playwright-core": "1.63.0",
+    "typescript": "6.0.3",
+    "vite": "8.2.2",
+    "vitest": "5.0.0"
+  }
+}

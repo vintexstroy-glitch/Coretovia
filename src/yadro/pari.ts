@@ -1,0 +1,200 @@
+/**
+ * Парите са цели НАЙ-МАЛКИ ЕДИНИЦИ на валутата. Никога float.
+ * Правило от Архитектурния документ §5 и План за изпълнение П2.1.
+ *
+ * Негова дума (23.08): „ЛЕВ НЯМА… пишеш в евро, не в евроцента." Затова всичко,
+ * което човек ВИЖДА, е в евро с думата и знака — а вътре се пази най-малката
+ * единица, защото ДДС, изваден от обща цена, я ражда: без нея инвариантът
+ * „основа + ДДС == обща" пада. Типът остава `Tsentove` — той е ЕДИНИЦАТА,
+ * не левът; преименуване би пипнало всеки запис в Журнала за нула полза.
+ */
+
+import { EVRO, type Valuta } from './valuta.js';
+
+export type Tsentove = number & { readonly __tsentove: unique symbol };
+
+export class GreshkaPari extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GreshkaPari';
+  }
+}
+
+/** Прави Tsentove от число. Хвърля, ако не е цяло и безопасно. */
+export function tsentove(n: number): Tsentove {
+  if (!Number.isSafeInteger(n)) {
+    throw new GreshkaPari(`Парите са цели центове; получено: ${n}`);
+  }
+  return n as Tsentove;
+}
+
+/** Проверка без хвърляне — ползва се от валидацията на Вратата. */
+export function eTsentove(n: unknown): n is Tsentove {
+  return typeof n === 'number' && Number.isSafeInteger(n);
+}
+
+export function sabiri(...chasti: readonly Tsentove[]): Tsentove {
+  let sbor = 0;
+  for (const ch of chasti) sbor += ch;
+  return tsentove(sbor);
+}
+
+export function izvadi(a: Tsentove, b: Tsentove): Tsentove {
+  return tsentove(a - b);
+}
+
+/** Обръща знака — основата на сторното. */
+export function obarni(a: Tsentove): Tsentove {
+  return tsentove(-a);
+}
+
+/**
+ * Разпределя сума на части без загуба на цент.
+ * Остатъкът отива към първите части, за да е сборът точен.
+ */
+export function razpredeli(suma: Tsentove, chasti: number): Tsentove[] {
+  if (!Number.isSafeInteger(chasti) || chasti <= 0) {
+    throw new GreshkaPari(`Броят части трябва да е цяло положително число; получено: ${chasti}`);
+  }
+  const znak = suma < 0 ? -1 : 1;
+  const abs = Math.abs(suma);
+  const osnova = Math.floor(abs / chasti);
+  const ostatak = abs - osnova * chasti;
+  return Array.from({ length: chasti }, (_, i) =>
+    tsentove(znak * (osnova + (i < ostatak ? 1 : 0))),
+  );
+}
+
+/**
+ * ЦЕЛОЧИСЛЕНО ДЕЛЕНЕ със закръгляне на половинката НАГОРЕ · ЕДИН ДОМ.
+ *
+ * Тук се дели всичко, което е част от сума: ДДС, изваден от обща цена;
+ * коефициент в базисни точки; лихвата за месеца по остатъка. Делителят и
+ * делимото са ЦЕЛИ и резултатът е ЦЯЛ — никъде по пътя няма float, защото
+ * float дели 1 на 3 и връща число, чиито три части не се събират обратно.
+ *
+ * ЗНАКЪТ СЕ ПАЗИ. Не е украса: сторното е обърнат знак (`obarni`), а деленето
+ * на обърнато число трябва да върне обърнат резултат — иначе сторното на един
+ * ДДС не е точно минус самия ДДС и сверката не затваря на нула.
+ *
+ * ЗАЩО СЕ ПРЕМЕСТИ ТУК (правило 17, платено с находка). Функцията живееше на
+ * ДВЕ места — `dds.ts` и `koefitsienti.ts` — с еднакво име и еднакъв коментар,
+ * но с РАЗЛИЧНО поведение: едната приемаше, че и двете числа са положителни, и
+ * при отрицателно делимо връщаше закръглено в грешната посока. Преписаното
+ * число се разминава; преписаната ФУНКЦИЯ се разминава по-тихо, защото и двете
+ * изглеждат прави, докато не подадеш минус.
+ */
+export function deliZakragleno(chislitel: number, znamenatel: number): number {
+  if (znamenatel === 0) {
+    throw new GreshkaPari('Деление на нула — числото няма стойност, а не нула.');
+  }
+  const znak = chislitel < 0 !== znamenatel < 0 ? -1 : 1;
+  const ch = Math.abs(chislitel);
+  const zn = Math.abs(znamenatel);
+  const chastno = Math.floor(ch / zn);
+  const ostatak = ch - chastno * zn;
+  return znak * (2 * ostatak >= zn ? chastno + 1 : chastno);
+}
+
+/**
+ * За четене от човек · ПО НОРМИТЕ НА ВАЛУТАТА (И96 т.7):
+ *
+ *   евро   123456 → „1 234,56 €"   знакът отзад · тясна пауза · запетая
+ *   долар  123456 → „$1,234.56"    знакът ОТПРЕД · запетая · ТОЧКА
+ *
+ * Дотук българските правила бяха ЗАКОВАНИ тук — запетая, тясна пауза, знак
+ * накрая. Долар по тези правила дава „1 234,56 $": не долар, а евро с чужд
+ * знак. Затова трите правила живеят във валутата и се четат оттам.
+ *
+ * Хилядите се делят НА РЪКА, не през локала: не всяка среда носи същите
+ * правила, а числото пред собственика трябва да е еднакво навсякъде.
+ */
+export function kakvoPishe(s: Tsentove, v: Valuta = EVRO): string {
+  const minus = s < 0 ? '-' : '';
+  const abs = Math.abs(s);
+  const tsyalo = String(Math.floor(abs / v.drobni)).replace(/\B(?=(\d{3})+(?!\d))/g, v.hilyadi);
+  const drobno = String(abs % v.drobni).padStart(String(v.drobni - 1).length, '0');
+  const chislo = `${minus}${tsyalo}${v.drobenZnak}${drobno}`;
+  // Знакът отпред се лепи за числото (,,$1,234.56"); отзад стои с тясна пауза
+  // („1 234,56 €") — така се пише и в двете норми.
+  return v.predi ? `${v.znak}${chislo}` : `${chislo}\u202F${v.znak}`;
+}
+
+/**
+ * Чете сума, написана от човек, и я превръща в цели най-малки единици.
+ *
+ * ЗАЩО ВАЛУТАТА Е ЗАДЪЛЖИТЕЛНА ТУК, а не се гадае. „1,234" е **1234** на
+ * долар и **1,234** на евро — същите знаци, две различни числа, и разликата е
+ * хилядократна. Никое правило „ако има точка след запетая…" не покрива всички
+ * случаи; затова се пита ВАЛУТАТА, а тя се знае — избрана е при регистрация.
+ *
+ * Приема „1150,50", „1 150,50", „1150" при евро; „1,150.50", „1150.50", „1150"
+ * при долар; със или без знак на валута. Отказва всичко друго — входът е
+ * мястото, където се спира дробното, не Вратата.
+ */
+export function otSuma(tekst: string, v: Valuta = EVRO): Tsentove {
+  const chisto = tekst
+    .replace(/[\s\u00A0\u202F]/g, '')
+    .replace(/€|EUR|евро|\$|USD|долар/gi, '')
+    // хилядите падат; дробният знак става точка — и двете по нормата НА ВАЛУТАТА
+    .split(v.hilyadi === '\u202F' ? /[\u202F]/ : new RegExp(`\\${v.hilyadi}`, 'g'))
+    .join('')
+    .replace(v.drobenZnak, '.');
+  const nameren = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(chisto);
+  if (!nameren) {
+    throw new GreshkaPari(`Не е сума в ${v.ime}: „${tekst}"`);
+  }
+  const [, znak, tsyala, drobna = ''] = nameren;
+  const stotni = Number(drobna.padEnd(2, '0'));
+  const sbor = Number(tsyala) * v.drobni + stotni;
+  return tsentove(znak === '-' ? -sbor : sbor);
+}
+
+/**
+ * ЕДИН ОТКАЗ, ЕДИН ДОМ (правило 17).
+ *
+ * Формите за плащане и за разход казваха това поотделно. Две форми, които
+ * отказват едно и също с два свои текста, започват да се разминават в деня,
+ * в който едната се поправи — и човекът вижда две различни правила там,
+ * където правилото е едно.
+ */
+export const SUMATA_NAD_NULA = 'Сумата трябва да е повече от нула.';
+
+/**
+ * ЗА ПИСАНЕ · чисто число за поле във форма: 123456 → „1234,56".
+ *
+ * Без знак на валута и без паузи за хиляди: полето е за РЕДАКТИРАНЕ, и
+ * човекът пише върху числото, не върху украсата. `kakvoPishe` е за четене.
+ */
+export function zaPisane(s: Tsentove, drobni = 100): string {
+  const znak = s < 0 ? '-' : '';
+  const abs = Math.abs(s);
+  return `${znak}${Math.floor(abs / drobni)},${String(abs % drobni).padStart(2, '0')}`;
+}
+
+/**
+ * ЗА ЕКРАНА · същото, но приема гол `number`.
+ *
+ * ЗАЩО СЪЩЕСТВУВА. `Tsentove` е маркиран тип и това е правилно: там, където се
+ * СМЯТА, марката пази да не влезе цена в левове или наполовина закръглено
+ * число. Но полетата в Огледалото са `number` — марката се губи, щом сумата
+ * мине през Журнала.
+ *
+ * Затова екраните пишеха `kakvoPishe(x as never)` на **71 места**. `as never`
+ * не е тесен кръпка: то изключва проверката на типа ИЗЦЯЛО за този довод.
+ * `undefined as never` минаваше компилацията и рисуваше „NaN €" — тихо грешно
+ * число на екран за пари.
+ *
+ * Тези две функции приемат `number`, значи проверката остава, а невъзможното
+ * число се КАЗВА, вместо да мине за нула.
+ */
+export function pishi(st: number, v: Valuta = EVRO): string {
+  if (!Number.isSafeInteger(st)) return `⚠ не е цели центове: ${String(st)}`;
+  return kakvoPishe(st as Tsentove, v);
+}
+
+/** Същото за полето за писане — без знака на валутата. */
+export function pishiVPole(st: number, drobni = 100): string {
+  if (!Number.isSafeInteger(st)) return '';
+  return zaPisane(st as Tsentove, drobni);
+}

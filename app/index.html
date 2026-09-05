@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    СТЕНАТА · всичко от собствения адрес и НИЩО друго (правило 10 · 29).
+
+    Книгата, Журналът и сметките са на устройството. Днес нито един байт не
+    тръгва навън. Когато влезе входът с доставчик (Google · Microsoft · Apple)
+    или бутонът към Клод, всеки нов път се ИЗБРОЯВА тук поименно и тест го
+    сверява — стена, отворена изобщо, е стена, свалена.
+
+    `ws://localhost` е само за `npm run dev`.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    img-src 'self' data:;
+    script-src 'self';
+    style-src 'self';
+    connect-src 'self' ws://localhost:* ws://127.0.0.1:*;
+    worker-src 'self';
+    object-src 'none';
+    base-uri 'none';
+    form-action 'none'">
+  <title>Coretovia</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#F6F2EA">
+  <link rel="icon" href="./ikona.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./stil.css">
+</head>
+<body>
+  <div id="ekran" class="ekran"></div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

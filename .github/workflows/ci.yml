@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  proverka:
+    name: Пълната проверка · типове · тестове · чистота · честност · слоеве · лицензи · стил · проход
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Типове
+        run: npm run typecheck
+
+      - name: Инвариантни тестове
+        run: npm test
+
+      # Обходите са ДОГОВОР, не пожелание: обход, който CI не пуска, разчита на
+      # дисциплина вместо на машина (урок ADR-056 на MasterBook).
+      - name: Чистотата · деветте обхода
+        run: npm run chistota
+      - name: Честността на проверките
+        run: npm run chestnost
+      - name: Слоевете · посоката на зависимостите
+        run: npm run sloeve
+      - name: Лицензите · нищо заразяващо
+        run: npm run litsenzi
+      - name: Стилът
+        run: npm run stil
+
+      - name: Браузър за прохода
+        run: npx playwright-core install --with-deps chromium
+
+      # Проходът проверява какво ПИШЕ НА ЕКРАНА. Без него регресия в изгледа
+      # минава зелено.
+      - name: Проход през истински браузър
+        run: npm run proba

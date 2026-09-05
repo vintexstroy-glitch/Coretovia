@@ -1,0 +1,65 @@
+# ПУСКАНЕТО · приложението застава на публичен адрес (GitHub Pages).
+#
+# Отделен поток от CI: CI казва „вярно ли е", пускането казва „видимо ли е".
+# Слети, един счупен тест би свалил работещото приложение от мрежата.
+#
+# Условията, които не могат да се направят оттук (урок ADR-054 на MasterBook):
+# хранилището е ПУБЛИЧНО (Pages отказва на частно), Settings → Pages → Source
+# е „GitHub Actions". Адресът е домът на ADR-003 в docs/.
+name: Пускане
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pusni
+  cancel-in-progress: false
+
+jobs:
+  pusni:
+    name: Построяване и качване
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pusnato.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Типове
+        run: npm run typecheck
+      - name: Инвариантни тестове
+        run: npm test
+      - name: Чистотата
+        run: npm run chistota
+      - name: Честността
+        run: npm run chestnost
+      - name: Слоевете
+        run: npm run sloeve
+      - name: Лицензите
+        run: npm run litsenzi
+
+      - name: Построяване
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: pusnato
+        uses: actions/deploy-pages@v4
