@@ -1,4 +1,4 @@
-/* Coretovia · стилът · резен 0 · системни шрифтове, нищо чуждо (правило 10). */
+/* Coretovia · стилът · резен 1 · системни шрифтове, нищо чуждо (правило 9). */
 
 :root {
   --fon: #fbf8f3;
@@ -6,8 +6,11 @@
   --mastilo: #1f2a25;
   --sivo: #6b7570;
   --linija: #e3ddd2;
+  --zebra: #f4f1ea;
   --zeleno: #2f5d50;
+  --zeleno-svetlo: #e6efe9;
   --cherveno: #b23a3a;
+  --zhalto: #fff6d6;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
@@ -25,14 +28,21 @@ body {
 }
 
 .ekran {
-  max-width: 64rem;
+  max-width: 80rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: 1rem 1rem 4rem;
+}
+
+.glava {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .glava h1 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   color: var(--zeleno);
   letter-spacing: 0.02em;
 }
@@ -42,6 +52,33 @@ body {
   color: var(--sivo);
 }
 
+/* ═══ лентата на осемте прозореца ═══ */
+.lenta-prozortsi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.75rem 0 1rem;
+  border-bottom: 1px solid var(--linija);
+}
+
+.lenta-prozortsi a {
+  padding: 0.4rem 0.7rem;
+  color: var(--sivo);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.lenta-prozortsi a:hover {
+  color: var(--mastilo);
+}
+
+.lenta-prozortsi a.tekusht {
+  color: var(--zeleno);
+  border-bottom-color: var(--zeleno);
+  font-weight: 600;
+}
+
+/* ═══ секции и думите му ═══ */
 .sektsiya {
   background: var(--hartiya);
   border: 1px solid var(--linija);
@@ -50,11 +87,30 @@ body {
   margin-top: 1rem;
 }
 
-.sektsiya h2 {
+.sektsiya h2,
+.lenta {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;
 }
 
+.lenta {
+  margin-top: 1.25rem;
+  color: var(--zeleno);
+}
+
+.dumite {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.25rem;
+  color: var(--sivo);
+  font-size: 0.9rem;
+}
+
+.dumite .nomer {
+  font-weight: 600;
+  color: var(--mastilo);
+}
+
+/* ═══ бутони и полета ═══ */
 button {
   font: inherit;
   padding: 0.35rem 0.8rem;
@@ -69,23 +125,233 @@ button:hover {
   filter: brightness(1.08);
 }
 
-.tablitsa {
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+button.vtorichen {
+  background: var(--hartiya);
+  color: var(--zeleno);
+}
+
+.deystviya {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.otmetka {
+  color: var(--sivo);
+  margin-left: auto;
+}
+
+.pole {
+  font: inherit;
+  width: 100%;
+  min-width: 6rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--zeleno);
+  border-radius: 4px;
+  background: var(--hartiya);
+  color: var(--mastilo);
+}
+
+.red-poleta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.red-poleta .pole {
+  max-width: 22rem;
+}
+
+.greshka {
+  margin: 0.5rem 0 0;
+  color: var(--cherveno);
+  min-height: 1.2em;
+}
+
+.greshka:empty {
+  display: none;
+}
+
+/* ═══ таблици ═══ */
+.tablitsa,
+.reshetka {
   border-collapse: collapse;
   width: 100%;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   font-variant-numeric: tabular-nums;
+  background: var(--hartiya);
 }
 
 .tablitsa th,
-.tablitsa td {
+.tablitsa td,
+.reshetka th,
+.reshetka td {
   text-align: left;
   padding: 0.3rem 0.5rem;
   border-bottom: 1px solid var(--linija);
+  vertical-align: middle;
 }
 
-.tablitsa th {
+.reshetka th {
   color: var(--sivo);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.reshetka th.evro,
+.reshetka td.evro,
+.reshetka th.chislo,
+.reshetka td.chislo {
+  text-align: right;
+}
+
+.reshetka td.nomer {
+  color: var(--sivo);
+  white-space: nowrap;
+}
+
+/* зебрата се сменя при смяна на групата (zebra.ts) · стои ПРЕДИ :hover */
+.reshetka tr.zebra {
+  background: var(--zebra);
+}
+
+.reshetka tr.red:hover {
+  background: var(--zeleno-svetlo);
+}
+
+.reshetka tr.grupata td {
+  background: var(--zeleno);
+  color: #fff;
+  font-weight: 600;
+}
+
+.reshetka .kletka[data-redakt] {
+  cursor: text;
+}
+
+.reshetka .kletka[data-redakt]:focus {
+  outline: 2px solid var(--zeleno);
+  outline-offset: -2px;
+}
+
+.reshetka .kletka.spryana {
+  color: var(--sivo);
+  font-style: italic;
+}
+
+.reshetka tr.izklyuchen {
+  color: var(--sivo);
+  text-decoration: line-through;
+}
+
+.reshetka tr.chernova td {
+  background: var(--zhalto);
+}
+
+.reshetka tr.chernova .pole + .pole {
+  margin-top: 0.2rem;
+}
+
+.pod-tablitsata {
+  margin: 0.25rem 0 0;
+  color: var(--sivo);
+  font-size: 0.85rem;
+}
+
+.tablitsa-blok {
+  margin-top: 0.5rem;
+}
+
+/* ═══ номенклатурите ═══ */
+.nomenklaturi tr.spryana td {
+  color: var(--sivo);
+  font-style: italic;
+}
+
+.nomenklaturi tr.nov td {
+  background: var(--zhalto);
+}
+
+.nomenklaturi tr.sverka td {
+  color: var(--sivo);
+  font-size: 0.85rem;
+  border-bottom: 2px solid var(--linija);
+}
+
+/* ═══ дясното меню ═══ */
+.kontekstno-menyu {
+  position: fixed;
+  z-index: 20;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--hartiya);
+  border: 1px solid var(--linija);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  min-width: 14rem;
+}
+
+.kontekstno-menyu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  color: var(--mastilo);
+  border: 0;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.kontekstno-menyu button:hover:not(:disabled) {
+  background: var(--zeleno-svetlo);
+  filter: none;
+}
+
+.kontekstno-menyu .zashto {
+  display: block;
+  color: var(--sivo);
+  font-size: 0.8rem;
+}
+
+/* ═══ изскачащият прозорец (prozorets.ts) ═══ */
+.istoriya-fon {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(31, 42, 37, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.istoriya-karta {
+  background: var(--hartiya);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  max-width: 32rem;
+  width: calc(100% - 2rem);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.istoriya-karta h3 {
+  margin: 0 0 0.25rem;
+}
+
+.istoriya-karta .pod {
+  margin: 0 0 0.75rem;
+  color: var(--sivo);
+}
+
+.istoriya-zatvori {
+  margin-top: 0.75rem;
 }
 
 ol[data-prozortsi] li {

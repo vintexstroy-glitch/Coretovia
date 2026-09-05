@@ -13,6 +13,7 @@ import type { KonteksNaProhoda } from './yadro/kontekst.ts';
 import { pusniServer, pochakaySurvara, spriServer } from './yadro/server.ts';
 import { tishina } from './yadro/tishina.ts';
 
+import * as imoti from './razdeli/imoti.ts';
 import * as skelet from './razdeli/skelet.ts';
 
 async function main(): Promise<void> {
@@ -33,6 +34,7 @@ async function main(): Promise<void> {
 
   try {
     await skelet.blok1(ctx);
+    await imoti.blok1(ctx);
   } catch (greshka) {
     broyach.dobaviNahodka({
       razdel: broyach.posledenRazdel,
@@ -45,6 +47,22 @@ async function main(): Promise<void> {
       .evaluate(() => document.getElementById('ekran')?.innerText?.slice(0, 1500) ?? 'няма екран')
       .catch(() => 'екранът не се чете');
     console.log(`\n  НА ЕКРАНА В МИГА НА СПЪВАНЕТО:\n  ${naEkrana.replace(/\n/g, '\n  ')}\n`);
+    // Белезите, които казват най-много при спъване: сверките, грешката, менюто.
+    const belezi = await stranitsa
+      .evaluate(() =>
+        [
+          ...document.querySelectorAll(
+            '[data-sverka], [data-greshka], [data-iznos-vest], [data-menyu], .chernova',
+          ),
+        ]
+          .map(
+            (e) =>
+              `${e.tagName.toLowerCase()} ${[...e.attributes].map((a) => `${a.name}=${a.value}`).join(' ')} → ${(e as HTMLElement).innerText?.trim().slice(0, 200)}`,
+          )
+          .join('\n'),
+      )
+      .catch(() => 'белезите не се четат');
+    console.log(`\n  БЕЛЕЗИТЕ:\n  ${belezi.replace(/\n/g, '\n  ')}\n`);
     console.log(`\n  КОНЗОЛАТА ДОТУК:\n  ${greshkiVKonzolata.join('\n  ') || 'чиста'}\n`);
     await stranitsa.screenshot({ path: 'proba/spanal.png', fullPage: true }).catch(() => {});
   }

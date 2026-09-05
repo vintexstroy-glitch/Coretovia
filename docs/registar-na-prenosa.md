@@ -20,21 +20,26 @@
 | src/iztochnik | 12 | 8 | 2 | 2 | 0 |
 | src/iznos | 5 | 2 | 1 | 2 | 0 |
 | src/ogledalo | 3 | 1 | 2 | 0 | 0 |
-| src/kalkulator | 10 | 1 | 7 | 1 | 1 |
-| src/domein | 105 | 16 | 35 | 38 | 16 |
+| src/kalkulator | 10 | 1 | 8 | 0 | 1 |
+| src/domein | 105 | 16 | 39 | 37 | 13 |
 | src/migratsiya + izdanie | 2 | 0 | 1 | 0 | 1 |
 | stroezh | 6 | 6 | 0 | 0 | 0 |
 | proba | 32 | 5 | 25 | 1 | 1 |
 | .claude/skills | 12 | 2 | 10 | 0 | 0 |
 | tests (поименно) | 17 | 10 | 4 | 3 | 0 |
-| **ОБЩО** | **224** | **67** | **88** | **50** | **19** |
+| **ОБЩО** | **224** | **67** | **93** | **48** | **16** |
 
-Сверка вход↔изход: 67 + 88 + 50 + 19 = 224 = 224 реда · разлика 0 (записана, макар и нула · правило 7).
+Сверка вход↔изход: 67 + 93 + 48 + 16 = 224 = 224 реда · разлика 0 (записана, макар и нула · правило 7).
 
 Осем присъди са ПОПРАВЕНИ спрямо първата сверка (тя гледаше пет прозореца, не осем):
 `domein/kolonno.ts` → ПРЕНОС · `domein/agenti.ts` и `zadachi.ts` → ПРЕНАПИСВАНЕ · `domein/formuli.ts` →
 ПРЕНАПИСВАНЕ · `domein/stopanin.ts` и `sluzhiteli.ts` → ПРЕНАПИСВАНЕ · `domein/butoni.ts` → ПРЕНОС;
 `tests/vazmozhnostite.test.ts` остава ЧАКА. Разделите на стария проход са 22 реда, не един.
+
+**Пет присъди се смениха на 05.09 след трите допълнения** (`zadanie/10-dopalneniya-05-09.md`): `dds.ts` ·
+`sverka-dds.ts` · `spravki-schetovodstvo.ts` · `kontragenti.ts` → ПРЕНАПИСВАНЕ (ДДС и подтаб НАП, резен 3б);
+`kalkulator/sazdavane.ts` → ПРЕНАПИСВАНЕ (Калкулаторът над Продажбите, резен 5). `glavna-kniga.ts` остава ОТПАДА —
+„Не е да се свързва с НАП".
 
 `app/` (74 файла) не е в регистъра по файл: екранният слой се рисува наново ОТ модела; пренасят се 13-те
 чисти UI-механики в `app/reshetka/` (резен 1). Останалите тестове (146 файла) носят присъдата на файла,
@@ -116,7 +121,7 @@
 | kalkulator/matritsa.ts | 522 | ПРЕНАПИСВАНЕ (ядрата `tsenaTochno` · `saglasuvana` · `teglataZatvaryat` · `tsenaPoRazhod` дословно; кръговият внос с `nastroyki` пада) | src/smetach/kalkulator/matritsa.ts | П | 3 · matematika §2 |
 | kalkulator/nastroyki.ts | 923 | ПРЕНАПИСВАНЕ (числата му 3 000/2 000 се пренасят; данни, не код) | src/smetach/kalkulator/nastroyki.ts | П | ADR-067 |
 | kalkulator/razbivka.ts | 569 | ПРЕНОС (одитната следа ред по ред + `sverkaNaRazbivkata`) | src/smetach/kalkulator/razbivka.ts | П | 3 · 7 |
-| kalkulator/sazdavane.ts | 127 | ЧАКА („Създай сграда"/площообразуване — книгата мълчи) | — | — | 18 |
+| kalkulator/sazdavane.ts | 127 | ПРЕНАПИСВАНЕ („Създай сграда" от площообразуване · Калкулаторът над Продажбите · резен 5) | src/smetach/kalkulator/sazdavane.ts | П | zadanie/10 |
 | kalkulator/stoynost.ts | 365 | ПРЕНАПИСВАНЕ (чете старото Огледало) | src/smetach/kalkulator/stoynost.ts | П · С | ADR-012 |
 | kalkulator/svarzvane.ts | 141 | ПРЕНАПИСВАНЕ (свързване по кортеж-номер) | src/ogledalo/darvo.ts | У · П | 17 |
 | kalkulator/tseni-md.ts | 187 | ОТПАДА (четец на конкретен стар файл; двете таблици на Продажби го заместват) | — | — | Задание |
@@ -158,12 +163,12 @@
 | domein/proverki-ot-sverki.ts | 153 | ПРЕНАПИСВАНЕ (сверки по теми, колонно) | src/smetach/sverki/po-temi.ts | С | 7 |
 | domein/nachislyavane.ts | 167 | ПРЕНАПИСВАНЕ (начисляване на наем; внася `deystviya`) | src/domein/nachislyavane.ts | С | 7 |
 | domein/registar-naemi.ts | 242 | ПРЕНАПИСВАНЕ | src/smetach/naemi.ts | С | 7 |
-| domein/spravki-schetovodstvo.ts | 267 | ОТПАДА (четирите справки са по ДДС декларирано/недекларирано) | — | — | ADR-106 |
+| domein/spravki-schetovodstvo.ts | 267 | ПРЕНАПИСВАНЕ (колко е платено, колко остава · подтаб НАП · резен 3б) | src/smetach/nap/spravki.ts | С | zadanie/10 |
 | domein/glavna-kniga.ts | 506 | ОТПАДА (двустранни статии — не в книгата; внася `dds`) | — | — | Задание |
-| domein/dds.ts | 144 | ОТПАДА | — | — | Задание |
-| domein/sverka-dds.ts | 139 | ОТПАДА | — | — | Задание |
+| domein/dds.ts | 144 | ПРЕНАПИСВАНЕ (ДДС като ред по знак, месечно натрупване · върнато 05.09 т.2 · резен 3б) | src/smetach/dds.ts | С | zadanie/10 |
+| domein/sverka-dds.ts | 139 | ПРЕНАПИСВАНЕ (декларирано ↔ платено ↔ остатък · резен 3б) | src/smetach/sverki/dds.ts | С | zadanie/10 · 7 |
 | domein/zamrazyavane.ts | 60 | ПРЕНАПИСВАНЕ (ключът става „Прочетено/Сверено" вместо ДДС-справка) | src/domein/zamrazyavane.ts | С | 9 |
-| domein/kontragenti.ts | 168 | ЧАКА (ЕИК — книгата не го назовава) | — | С | 17 |
+| domein/kontragenti.ts | 168 | ПРЕНАПИСВАНЕ (контрагентите с ЕИК · находки в подтаб НАП · резен 3б) | src/domein/kontragenti.ts | С | zadanie/10 |
 | domein/zakonoviyat-lev.ts | 84 | ОТПАДА (лев) | — | — | 3 |
 | domein/sverka-izvlechenie.ts | 658 | ПРЕНАПИСВАНЕ (ядрото — един ред веднъж · 3-дневен прозорец · сблъсък = находка — дословно; входът колонен) | src/smetach/sverki/izvlechenie.ts | С | 7 · 18 |
 | domein/sveryavane.ts | 321 | ПРЕНАПИСВАНЕ („Сверяване от Ексел" → „Сверяване с банкови извлечения") | src/smetach/sverki/sveryavane.ts | С | 7 |

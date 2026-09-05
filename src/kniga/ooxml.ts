@@ -2,10 +2,9 @@
  * OOXML · ЕДИНСТВЕНОТО място, където живее чуждата библиотека (ADR-002).
  *
  * ExcelJS 4.4.0 · MIT · решава проблем, който не сме решили: стилове, слети
- * клетки, валидации от списък, формули с кеш, замразени редове, автофилтър —
- * и на четене, И на писане. Собственият четец на MasterBook четеше стойности
- * и формули, но не и това; собственият писач пишеше числа и текст без нито
- * един стил. Книгата на Стопанина трябва да се отваря в Excel КАТО НЕГОВАТА.
+ * клетки, валидации от списък, формули с кеш, замразени редове, автофилтър,
+ * скрити колони и листове, защита с отключени клетки — и на четене, И на
+ * писане. Книгата на Стопанина трябва да се отваря в Excel КАТО НЕГОВАТА.
  *
  * ═══ ГРАНИЦАТА ═══
  *
@@ -14,6 +13,9 @@
  * го брои (`chuzhdo-samo-poimenno`). Парите не минават оттук като сметка: една
  * клетка с пари е ЧИСЛО за Excel (`st / 100`), и точно това число се проверява
  * при кръга (`Math.round(v * 100) === st`), а сметките четат само цели центове.
+ *
+ * Каквото се ПИШЕ, се и ЧЕТЕ обратно (скрито · валидации · отключено): иначе
+ * кръгът не може да го докаже, а резен 2 го иска и без това.
  *
  * Ако библиотеката падне (замразена е от 2023), се сменя тук и само тук —
  * тестовете на Книгата минават през този файл, не през нея.
@@ -29,11 +31,14 @@ export type KletkaZaPisane =
   | { readonly formula: string; readonly rezultat: number }
   | { readonly tekst: string; readonly glava: true };
 
-export interface ValidatsiyaOtSpisak {
-  /** адрес или обхват · `C6:C56` */
-  readonly obhvat: string;
-  readonly spisak: readonly string[];
-}
+/**
+ * Валидация от списък · вграден (`spisak`) или по ОБХВАТ на друг лист
+ * (`izvor`, например `'Лист'!$C$9:$C$11`). Вграденият списък
+ * има таван 255 знака и се чупи от запетая в стойност; обхватът — не.
+ */
+export type ValidatsiyaOtSpisak =
+  | { readonly obhvat: string; readonly spisak: readonly string[] }
+  | { readonly obhvat: string; readonly izvor: string };
 
 export interface OpisNaList {
   readonly ime: string;
@@ -49,9 +54,26 @@ export interface OpisNaList {
   readonly parichniKoloni?: readonly number[];
   /** колони, които Excel НЕ бива да превръща в число или дата · формат `@` */
   readonly tekstoviKoloni?: readonly number[];
+  /** формат по колона · `{ 5: '0.00' }` */
+  readonly formati?: Readonly<Record<number, string>>;
+  /** ширина по колона · в знаци */
+  readonly shirini?: Readonly<Record<number, number>>;
+  readonly skritiKoloni?: readonly number[];
+  /** скрит лист · `veryHidden` · не се показва в менюто на Excel */
+  readonly skrit?: boolean;
+  /** обхвати с ОТКЛЮЧЕНИ клетки · важат при защита */
+  readonly otklyucheni?: readonly string[];
+  /** защита без парола · честна спирачка: сортиране, филтър, вмъкване остават */
+  readonly zashtita?: boolean;
 }
 
 export type ProchetenaStoynost = string | number | null;
+
+export interface ProchetenaValidatsiya {
+  readonly obhvat: string;
+  /** формулата · `"а,б"` за вграден списък · `'Лист'!$C$1:$C$3` за обхват */
+  readonly formula: string;
+}
 
 export interface ProchetenList {
   readonly ime: string;
@@ -62,6 +84,12 @@ export interface ProchetenList {
   readonly kletki: readonly (readonly ProchetenaStoynost[])[];
   /** формулите по адрес · `H77 → SUM(H62:H76)` */
   readonly formuli: ReadonlyMap<string, string>;
+  readonly skrit: boolean;
+  readonly skritiKoloni: readonly number[];
+  readonly validatsii: readonly ProchetenaValidatsiya[];
+  /** адресите на отключените клетки */
+  readonly otklyucheni: readonly string[];
+  readonly zashtiten: boolean;
 }
 
 export interface ProchetenaKniga {
@@ -77,7 +105,7 @@ export async function napishiKniga(listove: readonly OpisNaList[]): Promise<Uint
     for (const [i, red] of opis.redove.entries()) {
       const r = list.getRow(i + 1);
       for (const [j, k] of red.entries()) {
-        if (k === null) continue;
+        if (k === null || k === undefined) continue;
         const kl = r.getCell(j + 1);
         if (typeof k === 'string' || typeof k === 'number') kl.value = k;
         else if ('formula' in k) kl.value = { formula: k.formula, result: k.rezultat };
@@ -90,23 +118,37 @@ export async function napishiKniga(listove: readonly OpisNaList[]): Promise<Uint
     }
     for (const s of opis.slivaniya ?? []) list.mergeCells(s);
     for (const v of opis.validatsii ?? []) {
-      const [ot, doo = ot] = v.obhvat.split(':');
-      const { red: r1, kolona: k1 } = razlozhiAdres(ot!);
-      const { red: r2, kolona: k2 } = razlozhiAdres(doo!);
-      for (let r = r1; r <= r2; r += 1) {
-        for (let k = k1; k <= k2; k += 1) {
-          list.getCell(r, k).dataValidation = {
-            type: 'list',
-            allowBlank: true,
-            formulae: [`"${v.spisak.join(',')}"`],
-          };
-        }
-      }
+      const formulae = 'spisak' in v ? [`"${v.spisak.join(',')}"`] : [v.izvor];
+      zaVsyakaKletka(v.obhvat, (r, k) => {
+        list.getCell(r, k).dataValidation = { type: 'list', allowBlank: true, formulae };
+      });
+    }
+    for (const obhvat of opis.otklyucheni ?? []) {
+      zaVsyakaKletka(obhvat, (r, k) => {
+        list.getCell(r, k).protection = { locked: false };
+      });
     }
     if (opis.zamraziPod !== undefined) list.views = [{ state: 'frozen', ySplit: opis.zamraziPod }];
     if (opis.avtofiltar !== undefined) list.autoFilter = opis.avtofiltar;
     for (const k of opis.parichniKoloni ?? []) list.getColumn(k).numFmt = '#,##0.00';
     for (const k of opis.tekstoviKoloni ?? []) list.getColumn(k).numFmt = '@';
+    for (const [k, f] of Object.entries(opis.formati ?? {})) list.getColumn(Number(k)).numFmt = f;
+    for (const [k, w] of Object.entries(opis.shirini ?? {})) list.getColumn(Number(k)).width = w;
+    for (const k of opis.skritiKoloni ?? []) list.getColumn(k).hidden = true;
+    if (opis.skrit === true) list.state = 'veryHidden';
+    if (opis.zashtita === true) {
+      await list.protect('', {
+        selectLockedCells: true,
+        selectUnlockedCells: true,
+        formatCells: true,
+        formatColumns: true,
+        formatRows: true,
+        insertRows: true,
+        deleteRows: true,
+        sort: true,
+        autoFilter: true,
+      });
+    }
   }
   const bufer = await kniga.xlsx.writeBuffer();
   return new Uint8Array(bufer as ArrayBuffer);
@@ -122,6 +164,7 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
   kniga.eachSheet((list) => {
     const kletki: ProchetenaStoynost[][] = [];
     const formuli = new Map<string, string>();
+    const otklyucheni: string[] = [];
     let broyKoloni = 0;
     list.eachRow({ includeEmpty: true }, (red, nomer) => {
       const stoynosti: ProchetenaStoynost[] = [];
@@ -129,6 +172,7 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
         stoynosti[k - 1] = stoynostNaKletka(kl.value);
         const f = formulaNaKletka(kl.value);
         if (f !== undefined) formuli.set(kl.address, f);
+        if (kl.protection?.locked === false) otklyucheni.push(kl.address);
       });
       kletki[nomer - 1] = stoynosti;
       if (stoynosti.length > broyKoloni) broyKoloni = stoynosti.length;
@@ -137,6 +181,18 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
     for (let i = 0; i < kletki.length; i += 1) if (kletki[i] === undefined) kletki[i] = [];
     // Слетите обхвати ExcelJS ги дава в модела на листа като `A4:H4`.
     const slivaniya = [...((list.model as { merges?: readonly string[] }).merges ?? [])];
+    const skritiKoloni: number[] = [];
+    for (let k = 1; k <= Math.max(broyKoloni, list.columnCount) + 2; k += 1) {
+      if (list.getColumn(k).hidden) skritiKoloni.push(k);
+    }
+    const validatsii: ProchetenaValidatsiya[] = [];
+    const model = (
+      list as unknown as { dataValidations?: { model?: Record<string, { formulae?: string[] }> } }
+    ).dataValidations?.model;
+    for (const [obhvat, v] of Object.entries(model ?? {})) {
+      validatsii.push({ obhvat, formula: v.formulae?.[0] ?? '' });
+    }
+    const zashtita = (list as unknown as { sheetProtection?: { sheet?: boolean } }).sheetProtection;
     listove.push({
       ime: list.name,
       broyRedove: kletki.length,
@@ -144,6 +200,11 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
       slivaniya,
       kletki,
       formuli,
+      skrit: list.state !== 'visible',
+      skritiKoloni,
+      validatsii,
+      otklyucheni,
+      zashtiten: zashtita?.sheet === true,
     });
   });
   return { listove };
@@ -172,11 +233,31 @@ function formulaNaKletka(v: ExcelJS.CellValue): string | undefined {
   return undefined;
 }
 
+/** Обхожда всяка клетка от обхват `C6:C56` (или единичен адрес). */
+function zaVsyakaKletka(obhvat: string, deystvie: (red: number, kolona: number) => void): void {
+  const [ot, doo = ot] = obhvat.split(':');
+  const { red: r1, kolona: k1 } = razlozhiAdres(ot!);
+  const { red: r2, kolona: k2 } = razlozhiAdres(doo!);
+  for (let r = r1; r <= r2; r += 1) for (let k = k1; k <= k2; k += 1) deystvie(r, k);
+}
+
 /** `C12` → ред 12, колона 3. */
 function razlozhiAdres(adres: string): { red: number; kolona: number } {
-  const m = /^([A-Z]+)(\d+)$/.exec(adres.trim().toUpperCase());
+  const m = /^\$?([A-Z]+)\$?(\d+)$/.exec(adres.trim().toUpperCase());
   if (!m) throw new Error(`Не е адрес на клетка: „${adres}"`);
   let kolona = 0;
   for (const ch of m[1]!) kolona = kolona * 26 + (ch.charCodeAt(0) - 64);
   return { red: Number(m[2]), kolona };
+}
+
+/** 3 → `C` · 27 → `AA`. */
+export function bukvaNaKolona(k: number): string {
+  let n = k;
+  let s = '';
+  while (n > 0) {
+    const ost = (n - 1) % 26;
+    s = String.fromCharCode(65 + ost) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
 }

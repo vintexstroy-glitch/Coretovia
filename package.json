@@ -21,6 +21,7 @@
     "litsenzi": "node stroezh/litsenzi.mjs",
     "stil": "biome check .",
     "mostra": "node stroezh/mostra-kniga.mjs",
+    "dumi": "node stroezh/dumi-ot-knigata.mjs",
     "proverka": "npm run typecheck && npm test && npm run chistota && npm run chestnost && npm run sloeve && npm run litsenzi && npm run stil"
   },
   "dependencies": {
