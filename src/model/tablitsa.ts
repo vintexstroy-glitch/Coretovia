@@ -81,6 +81,8 @@ export interface Tablitsa {
   readonly podglava?: Readonly<Record<string, string>>;
   /** ред „филтър" под главите в Книгата (Управление B19:R19 · Сметки B17:W17) */
   readonly redFiltar?: boolean;
+  /** таблицата е НАША (не е блок от неговата Книга) · липсата ѝ там е бележка, не грешка */
+  readonly nashaTablitsa?: true;
 }
 
 export function kolonaNa(t: Tablitsa, klyuch: string): Kolona | undefined {

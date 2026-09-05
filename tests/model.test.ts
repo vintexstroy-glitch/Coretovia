@@ -28,9 +28,23 @@ describe('основата на резен 1', () => {
     expect(proveriModela(MODEL)).toEqual([]);
   });
 
-  it('три таблици на Имоти и една на Управление · с неговите глави, дословно', () => {
-    expect(TABLITSI.map((t) => t.klyuch)).toEqual(['imoti', 'obekti', 'biznesi', 'zadachi']);
-    expect(TABLITSI.map((t) => t.prozorets)).toEqual(['imoti', 'imoti', 'imoti', 'upravlenie']);
+  it('шест таблици · три на Имоти, една на Управление, две на Сметки · с неговите глави', () => {
+    expect(TABLITSI.map((t) => t.klyuch)).toEqual([
+      'imoti',
+      'obekti',
+      'biznesi',
+      'zadachi',
+      'dvizheniya',
+      'kesh',
+    ]);
+    expect(TABLITSI.map((t) => t.prozorets)).toEqual([
+      'imoti',
+      'imoti',
+      'imoti',
+      'upravlenie',
+      'smetki',
+      'smetki',
+    ]);
     const glavi = (k: string): string[] => koloniNaReda(tablitsata(MODEL, k)).map((c) => c.ime);
     expect(glavi('imoti')).toEqual([
       '№',

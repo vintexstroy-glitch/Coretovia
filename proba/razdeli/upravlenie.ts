@@ -11,7 +11,7 @@ import { ADRES } from '../yadro/server.ts';
 const S_ZADACHA = join(tmpdir(), 'coretovia-proba-zadacha.xlsx');
 const UPRAVLENIE = 'УправлениеДелаПреписки';
 /** грешката на Управление · след залепената част, за да не е гол белег (честност Б) */
-const GRESHKA = '[data-zalepeno] + [data-greshka]';
+const GRESHKA = '[data-zalepeno="upravlenie"] + [data-greshka]';
 /** еврото по нормата му · тясна пауза (U+202F) между хилядите и пред знака */
 const EVRO_250000 = '250\u202F000,00\u202F€';
 
@@ -31,7 +31,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   // ══ 3а · залепената част · осем полета с цифри · четиринайсетте му бутона · дървото ═
   razdel = '3а · залепената част';
   await p.goto(`${ADRES}#/upravlenie`);
-  await p.waitForSelector('[data-zalepeno]');
+  await p.waitForSelector('[data-zalepeno="upravlenie"]');
   proveri(
     'осемте полета с цифри · от ляво надясно',
     (await tekstoveNa(p, '[data-pole] .ime')).join(' · '),
@@ -44,7 +44,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   );
   proveri(
     'четиринайсет бутона · всички с един клас',
-    await p.$$eval('[data-buton-ekran].malak', (es) => es.length),
+    await p.$$eval('[data-zalepeno="upravlenie"] [data-buton-ekran].malak', (es) => es.length),
     14,
   );
   proveri(

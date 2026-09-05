@@ -22,7 +22,8 @@ describe('неговата Книга · мострата без служебе�
     const kniga = await prochetiKniga(await napishiKniga(MOSTRA));
     const p = razpoznayKnigata(kniga, PRAZNO, KOGATO);
     expect(p.sluzhebno).toBeNull();
-    expect([...p.tablitsi.keys()]).toEqual(['imoti', 'obekti', 'biznesi', 'zadachi']);
+    // „кеш" го няма: блокът е НАШ и в неговата Книга още не е бил (бележка, не грешка)
+    expect([...p.tablitsi.keys()]).toEqual(['imoti', 'obekti', 'biznesi', 'zadachi', 'dvizheniya']);
     const imoti = p.tablitsi.get('imoti')!;
     expect(imoti.sKlyuchove).toBe(false);
     expect(imoti.redNaGlavata).toBe(5);
@@ -104,7 +105,11 @@ describe('неговата Книга · мострата без служебе�
     expect(belezhki.some((n) => n.adres === 'C6' && n.kakvo.includes('по началото'))).toBe(true);
     expect(belezhki.some((n) => n.adres === 'C18' && n.kakvo.includes('главните'))).toBe(true);
     expect(belezhki.some((n) => n.adres === 'C35' && n.kakvo.includes('по началото'))).toBe(true);
-    expect(p.nahodki.filter((n) => n.stepen === 'greshka')).toEqual([]);
+    // в листа Сметки К носи ДУМИ, не числа („ОБЩ Бюджет Сметки") — всяка е находка
+    // с адрес, и всичките са само оттам: неговият лист е макет, не данни
+    const greshki = p.nahodki.filter((n) => n.stepen === 'greshka');
+    expect(greshki.filter((n) => n.list !== 'Сметки')).toEqual([]);
+    expect(greshki.every((n) => n.kakvo.endsWith('не е сума.'))).toBe(true);
     // Бизнесите · Имотът по име не е жив (Огледалото е празно) · непознат родител
     const b = p.tablitsi.get('biznesi')!.redove[0]!;
     expect(b.kletki.find((k) => k.kolona === 'imot')!.nepoznatRoditel).toBe('Гара Яна');

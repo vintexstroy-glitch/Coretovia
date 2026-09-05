@@ -465,6 +465,17 @@ class Sverchik {
         continue;
       }
       if (kol.vid === 'vrazka') {
+        // НЕзадължителна връзка, към която нищо не сочи (неговите заплати и кредити
+        // нямат Имот), просто остава празна · находка тук би била шум, не липса
+        const nyamaKam =
+          (pk === undefined || pk.stoynost === null || pk.stoynost === undefined) &&
+          pk?.nepoznatRoditel === undefined &&
+          (r.grupa === null ||
+            (r.grupa.roditelId === null &&
+              r.grupa.imotNomer === null &&
+              r.grupa.imotIme === '' &&
+              r.grupa.nomerVKnigata === ''));
+        if (nyamaKam && !kol.zadalzhitelna) continue;
         const rod = this.roditel(t, r, pk, kol);
         if (rod === null) {
           nevlyaza = true;

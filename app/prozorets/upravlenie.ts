@@ -71,7 +71,7 @@ import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
 import { fokusiraySled, pokazhiGreshka, zakachiRedaktsiya } from '../reshetka/redaktsiya.js';
 import { kletkaHTML } from '../reshetka/reshetka.js';
 import { zakachiZebrata } from '../reshetka/zebra.js';
-import { iznosVestHTML, izpalniOtMenyuto, zakachiDyasnoMenyu, zapaziKnigata } from './deystviya.js';
+import { gantIDumiHTML, izpalniOtMenyuto, zakachiDyasnoMenyu, zapaziKnigata } from './deystviya.js';
 import { dumiteHTML } from './profil.js';
 
 const PAMET = Object.freeze({
@@ -399,7 +399,7 @@ export function narisuvayUpravlenie(k: KonteksNaEkrana): void {
   };
 
   k.tyalo.innerHTML = `
-    <div class="zalepeno" data-zalepeno>
+    <div class="zalepeno" data-zalepeno="upravlenie">
       <div class="poleta-s-tsifri" data-poleta>${poletaHTML}</div>
       <div class="deystviya butoni-malki" data-butoni>${BUTONI_NA_UPRAVLENIE.map(butonHTML).join('')}</div>
     </div>
@@ -418,14 +418,7 @@ export function narisuvayUpravlenie(k: KonteksNaEkrana): void {
         </table>
         <p class="pod-tablitsata" data-sverka="darvo">видими ${f.broyVidimi} от ${redove.length} · родители ${darvo.broyRoditeli} · задачи ${darvo.broyZadachi} · сираци ${darvo.siratsi.length}${eFiltarPrazen(filtar) ? '' : ' · филтърът е включен'}</p>
       </div>
-      <div class="gant-blok" data-blok="gant" ${vizhda.diagrama ? '' : 'hidden'}>
-        <h2 class="lenta" translate="no">${ekraniraj(p.lenti[2] ?? 'Диаграма Гант')}</h2>
-        <div class="gant-skrol" data-gant-skrol></div>
-        <p class="pod-tablitsata" data-sverka="gant"></p>
-      </div>
-    </section>
-    ${iznosVestHTML()}
-    <details class="dumite-blok"><summary>думите му от Книгата</summary>${dumiteHTML(DUMI_OT_KNIGATA.upravlenie)}</details>`;
+      ${gantIDumiHTML(p.lenti[2] ?? 'Диаграма Гант', DUMI_OT_KNIGATA.upravlenie, !vizhda.diagrama)}`;
 
   zakachiZebrata(k.tyalo);
   zakachiRedaktsiya(k.tyalo, k);

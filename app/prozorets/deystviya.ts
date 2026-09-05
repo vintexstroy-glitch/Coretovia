@@ -10,11 +10,13 @@ import { MODEL } from '../../src/model/osnova.js';
 import { otpechatakNaModela } from '../../src/model/otpechatak.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import type { Buton, Izbran } from '../../src/porta/porta.js';
+import type { DumaOtKnigata } from '../../src/model/dumi-ot-knigata.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { pokazhiMenyu, type Tochka } from '../reshetka/menyu.js';
 import { ekraniraj, svaliFayl } from '../reshetka/obshto.js';
 import { otvoriProzorets } from '../reshetka/prozorets.js';
 import { pokazhiGreshka } from '../reshetka/redaktsiya.js';
+import { dumiteHTML } from './profil.js';
 
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 /** думите за последния износ · живеят извън тялото, защото всеки запис го прерисува */
@@ -96,6 +98,46 @@ export async function zapaziKnigata(k: KonteksNaEkrana): Promise<void> {
   } catch (g) {
     kazhiZaIznosa(k, `Книгата не се записа: ${dumiZaGreshka(g)}`);
   }
+}
+
+/**
+ * Какво прави екранът с отговора на Портата · отказът се КАЗВА (правило 12), а
+ * повтореното иска ново рисуване, защото абонаментът мълчи при нула нови звена.
+ */
+export function otgovoratNaPortata(
+  k: KonteksNaEkrana,
+  r: {
+    readonly otkaz?: unknown;
+    readonly zashto?: readonly string[];
+    readonly povtoreno?: boolean;
+  },
+): boolean {
+  if ('otkaz' in r) {
+    pokazhiGreshka(k.tyalo, (r.zashto ?? []).join(' '));
+    return false;
+  }
+  pokazhiGreshka(k.tyalo, '');
+  if (r.povtoreno === true) k.prerisuvay();
+  return true;
+}
+
+/**
+ * КРАЯТ на прозорец с диаграма · блокът на Ганта, вестта за износа и думите му
+ * от Книгата. Управление и Сметки го делят: една дума, един дом (правило 14).
+ */
+export function gantIDumiHTML(
+  lenta: string,
+  dumi: readonly DumaOtKnigata[],
+  skrit = false,
+): string {
+  return `<div class="gant-blok" data-blok="gant" ${skrit ? 'hidden' : ''}>
+        <h2 class="lenta" translate="no">${ekraniraj(lenta)}</h2>
+        <div class="gant-skrol" data-gant-skrol></div>
+        <p class="pod-tablitsata" data-sverka="gant"></p>
+      </div>
+    </section>
+    ${iznosVestHTML()}
+    <details class="dumite-blok"><summary>думите му от Книгата</summary>${dumiteHTML(dumi)}</details>`;
 }
 
 /**

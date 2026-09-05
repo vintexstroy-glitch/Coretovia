@@ -456,6 +456,10 @@ label.malak.buton-grupa {
   color: var(--sivo);
 }
 
+.red-kesh .pole.malak {
+  width: 7rem;
+}
+
 label.malak.buton-grupa .pole.malak {
   min-height: 1.4rem;
   padding: 0 0.3rem;
@@ -516,6 +520,18 @@ label.malak.buton-grupa .pole.malak {
 .reshetka.darvo tfoot tr.sbor td {
   background: var(--zebra);
   border-top: 2px solid var(--linija);
+  font-weight: 600;
+}
+
+.reshetka.smetki tfoot tr.sbor td {
+  background: var(--zebra);
+  border-top: 2px solid var(--linija);
+  font-weight: 600;
+}
+
+.reshetka.smetki tr.grupata.sektsiya td {
+  background: var(--zeleno-svetlo);
+  color: var(--mastilo);
   font-weight: 600;
 }
 
@@ -605,4 +621,42 @@ label.malak.buton-grupa .pole.malak {
 .gant .gant-broy {
   font-weight: 400;
   fill: var(--sivo);
+}
+
+/* ═══ Сметки · редът за кеш · секциите (ADR-006) ═══ */
+.red-kesh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--linija);
+  border-radius: 6px;
+  background: var(--zhalto);
+}
+
+.red-kesh label.malak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: none;
+  color: var(--sivo);
+}
+
+.red-kesh .vest {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.smetki-blokove {
+  flex: 1 1 32rem;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.reshetka.smetki td.evro,
+.reshetka.smetki th.evro {
+  text-align: right;
+  white-space: nowrap;
 }

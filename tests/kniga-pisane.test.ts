@@ -114,6 +114,7 @@ async function iznesena() {
 const IMOTI = PROZORTSI.find((p) => p.klyuch === 'imoti')!.list;
 const NASTROYKI = PROZORTSI.find((p) => p.klyuch === 'nastroyki')!.list;
 const UPRAVLENIE = PROZORTSI.find((p) => p.klyuch === 'upravlenie')!.list;
+const SMETKI = PROZORTSI.find((p) => p.klyuch === 'smetki')!.list;
 
 describe('Книгата на изход', () => {
   it('осем листа в реда му + служебният, скрит · сверката на всеки лист затваря', async () => {
@@ -125,7 +126,14 @@ describe('Книгата на изход', () => {
     expect(procheteno.listove.map((l) => l.skrit)).toEqual([...PROZORTSI.map(() => false), true]);
     expect(kniga.sverki).toHaveLength(9);
     for (const s of kniga.sverki) expect(s.nared, s.kakvo).toBe(true);
-    expect(kniga.redove).toEqual({ imoti: 3, obekti: 4, biznesi: 3, zadachi: 0 });
+    expect(kniga.redove).toEqual({
+      imoti: 3,
+      obekti: 4,
+      biznesi: 3,
+      zadachi: 0,
+      dvizheniya: 0,
+      kesh: 0,
+    });
   });
 
   it('инструкциите му стоят дословно · на неговите редове в непостроените прозорци', async () => {
@@ -312,6 +320,8 @@ describe('Книгата на изход', () => {
       ['obekti', IMOTI, 4],
       ['biznesi', IMOTI, 3],
       ['zadachi', UPRAVLENIE, 0],
+      ['dvizheniya', SMETKI, 0],
+      ['kesh', SMETKI, 0],
     ]);
     expect(tablitsi[0]?.[3]).toBe('A6:J8');
     const nomenklaturi = s.kletki.filter((r) => r[0] === 'nomenklatura');

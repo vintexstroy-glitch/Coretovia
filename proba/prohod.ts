@@ -16,6 +16,7 @@ import { tishina } from './yadro/tishina.ts';
 import * as imoti from './razdeli/imoti.ts';
 import * as kniga from './razdeli/kniga.ts';
 import * as skelet from './razdeli/skelet.ts';
+import * as smetki from './razdeli/smetki.ts';
 import * as upravlenie from './razdeli/upravlenie.ts';
 
 async function main(): Promise<void> {
@@ -39,6 +40,7 @@ async function main(): Promise<void> {
     await imoti.blok1(ctx);
     await kniga.blok1(ctx);
     await upravlenie.blok1(ctx);
+    await smetki.blok1(ctx);
   } catch (greshka) {
     broyach.dobaviNahodka({
       razdel: broyach.posledenRazdel,

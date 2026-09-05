@@ -32,12 +32,20 @@ import {
   OBLIK_NA_UPRAVLENIE,
   PROZORTSI,
   SLUZHEBEN_LIST,
+  nachalataNaGlavite,
+  OBLIK_NA_SMETKI,
 } from '../model/osnova.js';
 import { kolonaNa, koloniNaReda, slyataNa, type Tablitsa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { kletkaNa, zhiviteRedove } from '../ogledalo/tablitsa.js';
 import type { Kursor } from '../sabitiya/tovari.js';
 import { otSuma } from '../yadro/pari.js';
+import {
+  IMENA_NA_STRANITE,
+  KOLONA_NA_SEKTSIYATA,
+  NOMENKLATURA_NA_STRANATA,
+  type Strana,
+} from '../smetach/smetki.js';
 import { sverka, type Sverka } from '../yadro/sverka.js';
 import {
   FILTAR,
@@ -49,6 +57,7 @@ import {
   RAZDELITEL_NA_GRUPATA,
   SLUZHEBNO,
   SPRYANA,
+  SEKTSIYA,
 } from './dumi.js';
 import {
   bukvaNaKolona,
@@ -242,6 +251,12 @@ function chislo(v: ProchetenaStoynost): number | null {
   }
   return null;
 }
+
+/** Коя негова лента коя страна отваря · за четеца на Сметки. */
+const STRANA_NA_LENTATA: Readonly<Record<string, Strana | undefined>> = {
+  [podravni(IMENA_NA_STRANITE.prihod)]: 'prihod',
+  [podravni(IMENA_NA_STRANITE.razhod)]: 'razhod',
+};
 
 class Chetets {
   readonly nahodki: Nahodka[] = [];
@@ -439,11 +454,19 @@ class Chetets {
     t: Tablitsa,
     l: ProchetenList,
     glavi: readonly (string | null)[],
+    lenta?: string,
   ): { redNaGlavata: number; jKlyuch: number } | null {
-    const imeNaLentata = podravni(t.ime);
+    const imeNaLentata = podravni(lenta ?? t.ime);
     const redNaLentata = l.kletki.findIndex((r) => tekstNa(r[0]) === imeNaLentata);
     if (redNaLentata < 0) {
-      this.nahodka(l.ime, 'лист', `Няма лента „${t.ime}" — таблицата не е разпозната.`);
+      this.nahodka(
+        l.ime,
+        'лист',
+        t.nashaTablitsa === true
+          ? `Няма лента „${t.ime}" — нашият блок още го няма в тази Книга; ще се появи при следващия износ.`
+          : `Няма лента „${lenta ?? t.ime}" — таблицата не е разпозната.`,
+        t.nashaTablitsa === true ? 'beleshka' : 'greshka',
+      );
       return null;
     }
     const redNaGlavata = redNaLentata + 1;
@@ -451,10 +474,11 @@ class Chetets {
     // главите по МЯСТО · разминаването е находка, не пренареждане
     let razminati = 0;
     for (const [j, g] of glavi.entries()) {
-      if (g === null) continue;
+      if (g === null || g === undefined) continue;
       if (tekstNa(glava[j]) !== podravni(g)) razminati += 1;
     }
-    if (razminati * 2 > glavi.length) {
+    const broyNaGlavite = glavi.filter((g) => g !== null && g !== undefined).length;
+    if (razminati * 2 > broyNaGlavite) {
       this.nahodka(
         l.ime,
         `ред ${redNaGlavata + 1}`,
@@ -626,6 +650,74 @@ class Chetets {
     };
   }
 
+  /** Първият ред с данни · под главата, подглавата и реда „филтър". */
+  parviyatRed(t: Tablitsa, l: ProchetenList, redNaGlavata: number): number {
+    let i = redNaGlavata + 1;
+    if (t.podglava !== undefined) i += 1;
+    if (
+      t.redFiltar === true &&
+      (l.kletki[i] ?? []).some((c) => tekstNa(c).toLowerCase() === FILTAR)
+    )
+      i += 1;
+    return i;
+  }
+
+  /** Груповият ред на РОДИТЕЛ (Имот · Обект · Бизнес) · от ключа или от номера в A. */
+  grupaNaRoditel(
+    red: number,
+    klyuch: string | null,
+    nomerVKnigata: string,
+    imeIme: string,
+  ): ProchetenaGrupa {
+    const roditelId = klyuch?.startsWith(GRUPA) === true ? klyuch.slice(GRUPA.length) : null;
+    const roditelTablitsa =
+      roditelId === null ? null : (tablitsaNaId(this.o.model, roditelId)?.klyuch ?? null);
+    return {
+      red,
+      imotId: roditelTablitsa === 'imoti' ? roditelId : null,
+      imotNomer: null,
+      imotIme: imeIme,
+      kategoriya: null,
+      kategoriyaTekst: '',
+      roditelId: roditelTablitsa === null ? null : roditelId,
+      roditelTablitsa,
+      nomerVKnigata,
+    };
+  }
+
+  /**
+   * Клетките на един ред по ОБЛИКА · `koya` казва коя колона на Модела стои под
+   * всяка глава (задачата при Управление, движението при Сметки); слятата клетка
+   * се дели по разделителя си. `nachalo` мести главите, когато една е широка две.
+   */
+  kletkiPoOblik(
+    t: Tablitsa,
+    l: ProchetenList,
+    red: number,
+    kletki: readonly ProchetenaStoynost[],
+    oblik: readonly GlavaNaOblika[],
+    koya: (g: GlavaNaOblika) => string | undefined,
+    nachalo?: readonly number[],
+  ): ProchetenaKletka[] {
+    const procheteni: ProchetenaKletka[] = [];
+    for (const [j, g] of oblik.entries()) {
+      const ime = koya(g);
+      if (ime === undefined) continue;
+      const kol = kolonaNa(t, ime);
+      if (kol === undefined) continue;
+      const jj = nachalo?.[j] ?? j;
+      const sl = slyataNa(t, kol.klyuch);
+      if (sl !== undefined) {
+        const [lyavo, dyasno] = razdeli(kletki[jj], sl.razdelitel);
+        procheteni.push(this.kletka(l.ime, red, kol, jj, lyavo, {}));
+        const opashka = kolonaNa(t, sl.opashka);
+        if (opashka !== undefined)
+          procheteni.push(this.kletka(l.ime, red, opashka, jj, dyasno, {}));
+      } else procheteni.push(this.kletka(l.ime, red, kol, jj, kletki[jj], {}));
+    }
+    return procheteni;
+  }
+
   /**
    * ДЪРВОТО на Управление · родители (групови редове от трите таблици на Имоти) и
    * задачи под тях · по неговия облик (десетте глави · подглавите · ред „филтър").
@@ -645,13 +737,7 @@ class Chetets {
     const sKlyuchove = jKlyuch >= 0;
     const jZadacha = oblik.findIndex((g) => g.ot === 'zadacha');
     const jIme = oblik.findIndex((g) => g.ot === 'roditel' && g.kolona === 'ime');
-    let i = redNaGlavata + 1;
-    if (t.podglava !== undefined) i += 1;
-    if (
-      t.redFiltar === true &&
-      (l.kletki[i] ?? []).some((c) => tekstNa(c).toLowerCase() === FILTAR)
-    )
-      i += 1;
+    let i = this.parviyatRed(t, l, redNaGlavata);
     const { lenti, instruktsii } = this.krayatNaTablitsata(t);
     const redove: ProchetenRed[] = [];
     const grupi: ProchetenaGrupa[] = [];
@@ -674,20 +760,12 @@ class Chetets {
       const nomeratsiya = tekstNa(kletki[0]);
       const eGrupov = klyuch?.startsWith(GRUPA) === true || (klyuch === null && nomeratsiya !== '');
       if (eGrupov) {
-        const roditelId = klyuch?.startsWith(GRUPA) === true ? klyuch.slice(GRUPA.length) : null;
-        const roditelTablitsa =
-          roditelId === null ? null : (tablitsaNaId(this.o.model, roditelId)?.klyuch ?? null);
-        tekushta = {
+        tekushta = this.grupaNaRoditel(
           red,
-          imotId: roditelTablitsa === 'imoti' ? roditelId : null,
-          imotNomer: null,
-          imotIme: jIme >= 0 ? tekstNa(kletki[jIme]) : '',
-          kategoriya: null,
-          kategoriyaTekst: '',
-          roditelId: roditelTablitsa === null ? null : roditelId,
-          roditelTablitsa,
-          nomerVKnigata: nomeratsiya,
-        };
+          klyuch,
+          nomeratsiya,
+          jIme >= 0 ? tekstNa(kletki[jIme]) : '',
+        );
         grupi.push(tekushta);
       }
       const eZadacha =
@@ -706,20 +784,9 @@ class Chetets {
         nechetimi += 1;
         continue;
       }
-      const procheteni: ProchetenaKletka[] = [];
-      for (const [j, g] of oblik.entries()) {
-        if (g.ot !== 'zadacha' || g.kolona === undefined) continue;
-        const kol = kolonaNa(t, g.kolona);
-        if (kol === undefined) continue;
-        const sl = slyataNa(t, kol.klyuch);
-        if (sl !== undefined) {
-          const [lyavo, dyasno] = razdeli(kletki[j], sl.razdelitel);
-          procheteni.push(this.kletka(l.ime, red, kol, j, lyavo, {}));
-          const opashka = kolonaNa(t, sl.opashka);
-          if (opashka !== undefined)
-            procheteni.push(this.kletka(l.ime, red, opashka, j, dyasno, {}));
-        } else procheteni.push(this.kletka(l.ime, red, kol, j, kletki[j], {}));
-      }
+      const procheteni = this.kletkiPoOblik(t, l, red, kletki, oblik, (g) =>
+        g.ot === 'zadacha' ? g.kolona : undefined,
+      );
       // връзката към родителя не е клетка · идва от групата · Сверчикът я разрешава
       const klyuchNaZadachata = klyuch?.startsWith(GRUPA) === true ? null : klyuch;
       redove.push({
@@ -740,6 +807,159 @@ class Chetets {
         samoGrupovi + sKlyuch + bezKlyuch + drugi + nechetimi,
         this.kogato,
         'обходени = само групови + задачи с ключ + без ключ + други + нечетими',
+      ),
+    );
+    return {
+      klyuch: t.klyuch,
+      list: l.ime,
+      redNaGlavata: redNaGlavata + 1,
+      sKlyuchove,
+      redove,
+      grupi,
+    };
+  }
+
+  /**
+   * СЕКЦИИТЕ на Сметки · движенията под неговите ленти ПРИХОД и Разходи.
+   *
+   * Главите са ОБЩИ за листа (ред 15–16, под лентата „ОБЕКТИ"), затова се търсят
+   * по нея. Оттам надолу: лентата казва СТРАНАТА, редът със секция (ключ
+   * `grupa:sektsiya:‹страна›·‹номер›` или неговата дума в A) казва секцията, а
+   * редовете под нея са движения. Ред с номер в A и без клетки на движение е
+   * РОДИТЕЛ (неговите подсборови редове 38 · 44 · 56): дава родителя на редовете
+   * под себе си, точно както в дървото. Блокът свършва на „Финансови Отчети…"
+   * или на лентата „Кеш".
+   */
+  sektsii(
+    t: Tablitsa,
+    l: ProchetenList,
+    oblik: readonly GlavaNaOblika[],
+  ): ProchetenaTablitsa | null {
+    const lenti = PROZORTSI.find((p) => p.klyuch === t.prozorets)?.lenti ?? [];
+    const nachalo = nachalataNaGlavite(oblik);
+    // главите се сверяват по ФИЗИЧЕСКАТА си колона · „Дата" при него е две (F15:G15)
+    const glaviPoKolona: (string | null)[] = [];
+    for (const [j, g] of oblik.entries())
+      glaviPoKolona[nachalo[j]!] = g.ot === 'nomeratsiya' ? null : g.glava;
+    const lg = this.lentaIGlava(t, l, glaviPoKolona, lenti[1]);
+    if (lg === null) return null;
+    const { redNaGlavata, jKlyuch } = lg;
+    const sKlyuchove = jKlyuch >= 0;
+    const jNa = (kolona: string): number =>
+      nachalo[oblik.findIndex((g) => g.dvizhenie === kolona)] ?? -1;
+    const jIme = nachalo[oblik.findIndex((g) => g.ot === 'roditel' && g.kolona === 'ime')] ?? 1;
+    const krayat = new Set([
+      podravni(lenti[5] ?? ''),
+      podravni(tablitsata(this.o.model, 'kesh').ime),
+    ]);
+    const poStrana = new Map<string, Map<string, number>>();
+    for (const strana of ['prihod', 'razhod'] as const) {
+      const n = this.o.nomenklaturi.get(NOMENKLATURA_NA_STRANATA[strana]);
+      const po = new Map<string, number>();
+      for (const st of n?.stoynosti ?? []) po.set(podravni(st.tekst), st.nomer);
+      poStrana.set(strana, po);
+    }
+    const redove: ProchetenRed[] = [];
+    const grupi: ProchetenaGrupa[] = [];
+    let strana: 'prihod' | 'razhod' | null = null;
+    let sektsiya: number | null = null;
+    let redNaSektsiyata = 0;
+    let tekushta: ProchetenaGrupa | null = null;
+    let obhodeni = 0;
+    let sluzhebni = 0;
+    let samoGrupovi = 0;
+    let sKlyuch = 0;
+    let bezKlyuch = 0;
+    let nechetimi = 0;
+    let i = this.parviyatRed(t, l, redNaGlavata);
+    for (; i < l.kletki.length; i += 1) {
+      const kletki = l.kletki[i] ?? [];
+      const parva = tekstNa(kletki[0]);
+      if (krayat.has(parva)) break;
+      const kakvoE = STRANA_NA_LENTATA[parva];
+      // лентата не е ред от таблицата · тя само отваря страната
+      if (kakvoE !== undefined) {
+        strana = kakvoE;
+        sektsiya = null;
+        tekushta = null;
+        continue;
+      }
+      if (strana === null) continue;
+      obhodeni += 1;
+      const red = i + 1;
+      const klyuch = sKlyuchove ? tekstNa(kletki[jKlyuch]) || null : null;
+      const klyuchNaSektsiya =
+        klyuch?.startsWith(`${GRUPA}${SEKTSIYA}`) === true
+          ? klyuch.slice(GRUPA.length + SEKTSIYA.length)
+          : null;
+      if (klyuchNaSektsiya !== null) {
+        const [imeNaStranata, nomer] = klyuchNaSektsiya.split(RAZDELITEL_NA_GRUPATA);
+        if (imeNaStranata === 'prihod' || imeNaStranata === 'razhod') strana = imeNaStranata;
+        sektsiya = Number(nomer);
+        redNaSektsiyata = red;
+        tekushta = null;
+        sluzhebni += 1;
+        continue;
+      }
+      // в Книга без ключове секцията се познава по ДУМАТА му · при ПРИХОД е в A
+      // (A37 „Наем Банка"), при Разходи — в B (B75 „Заплати Кеш"); неговите B80 · B81
+      // носят и функцията на секцията, затова думата бие функцията
+      const poIme =
+        poStrana.get(strana)?.get(parva) ?? poStrana.get(strana)?.get(tekstNa(kletki[1]));
+      if (klyuch === null && poIme !== undefined) {
+        sektsiya = poIme;
+        redNaSektsiyata = red;
+        tekushta = null;
+        sluzhebni += 1;
+        continue;
+      }
+      const eGrupov = klyuch?.startsWith(GRUPA) === true || (klyuch === null && parva !== '');
+      if (eGrupov) {
+        tekushta = this.grupaNaRoditel(red, klyuch, parva, tekstNa(kletki[jIme]));
+        grupi.push(tekushta);
+      }
+      // движението се познава по ФУНКЦИЯТА (задължителна) или по своя ключ · сумата
+      // не върши работа: в неговия лист K носи ДУМИ („ОБЩ Бюджет Сметки"), не числа
+      const eDvizhenie =
+        tekstNa(kletki[jNa('funktsiya')]) !== '' || (klyuch !== null && !klyuch.startsWith(GRUPA));
+      if (!eDvizhenie) {
+        if (eGrupov) samoGrupovi += 1;
+        else sluzhebni += 1;
+        continue;
+      }
+      if (sektsiya === null) {
+        this.nahodka(l.ime, `ред ${red}`, 'Редът с пари не е под секция — не може да се прочете.');
+        nechetimi += 1;
+        continue;
+      }
+      const procheteni: ProchetenaKletka[] = [];
+      const kolonaNaSektsiyata = kolonaNa(t, KOLONA_NA_SEKTSIYATA[strana]);
+      if (kolonaNaSektsiyata !== undefined)
+        procheteni.push({
+          kolona: kolonaNaSektsiyata.klyuch,
+          adres: `A${redNaSektsiyata}`,
+          stoynost: { nomer: sektsiya },
+        });
+      procheteni.push(...this.kletkiPoOblik(t, l, red, kletki, oblik, (g) => g.dvizhenie, nachalo));
+      const klyuchNaReda = klyuch?.startsWith(GRUPA) === true ? null : klyuch;
+      redove.push({
+        red,
+        adres: `A${red}`,
+        klyuch: klyuchNaReda,
+        nomeratsiya: '',
+        grupa: tekushta,
+        kletki: procheteni,
+      });
+      if (klyuchNaReda !== null) sKlyuch += 1;
+      else bezKlyuch += 1;
+    }
+    this.sverki.push(
+      sverka(
+        `четене · ${l.ime} · ${t.klyuch}`,
+        obhodeni,
+        sluzhebni + samoGrupovi + sKlyuch + bezKlyuch + nechetimi,
+        this.kogato,
+        'обходени = празни и секции + само родители + движения с ключ + без ключ + нечетими',
       ),
     );
     return {
@@ -934,10 +1154,13 @@ export function razpoznayKnigata(
     }
     for (const t of o.model.tablitsi.values()) {
       if (t.prozorets !== p.klyuch) continue;
+      const opis = tablitsata(o.model, t.klyuch);
       const pt =
         p.klyuch === 'upravlenie'
-          ? ch.darvo(tablitsata(o.model, t.klyuch), l, OBLIK_NA_UPRAVLENIE)
-          : ch.tablitsa(tablitsata(o.model, t.klyuch), l);
+          ? ch.darvo(opis, l, OBLIK_NA_UPRAVLENIE)
+          : t.klyuch === 'dvizheniya'
+            ? ch.sektsii(opis, l, OBLIK_NA_SMETKI)
+            : ch.tablitsa(opis, l);
       if (pt !== null) tablitsi.set(t.klyuch, pt);
     }
   }

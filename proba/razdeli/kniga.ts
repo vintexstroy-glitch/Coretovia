@@ -266,7 +266,18 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   // ══ 2е · неговата Книга (мострата) върху живо Огледало · чете се без грешки ═
   razdel = '2е · неговата Книга';
   const otchet = await prochetiVII(MOSTRA);
-  proveri('нула грешки', /^\d+ предложения · 0 находки · \d+ бележки$/.test(otchet), true);
+  proveri(
+    'чете се · с находки само от листа Сметки (в макета му K носи думи, не числа)',
+    /^\d+ предложения · \d+ находки · \d+ бележки$/.test(otchet),
+    true,
+  );
+  proveri(
+    'нито една грешка извън Сметки',
+    await p.$$eval('[data-nahodki] tr.greshka-red td:first-child', (es) =>
+      [...new Set(es.map((e) => (e as HTMLElement).innerText.trim()))].join(' · '),
+    ),
+    'Сметки',
+  );
   proveri(
     'над трийсет предложения · нищо не е прието',
     (await p.$$eval('[data-predlozheniya] tr.red', (es) => es.length)) > 30,

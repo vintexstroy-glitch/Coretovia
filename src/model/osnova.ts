@@ -384,6 +384,7 @@ const ZADACHI_KOLONI: readonly Kolona[] = [
     vrazka: ['imoti', 'obekti', 'biznesi'],
     zadalzhitelna: true,
     zatvorena: false,
+    vKlyucha: true,
     kratko: 'към',
   },
   {
@@ -392,16 +393,18 @@ const ZADACHI_KOLONI: readonly Kolona[] = [
       ' Задачи(нещо като състояние за Делата, Срещите и Преписките).',
       NOMENKLATURA.vidNaZadacha,
     ),
+    vKlyucha: true,
     kratko: 'Вид',
   },
   // главата му E17 е за ВИДА; името е опашката на слятата клетка · нашата дума
-  { ...tekst('ime', 'име на задачата', true), nashaDuma: true, kratko: 'име' },
+  { ...tekst('ime', 'име на задачата', true), nashaDuma: true, vKlyucha: true, kratko: 'име' },
   {
     klyuch: 'ot',
     ime: 'Дата',
     vid: 'data',
     zadalzhitelna: false,
     zatvorena: false,
+    vKlyucha: true,
     kratko: 'Начало',
   },
   {
@@ -447,6 +450,171 @@ const ZADACHI: Tablitsa = Object.freeze({
   redFiltar: true,
 });
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * СМЕТКИ · ДВИЖЕНИЕТО и КЕШЪТ
+ *
+ * Редът с пари в листа му (38–91): към Имот · Обект · Бизнес, или без родител
+ * (заплати · кредити · банкови такси), с ИМЕ в колона C („[служител 1]" ·
+ * „Малинова Строителство"), СЕКЦИЯ (лентите му ПРИХОД и Разходи и главите под
+ * тях), ФУНКЦИЯ на парите и СЪСТОЯНИЕ на сметката в една слята клетка E —
+ * негово E81: „Вкарване / Сверяване с Банкови Извлечения" — месец и сума.
+ *
+ * ЗНАКЪТ решава страната (правило 20): приходът е +, разходът е −; секцията
+ * трябва да е от страната на знака. „Бизнес" е дума и в двете номенклатури —
+ * точно неговото B6: „Ако е на загуба се изпраща сметката с знак - в Разходи."
+ *
+ * МЕСЕЦЪТ е наша колона под неговата глава „Дата": дванайсетте такта на Ганта,
+ * месечната сверка на кеша и периодът искат момент, а листът му няма дата тук.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+const DVIZHENIYA_KOLONI: readonly Kolona[] = [
+  {
+    klyuch: 'kam',
+    ime: 'име Имот',
+    vid: 'vrazka',
+    vrazka: ['imoti', 'obekti', 'biznesi'],
+    zadalzhitelna: false,
+    zatvorena: false,
+    vKlyucha: true,
+    kratko: 'към',
+  },
+  {
+    ...tekst('ime', 'име на реда'),
+    nashaDuma: true,
+    vKlyucha: true,
+    kratko: 'име',
+  },
+  {
+    klyuch: 'sektsiya',
+    ime: 'секция в ПРИХОД',
+    vid: 'izbor',
+    nomenklatura: NOMENKLATURA.sektsiiPrihod,
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+    vKlyucha: true,
+    strana: 'prihod',
+    kratko: 'Приход',
+  },
+  {
+    klyuch: 'sektsiyaR',
+    ime: 'секция в Разходи',
+    vid: 'izbor',
+    nomenklatura: NOMENKLATURA.sektsiiRazhodi,
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+    vKlyucha: true,
+    strana: 'razhod',
+    kratko: 'Разход',
+  },
+  {
+    klyuch: 'funktsiya',
+    ime: 'Функция на парите',
+    vid: 'izbor',
+    nomenklatura: NOMENKLATURA.funktsiyaNaParite,
+    zadalzhitelna: true,
+    zatvorena: false,
+    vKlyucha: true,
+    kratko: 'Функция',
+  },
+  {
+    klyuch: 'sastoyanie',
+    ime: 'Вид Сметка',
+    vid: 'izbor',
+    nomenklatura: NOMENKLATURA.sastoyanieNaSmetki,
+    zadalzhitelna: false,
+    zatvorena: false,
+    kratko: 'Състояние',
+  },
+  {
+    klyuch: 'mesets',
+    ime: 'месец',
+    vid: 'tekst',
+    zadalzhitelna: true,
+    zatvorena: false,
+    nashaDuma: true,
+    vKlyucha: true,
+    kratko: 'месец',
+  },
+  {
+    klyuch: 'suma',
+    ime: 'Бюджет Дела/ Бюджет Сметки',
+    vid: 'evro',
+    zadalzhitelna: true,
+    zatvorena: false,
+    kratko: 'сума',
+  },
+];
+
+const DVIZHENIYA: Tablitsa = Object.freeze({
+  klyuch: 'dvizheniya',
+  ime: 'Сметки',
+  prozorets: 'smetki',
+  sashtnost: 'dvizhenie',
+  koloni: DVIZHENIYA_KOLONI,
+  slyati: [{ kolona: 'funktsiya', opashka: 'sastoyanie', razdelitel: ' / ' }],
+  podglava: {
+    funktsiya:
+      'Вид Задачи: Дело, Среща, Преписка и Вид Сметка: Сметнато, Вкарано (поле за това), Прочетено(Сверено.)',
+    mesets: 'Начало ',
+    suma: 'знак(Евро)',
+  },
+  redFiltar: true,
+});
+
+/**
+ * КЕШЪТ · негово, 05.09: „ред … който ред дава възможност за въвеждане на
+ * информация за дадени Кеш пари за Заплати и Фактури Кеш и сверка на края на
+ * месеца от извлечението." Един ред на МЕСЕЦ; живее в залепената част на екрана
+ * и — за да остане Ексел движеща сила — в края на листа Сметки, под неговите
+ * блокове, за да не мръдне нито един негов адрес.
+ */
+const KESH_KOLONI: readonly Kolona[] = [
+  {
+    klyuch: 'mesets',
+    ime: 'месец',
+    vid: 'tekst',
+    zadalzhitelna: true,
+    zatvorena: false,
+    nashaDuma: true,
+    vKlyucha: true,
+  },
+  {
+    klyuch: 'zaplati',
+    ime: 'дадени за Заплати Кеш',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'fakturi',
+    ime: 'дадени за Фактури Кеш',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+  {
+    klyuch: 'izvlechenie',
+    ime: 'изтеглено по извлечение',
+    vid: 'evro',
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+  },
+];
+
+const KESH: Tablitsa = Object.freeze({
+  klyuch: 'kesh',
+  ime: 'Кеш',
+  prozorets: 'smetki',
+  sashtnost: 'kesh',
+  koloni: KESH_KOLONI,
+  nashaTablitsa: true,
+});
+
 /**
  * ОБЛИКЪТ НА ЛИСТА УправлениеДелаПреписки · неговите десет глави (ред 17), с
  * подглавите им (ред 18), и откъде идва всяка клетка: от РОДИТЕЛЯ (реда на Имот ·
@@ -461,6 +629,12 @@ export interface GlavaNaOblika {
   readonly ot: 'nomeratsiya' | 'roditel' | 'zadacha';
   /** колоната на Модела · при родител: ключът в таблицата на Имотите · при задача: в ZADACHI */
   readonly kolona?: string;
+  /** същата глава при листа Сметки носи и тази колона на ДВИЖЕНИЕТО */
+  readonly dvizhenie?: string;
+  /** колко ФИЗИЧЕСКИ колони заема главата · неговото F15:G15 при Сметки е две */
+  readonly shirina?: number;
+  /** подглавата на втората физическа колона · неговото G16 „ Край" */
+  readonly podglavaVtora?: string;
 }
 
 export const OBLIK_NA_UPRAVLENIE: readonly GlavaNaOblika[] = [
@@ -493,9 +667,83 @@ export const OBLIK_NA_UPRAVLENIE: readonly GlavaNaOblika[] = [
   { glava: 'Бюджет Дела/ Бюджет Сметки', ot: 'zadacha', kolona: 'byudzhet' },
 ];
 
+/**
+ * ОБЛИКЪТ НА ЛИСТА СМЕТКИ · неговите десет глави (ред 15) с подглавите (ред 16).
+ * Същите десет като Управление, но с ДРУГИТЕ му думи, и всяка глава носи И
+ * колоната на ДВИЖЕНИЕТО: „Състояние" държи името на реда без родител
+ * („[служител 1]"), „Задачи" — функцията и състоянието на сметката, „Дата" —
+ * месеца, „Бюджет" — сумата. Задачите в този лист са ПРЕПИС от Управление
+ * (домът им е там); движенията се четат оттук.
+ */
+export const OBLIK_NA_SMETKI: readonly GlavaNaOblika[] = [
+  { glava: '№', ot: 'nomeratsiya' },
+  { glava: 'име Имот', ot: 'roditel', kolona: 'ime' },
+  {
+    glava: ' Състояние за Имот или Състояние на Обект или състояние на Бизнес',
+    podglava:
+      'За Имот и за Обект са различни Състояние за Управление Дела и Сметки на Стойност. Долу ги пише една част, но За Имот, Обект и Бизнес се различават.',
+    ot: 'roditel',
+    kolona: 'sastoyanie',
+    dvizhenie: 'ime',
+  },
+  { glava: '№', ot: 'roditel', kolona: 'nomer' },
+  {
+    glava: ' Задачи',
+    podglava:
+      'Вид Задачи: Дело, Среща, Преписка и Вид Сметка: Сметнато, Вкарано (поле за това), Прочетено(Сверено.)',
+    ot: 'zadacha',
+    kolona: 'vid',
+    dvizhenie: 'funktsiya',
+  },
+  {
+    glava: 'Дата',
+    podglava: 'Начало ',
+    podglavaVtora: ' Край',
+    shirina: 2,
+    ot: 'zadacha',
+    kolona: 'ot',
+    dvizhenie: 'mesets',
+  },
+  {
+    glava: 'Оценка',
+    podglava: 'Спешно и Важно(червн цвят в Календара(Диагарамата Хант)',
+    ot: 'zadacha',
+    kolona: 'otsenka',
+  },
+  { glava: 'площ', podglava: 'м2', ot: 'roditel', kolona: 'plosht' },
+  { glava: 'цена', podglava: 'знак(Евро)', ot: 'roditel', kolona: 'tsena' },
+  {
+    glava: 'Бюджет Дела/ Бюджет Сметки',
+    ot: 'zadacha',
+    kolona: 'byudzhet',
+    dvizhenie: 'suma',
+  },
+];
+
+/**
+ * Физическото начало (0-базирано) на всяка глава · при Сметки „Дата" е ДВЕ
+ * колони (неговото F15:G15), затова главите и колоните на листа не съвпадат.
+ */
+export function nachalataNaGlavite(oblik: readonly GlavaNaOblika[]): number[] {
+  const nachalo: number[] = [];
+  let j = 0;
+  for (const g of oblik) {
+    nachalo.push(j);
+    j += g.shirina ?? 1;
+  }
+  return nachalo;
+}
+
+/** Колко ФИЗИЧЕСКИ колони заемат главите на един облик. */
+export function shirinaNaOblika(oblik: readonly GlavaNaOblika[]): number {
+  return oblik.reduce((a, g) => a + (g.shirina ?? 1), 0);
+}
+
 /** Неговата дума за колоните на Ганта в листа (K17:R17) · и колко са при него. */
 export const TAKT_GLAVA = 'такт';
 export const BROY_TAKT_KOLONI_V_KNIGATA = 8;
+/** При Сметки тактовете са дванайсет (неговите L15:W15). */
+export const BROY_TAKT_KOLONI_V_SMETKI = 12;
 
 /**
  * БУТОНИТЕ на прозореца · неговите думи от ред 14–15 на Управление (същите на
@@ -588,7 +836,14 @@ export const BUTONI_NA_UPRAVLENIE: readonly ButonNaProzoretsa[] = [
   },
 ];
 
-export const TABLITSI: readonly Tablitsa[] = Object.freeze([IMOTI, OBEKTI, BIZNESI, ZADACHI]);
+export const TABLITSI: readonly Tablitsa[] = Object.freeze([
+  IMOTI,
+  OBEKTI,
+  BIZNESI,
+  ZADACHI,
+  DVIZHENIYA,
+  KESH,
+]);
 
 /** МОДЕЛЪТ на резен 1 · единственият екземпляр в кода. */
 export const MODEL: Model = Object.freeze({

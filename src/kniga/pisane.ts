@@ -23,7 +23,7 @@ import { DUMI_OT_KNIGATA, type DumaOtKnigata } from '../model/dumi-ot-knigata.js
 import { blokoveNaDumite } from '../model/dumite.js';
 import type { Kletka } from '../model/kletka.js';
 import type { KlyuchNaProzorets, ProzoretsVOsnovata } from '../model/klyuchove.js';
-import { tablitsata } from '../model/model.js';
+import { tablitsaNaId, tablitsata } from '../model/model.js';
 import {
   type StoynostNaNomenklatura,
   type ZhivaNomenklatura,
@@ -36,17 +36,28 @@ import {
   PROZORTSI,
   SLUZHEBEN_LIST,
   TAKT_GLAVA,
+  type GlavaNaOblika,
+  BROY_TAKT_KOLONI_V_SMETKI,
+  OBLIK_NA_SMETKI,
+  nachalataNaGlavite,
+  shirinaNaOblika,
 } from '../model/osnova.js';
 import { otpechatakNaModela } from '../model/otpechatak.js';
 import { kolonaNa, koloniNaReda, slyataNa, type Tablitsa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { type Red as RedNaOgledaloto, redKato, zhiviteRedove } from '../ogledalo/tablitsa.js';
 import type { Kursor } from '../sabitiya/tovari.js';
-import { darvoto, type RoditelVDarvoto } from '../smetach/darvo.js';
+import { darvoto } from '../smetach/darvo.js';
 import { lentaNa, sboroveVKolonite } from '../smetach/gant.js';
 import { dumiNaKletka, imeNaReda, imeNaVrazkata, tekstNaIzbora } from '../smetach/kletki.js';
-import { koloniNaTakta } from '../smetach/vreme.js';
-import { grupiPoImotIKategoriya, podrediPoNomer, tekstNaNomera } from '../smetach/nomeratsiya.js';
+import { type KolonaNaTakta, koloniNaTakta } from '../smetach/vreme.js';
+import {
+  grupiPoImotIKategoriya,
+  nomerNaRed,
+  podrediPoNomer,
+  tekstNaNomera,
+} from '../smetach/nomeratsiya.js';
+import { IMENA_NA_STRANITE, smetkite } from '../smetach/smetki.js';
 import { sverka, type Sverka } from '../yadro/sverka.js';
 import {
   bukvaNaKolona,
@@ -68,6 +79,9 @@ import {
   RAZDELITEL_NA_GRUPATA,
   SLUZHEBNO,
   SPRYANA,
+  KLYUCH_KOLONA_SMETKI,
+  SEKTSIYA,
+  DUMI_ZA_OTCHETITE,
 } from './dumi.js';
 
 export interface KnigaZaIznos {
@@ -501,15 +515,303 @@ function slyataKletkaZaExcel(
   return dyasno === '' ? lyavo : `${lyavo}${sl.razdelitel}${dyasno}`;
 }
 
-/** Осемте месечни колони на такта в Книгата · от предишния месец нататък. */
-function koloniteNaTaktaVKnigata(kogato: string) {
+/** Месечните колони на такта в Книгата · от предишния месец нататък · колкото са при него. */
+function koloniteNaTaktaVKnigata(kogato: string, broy: number) {
   const dnes = kogato.slice(0, 10);
   const vsichki = koloniNaTakta('godina', dnes);
   const tekusht = Math.max(
     1,
     vsichki.findIndex((k) => k.dnes),
   );
-  return vsichki.slice(tekusht - 1, tekusht - 1 + BROY_TAKT_KOLONI_V_KNIGATA);
+  return vsichki.slice(tekusht - 1, tekusht - 1 + broy);
+}
+
+/**
+ * Описът на лист с дърво (Управление · Сметки) · защитен, с една скрита колона
+ * „Ключ", текстова номерация в A и замразена шапка над данните.
+ */
+function opisNaListSDarvo(
+  l: ReturnType<typeof novList>,
+  ime: string,
+  KL: number,
+  shirini: Record<number, number>,
+  zamraziPod: number,
+  formati: Record<number, string>,
+): OpisNaList {
+  return {
+    ime,
+    redove: l.redove,
+    slivaniya: l.slivaniya,
+    validatsii: l.validatsii,
+    otklyucheni: l.otklyucheni,
+    otklyucheniRedove: l.otklyucheniRedove,
+    zashtita: true,
+    skritiKoloni: [KL],
+    tekstoviKoloni: [1],
+    formati,
+    shirini,
+    zamraziPod,
+  };
+}
+
+/** Какво връща общата шапка на листовете с дърво (Управление и Сметки). */
+interface Shapka {
+  /** 1-базираната физическа колона на първия такт */
+  readonly parvaTakt: number;
+  readonly zamraziPod: number;
+  readonly nachalo: readonly number[];
+  readonly posledna: string;
+}
+
+/**
+ * ОБЩАТА ШАПКА на Управление и Сметки · дословно неговата: инструкциите му ·
+ * лентата „Бутони" с четиринайсетте бутона и сливанията им · лентите ОБЕКТИ и
+ * Диаграма Гант · двете глави с подглавите и надписите на тактовете · редът
+ * „филтър". Двата листа се различават по думите и по броя такт-колони, не по
+ * строежа — затова тук е един дом (правило 14).
+ */
+function shapkaNaLista(
+  l: ReturnType<typeof novList>,
+  p: ProzoretsVOsnovata,
+  dumi: readonly DumaOtKnigata[],
+  oblik: readonly GlavaNaOblika[],
+  KL: number,
+  taktove: readonly KolonaNaTakta[],
+): Shapka {
+  const { redove, b, slivaniya } = l;
+  const nachalo = nachalataNaGlavite(oblik);
+  const shirinaNaGlavite = shirinaNaOblika(oblik);
+  const parvaTakt = shirinaNaGlavite + 1;
+  for (const d of dumi) {
+    while (redove.length < d.red - 1) {
+      redove.push([]);
+      b.prazni += 1;
+    }
+    redove.push(redNaDumata(d));
+    b.instruktsii += 1;
+  }
+  // Бутони · неговите думи и сливания (A13:R13 · A14:A15 … · L14:M14 · O14:R14)
+  redove.push([glava(p.lenti[0] ?? '')]);
+  const rLenta = redove.length;
+  b.lenti += 1;
+  const redGore: Red = [];
+  const redDolu: Red = [];
+  const rButoni = redove.length + 1;
+  let kol = 1;
+  for (const bt of BUTONI_NA_UPRAVLENIE) {
+    redGore[kol - 1] = glava(bt.ime);
+    if (bt.izbor === undefined) {
+      slivaniya.push(`${bukvaNaKolona(kol)}${rButoni}:${bukvaNaKolona(kol)}${rButoni + 1}`);
+      kol += 1;
+    } else {
+      for (const [i, d] of bt.izbor.entries()) redDolu[kol - 1 + i] = d;
+      if (bt.izbor.length > 1)
+        slivaniya.push(
+          `${bukvaNaKolona(kol)}${rButoni}:${bukvaNaKolona(kol + bt.izbor.length - 1)}${rButoni}`,
+        );
+      kol += bt.izbor.length;
+    }
+  }
+  slivaniya.push(`A${rLenta}:${bukvaNaKolona(kol - 1)}${rLenta}`);
+  redove.push(redGore);
+  redove.push(redDolu);
+  b.glavi += 2;
+  // ОБЕКТИ · Диаграма Гант (Календар)
+  const redLenti: Red = [glava(p.lenti[1] ?? '')];
+  redLenti[shirinaNaGlavite - 1] = glava(p.lenti[2] ?? '');
+  redove.push(redLenti);
+  const rLenti = redove.length;
+  slivaniya.push(`A${rLenti}:${bukvaNaKolona(shirinaNaGlavite - 1)}${rLenti}`);
+  slivaniya.push(
+    `${bukvaNaKolona(shirinaNaGlavite)}${rLenti}:${bukvaNaKolona(parvaTakt + taktove.length - 1)}${rLenti}`,
+  );
+  b.lenti += 1;
+  // двете глави · неговите · подглавите му и надписите на тактовете
+  const redGlavi: Red = [];
+  const redPodglavi: Red = [];
+  for (const [j, g] of oblik.entries()) {
+    redGlavi[nachalo[j]!] = glava(g.glava);
+    redPodglavi[nachalo[j]!] = g.podglava ?? null;
+    if ((g.shirina ?? 1) > 1) redPodglavi[nachalo[j]! + 1] = g.podglavaVtora ?? null;
+  }
+  for (const [i, tk] of taktove.entries()) {
+    redGlavi[parvaTakt - 1 + i] = glava(TAKT_GLAVA);
+    redPodglavi[parvaTakt - 1 + i] = tk.nadpis;
+  }
+  redGlavi[KL - 1] = glava(KLYUCH);
+  redove.push(redGlavi);
+  const rGlavi = redove.length;
+  redove.push(redPodglavi);
+  b.glavi += 2;
+  for (const [j, g] of oblik.entries()) {
+    const bukva = bukvaNaKolona(nachalo[j]! + 1);
+    if ((g.shirina ?? 1) > 1) {
+      slivaniya.push(`${bukva}${rGlavi}:${bukvaNaKolona(nachalo[j]! + (g.shirina ?? 1))}${rGlavi}`);
+      continue;
+    }
+    if (g.podglava === undefined) slivaniya.push(`${bukva}${rGlavi}:${bukva}${rGlavi + 1}`);
+  }
+  // редът „филтър" · неговата дума под всяка колона освен A
+  const redFiltar: Red = [];
+  for (let j = 1; j < parvaTakt - 1 + taktove.length; j += 1) redFiltar[j] = FILTAR;
+  redove.push(redFiltar);
+  b.filtri += 1;
+  return { parvaTakt, zamraziPod: redove.length, nachalo, posledna: bukvaNaKolona(KL) };
+}
+
+/** Изворът на валидацията за една номенклатура · обхватът ѝ в листа Настройки. */
+function izvorNaValidatsiya(
+  imeNaNastroykite: string,
+  podtablitsi: Map<string, Podtablitsa>,
+): (nomenklatura: string | undefined) => string | undefined {
+  return (nomenklatura) => {
+    const pt = nomenklatura === undefined ? undefined : podtablitsi.get(nomenklatura);
+    return pt === undefined || pt.zhivi === '' ? undefined : `'${imeNaNastroykite}'!${pt.zhivi}`;
+  };
+}
+
+/** Клетката на РОДИТЕЛЯ (груповия ред) под една негова глава. */
+function roditelKletka(
+  o: Ogledalo,
+  g: GlavaNaOblika,
+  tablitsa: string,
+  red: RedNaOgledaloto,
+): KletkaZaPisane {
+  const opis = tablitsata(o.model, tablitsa);
+  switch (g.kolona) {
+    case 'ime': {
+      if (tablitsa === 'imoti')
+        return kletkaZaExcel(o, 'imoti', 'ime', red.kletki['ime'] ?? null, red.kletki);
+      const imot = opis.roditel === undefined ? null : (red.kletki[opis.roditel.kolona] ?? null);
+      return imot !== null && 'tekst' in imot ? imeNaReda(o, 'imoti', imot.tekst) : null;
+    }
+    case 'sastoyanie': {
+      const k = tablitsa === 'obekti' ? 'vid' : 'sastoyanie';
+      return tekstNaIzbora(o, tablitsa, k, red.kletki[k] ?? null, red.kletki) || null;
+    }
+    case 'nomer':
+    case 'plosht':
+    case 'tsena':
+      return kletkaZaExcel(o, tablitsa, g.kolona, red.kletki[g.kolona] ?? null, red.kletki);
+    default:
+      return null;
+  }
+}
+
+/**
+ * Клетките на един ред по ОБЛИКА · `koya` казва коя колона на Модела стои под
+ * всяка глава (задачата при Управление, движението при Сметки). Слятата клетка
+ * се пише слята; изборът получава валидация към подтаблицата на Настройки.
+ */
+function pishiPoOblik(
+  o: Ogledalo,
+  t: Tablitsa,
+  z: RedNaOgledaloto,
+  red: Red,
+  oblik: readonly GlavaNaOblika[],
+  sh: Shapka,
+  koya: (g: GlavaNaOblika) => string | undefined,
+  oshte: {
+    validatsii: ValidatsiyaOtSpisak[];
+    naRed: number;
+    izvorNa: (nomenklatura: string | undefined) => string | undefined;
+    bezPrazni?: boolean;
+  },
+): void {
+  for (const [j, g] of oblik.entries()) {
+    const ime = koya(g);
+    if (ime === undefined) continue;
+    const k = kolonaNa(t, ime);
+    if (k === undefined) continue;
+    const stoynost = slyataKletkaZaExcel(o, t, k, z);
+    if (stoynost !== null || oshte.bezPrazni !== true) red[sh.nachalo[j]!] = stoynost;
+    if (k.vid === 'izbor' && slyataNa(t, k.klyuch) === undefined) {
+      const izvor = oshte.izvorNa(k.nomenklatura);
+      if (izvor !== undefined)
+        oshte.validatsii.push({
+          obhvat: `${bukvaNaKolona(sh.nachalo[j]! + 1)}${oshte.naRed}`,
+          izvor,
+        });
+    }
+  }
+}
+
+/**
+ * ДЪРВОТО в листа · родителите като групови редове с ключ `grupa:`, задачите под
+ * тях със слетите клетки и „■" в покритите тактове. Пише се И в двата листа:
+ * при Управление е домът му, при Сметки е ПРЕПИС (неговите редове 18–35), който
+ * се чете от Управление, за да не даде една задача две предложения.
+ */
+function redoveNaDarvoto(
+  l: ReturnType<typeof novList>,
+  o: Ogledalo,
+  oblik: readonly GlavaNaOblika[],
+  sh: Shapka,
+  KL: number,
+  taktove: readonly KolonaNaTakta[],
+  izvorNa: (nomenklatura: string | undefined) => string | undefined,
+): {
+  readonly darvo: ReturnType<typeof darvoto>;
+  readonly chislaPoData: readonly { data: string; chislo: number }[];
+  readonly sborNaByudzheta: number;
+  readonly parviRed: number;
+  readonly posledenRed: number;
+} {
+  const { redove, b, validatsii, otklyucheni, otklyucheniRedove } = l;
+  const t = tablitsata(o.model, 'zadachi');
+  const tvZ = o.tablitsi.get('zadachi');
+  const darvo = darvoto(o);
+  const chislaPoData: { data: string; chislo: number }[] = [];
+  const parviRed = redove.length + 1;
+  let sborNaByudzheta = 0;
+  for (const r of darvo.redove) {
+    const red: Red = [];
+    if (r.vid === 'roditel') {
+      red[0] = tekstNaNomera(r.nomer);
+      const tv = o.tablitsi.get(r.tablitsa)!;
+      const negov = redKato(tv, r.i);
+      for (const [j, g] of oblik.entries())
+        if (g.ot === 'roditel') red[sh.nachalo[j]!] = roditelKletka(o, g, r.tablitsa, negov);
+      red[KL - 1] = `${GRUPA}${r.id}`;
+      redove.push(red);
+      b.grupovi += 1;
+      continue;
+    }
+    const z = redKato(tvZ!, r.i);
+    pishiPoOblik(o, t, z, red, oblik, sh, (g) => (g.ot === 'zadacha' ? g.kolona : undefined), {
+      validatsii,
+      naRed: redove.length + 1,
+      izvorNa,
+    });
+    const ot = z.kletki['ot'];
+    const doo = z.kletki['do'];
+    const lenta = lentaNa(
+      {
+        id: r.id,
+        ot: ot !== undefined && 'tekst' in ot ? ot.tekst : '',
+        do: doo !== undefined && 'tekst' in doo ? doo.tekst : '',
+      },
+      taktove,
+    );
+    if (lenta !== null)
+      for (let i = lenta.ot; i < lenta.ot + lenta.broy; i += 1)
+        red[sh.parvaTakt - 1 + i] = TAKT_ZNAK;
+    const byudzhet = z.kletki['byudzhet'];
+    if (byudzhet !== undefined && 'stoynost_st' in byudzhet) {
+      sborNaByudzheta += byudzhet.stoynost_st;
+      if (ot !== undefined && 'tekst' in ot)
+        chislaPoData.push({ data: ot.tekst, chislo: byudzhet.stoynost_st });
+    }
+    red[KL - 1] = r.id;
+    redove.push(red);
+    b.danni += 1;
+    const jE = oblik.findIndex((g) => g.ot === 'zadacha');
+    otklyucheni.push(
+      `${bukvaNaKolona(sh.nachalo[jE]! + 1)}${redove.length}:${sh.posledna}${redove.length}`,
+    );
+    otklyucheniRedove.push(redove.length);
+  }
+  return { darvo, chislaPoData, sborNaByudzheta, parviRed, posledenRed: redove.length };
 }
 
 /**
@@ -526,174 +828,26 @@ function listUpravlenie(
   podtablitsi: Map<string, Podtablitsa>,
   kogato: string,
 ): { list: OpisNaList; myasto: MyastoNaTablitsa; sverka: Sverka } {
-  const { redove, b, slivaniya, validatsii, otklyucheni, otklyucheniRedove } = novList();
-  const t = tablitsata(o.model, 'zadachi');
-  const tvZ = o.tablitsi.get('zadachi');
+  const l = novList();
+  const { redove, b, otklyucheni, otklyucheniRedove } = l;
   const KL = KLYUCH_KOLONA_UPRAVLENIE;
-  const posledna = bukvaNaKolona(KL);
   const oblik = OBLIK_NA_UPRAVLENIE;
-  const parvaTakt = oblik.length + 1;
-  const taktove = koloniteNaTaktaVKnigata(kogato);
-  const izvorNa = (nomenklatura: string | undefined): string | undefined => {
-    const pt = nomenklatura === undefined ? undefined : podtablitsi.get(nomenklatura);
-    return pt === undefined || pt.zhivi === '' ? undefined : `'${imeNaNastroykite}'!${pt.zhivi}`;
-  };
-
-  for (const d of DUMI_OT_KNIGATA.upravlenie) {
-    while (redove.length < d.red - 1) {
-      redove.push([]);
-      b.prazni += 1;
-    }
-    redove.push(redNaDumata(d));
-    b.instruktsii += 1;
-  }
-  // Бутони · неговите думи и сливания (A13:R13 · A14:A15 … · L14:M14 · O14:R14)
-  redove.push([glava(p.lenti[0] ?? '')]);
-  const r13 = redove.length;
-  b.lenti += 1;
-  const red14: Red = [];
-  const red15: Red = [];
-  const r14 = redove.length + 1;
-  let kol = 1;
-  for (const bt of BUTONI_NA_UPRAVLENIE) {
-    red14[kol - 1] = glava(bt.ime);
-    if (bt.izbor === undefined) {
-      slivaniya.push(`${bukvaNaKolona(kol)}${r14}:${bukvaNaKolona(kol)}${r14 + 1}`);
-      kol += 1;
-    } else {
-      for (const [i, d] of bt.izbor.entries()) red15[kol - 1 + i] = d;
-      if (bt.izbor.length > 1)
-        slivaniya.push(
-          `${bukvaNaKolona(kol)}${r14}:${bukvaNaKolona(kol + bt.izbor.length - 1)}${r14}`,
-        );
-      kol += bt.izbor.length;
-    }
-  }
-  const poslednaNaButonite = bukvaNaKolona(kol - 1);
-  slivaniya.push(`A${r13}:${poslednaNaButonite}${r13}`);
-  redove.push(red14);
-  redove.push(red15);
-  b.glavi += 2;
-  // ОБЕКТИ · Диаграма Гант (Календар) · неговото A16:I16 · J16:R16
-  const red16: Red = [glava(p.lenti[1] ?? '')];
-  red16[oblik.length - 1] = glava(p.lenti[2] ?? '');
-  redove.push(red16);
-  const r16 = redove.length;
-  slivaniya.push(`A${r16}:${bukvaNaKolona(oblik.length - 1)}${r16}`);
-  slivaniya.push(
-    `${bukvaNaKolona(oblik.length)}${r16}:${bukvaNaKolona(parvaTakt + taktove.length - 1)}${r16}`,
-  );
-  b.lenti += 1;
-  // двете глави · 17 неговите · 18 подглавите му и надписите на тактовете
-  const red17: Red = oblik.map((g) => glava(g.glava));
-  const red18: Red = oblik.map((g) => (g.podglava === undefined ? null : g.podglava));
-  for (const [i, tk] of taktove.entries()) {
-    red17[parvaTakt - 1 + i] = glava(TAKT_GLAVA);
-    red18[parvaTakt - 1 + i] = tk.nadpis;
-  }
-  red17[KL - 1] = glava(KLYUCH);
-  redove.push(red17);
-  const r17 = redove.length;
-  redove.push(red18);
-  b.glavi += 2;
-  for (const [i, g] of oblik.entries()) {
-    if (g.podglava === undefined)
-      slivaniya.push(`${bukvaNaKolona(i + 1)}${r17}:${bukvaNaKolona(i + 1)}${r17 + 1}`);
-  }
-  // редът „филтър" · неговата дума под всяка колона освен A
-  const red19: Red = [];
-  for (let j = 1; j < parvaTakt - 1 + taktove.length; j += 1) red19[j] = FILTAR;
-  redove.push(red19);
-  b.filtri += 1;
-  const zamraziPod = redove.length;
-  const parviRed = redove.length + 1;
-
-  const jNa = (kolona: string): number => oblik.findIndex((g) => g.kolona === kolona);
-  const roditelKletka = (g: (typeof oblik)[number], r: RoditelVDarvoto): KletkaZaPisane => {
-    const tv = o.tablitsi.get(r.tablitsa)!;
-    const red = redKato(tv, r.i);
-    const opis = tablitsata(o.model, r.tablitsa);
-    switch (g.kolona) {
-      case 'ime': {
-        if (r.tablitsa === 'imoti')
-          return kletkaZaExcel(o, 'imoti', 'ime', red.kletki['ime'] ?? null, red.kletki);
-        const imot = opis.roditel === undefined ? null : (red.kletki[opis.roditel.kolona] ?? null);
-        return imot !== null && 'tekst' in imot ? imeNaReda(o, 'imoti', imot.tekst) : null;
-      }
-      case 'sastoyanie': {
-        const k = r.tablitsa === 'obekti' ? 'vid' : 'sastoyanie';
-        return tekstNaIzbora(o, r.tablitsa, k, red.kletki[k] ?? null, red.kletki) || null;
-      }
-      case 'nomer':
-      case 'plosht':
-      case 'tsena':
-        return kletkaZaExcel(o, r.tablitsa, g.kolona, red.kletki[g.kolona] ?? null, red.kletki);
-      default:
-        return null;
-    }
-  };
-
-  const darvo = darvoto(o);
-  const chislaPoData: { data: string; chislo: number }[] = [];
-  let sborNaByudzheta = 0;
-  for (const r of darvo.redove) {
-    const red: Red = [];
-    if (r.vid === 'roditel') {
-      red[0] = tekstNaNomera(r.nomer);
-      for (const [j, g] of oblik.entries()) if (g.ot === 'roditel') red[j] = roditelKletka(g, r);
-      red[KL - 1] = `${GRUPA}${r.id}`;
-      redove.push(red);
-      b.grupovi += 1;
-      continue;
-    }
-    const z = redKato(tvZ!, r.i);
-    for (const [j, g] of oblik.entries()) {
-      if (g.ot !== 'zadacha' || g.kolona === undefined) continue;
-      const k = kolonaNa(t, g.kolona);
-      if (k === undefined) continue;
-      red[j] = slyataKletkaZaExcel(o, t, k, z);
-      if (k.vid === 'izbor' && slyataNa(t, k.klyuch) === undefined) {
-        const izvor = izvorNa(k.nomenklatura);
-        if (izvor !== undefined)
-          validatsii.push({ obhvat: `${bukvaNaKolona(j + 1)}${redove.length + 1}`, izvor });
-      }
-    }
-    const ot = z.kletki['ot'];
-    const doo = z.kletki['do'];
-    const lenta = lentaNa(
-      {
-        id: r.id,
-        ot: ot !== undefined && 'tekst' in ot ? ot.tekst : '',
-        do: doo !== undefined && 'tekst' in doo ? doo.tekst : '',
-      },
-      taktove,
-    );
-    if (lenta !== null)
-      for (let i = lenta.ot; i < lenta.ot + lenta.broy; i += 1) red[parvaTakt - 1 + i] = TAKT_ZNAK;
-    const byudzhet = z.kletki['byudzhet'];
-    if (byudzhet !== undefined && 'stoynost_st' in byudzhet) {
-      sborNaByudzheta += byudzhet.stoynost_st;
-      if (ot !== undefined && 'tekst' in ot)
-        chislaPoData.push({ data: ot.tekst, chislo: byudzhet.stoynost_st });
-    }
-    red[KL - 1] = r.id;
-    redove.push(red);
-    b.danni += 1;
-    const jE = jNa('vid') + 1;
-    otklyucheni.push(`${bukvaNaKolona(jE)}${redove.length}:${posledna}${redove.length}`);
-    otklyucheniRedove.push(redove.length);
-  }
-  const posledenRed = redove.length;
+  const taktove = koloniteNaTaktaVKnigata(kogato, BROY_TAKT_KOLONI_V_KNIGATA);
+  const izvorNa = izvorNaValidatsiya(imeNaNastroykite, podtablitsi);
+  const sh = shapkaNaLista(l, p, DUMI_OT_KNIGATA.upravlenie, oblik, KL, taktove);
+  const d = redoveNaDarvoto(l, o, oblik, sh, KL, taktove, izvorNa);
+  const jNa = (kolona: string): number =>
+    sh.nachalo[oblik.findIndex((g) => g.kolona === kolona)] ?? 0;
   // празният ред след дървото е отключен · там се дописва задача под последния родител
-  otklyucheni.push(`A${redove.length + 1}:${posledna}${redove.length + 1}`);
+  otklyucheni.push(`A${redove.length + 1}:${sh.posledna}${redove.length + 1}`);
   otklyucheniRedove.push(redove.length + 1);
   redove.push([]);
   b.prazni += 1;
   // СБОР · брой задачи · сборът на бюджета · и по такт, по началото на задачата
-  const redSbor: Red = [SBOR, darvo.broyZadachi];
-  redSbor[jNa('byudzhet')] = sborNaByudzheta / 100;
-  for (const [i, sv] of sboroveVKolonite(taktove, chislaPoData).entries()) {
-    if (sv.obhvat > 0 && sv.sbor !== 0) redSbor[parvaTakt - 1 + i] = sv.sbor / 100;
+  const redSbor: Red = [SBOR, d.darvo.broyZadachi];
+  redSbor[jNa('byudzhet')] = d.sborNaByudzheta / 100;
+  for (const [i, sv] of sboroveVKolonite(taktove, d.chislaPoData).entries()) {
+    if (sv.obhvat > 0 && sv.sbor !== 0) redSbor[sh.parvaTakt - 1 + i] = sv.sbor / 100;
   }
   redove.push(redSbor);
   b.sborove += 1;
@@ -710,30 +864,200 @@ function listUpravlenie(
     9: 14,
     10: 16,
   };
-  for (let i = 0; i < taktove.length; i += 1) shirini[parvaTakt + i] = 8;
-  const list: OpisNaList = {
-    ime: p.list,
-    redove,
-    slivaniya,
-    validatsii,
-    otklyucheni,
-    otklyucheniRedove,
-    zashtita: true,
-    skritiKoloni: [KL],
-    tekstoviKoloni: [1],
-    formati: { 8: '0.00', 9: '#,##0.00', 10: '#,##0.00' },
-    shirini,
-    zamraziPod,
-  };
+  for (let i = 0; i < taktove.length; i += 1) shirini[sh.parvaTakt + i] = 8;
+  const list = opisNaListSDarvo(l, p.list, KL, shirini, sh.zamraziPod, {
+    8: '0.00',
+    9: '#,##0.00',
+    10: '#,##0.00',
+  });
   return {
     list,
     myasto: {
       klyuch: 'zadachi',
       list: p.list,
       klyuchKolona: KL,
-      obhvat: posledenRed >= parviRed ? `A${parviRed}:${posledna}${posledenRed}` : '',
-      redove: darvo.broyZadachi,
+      obhvat: d.posledenRed >= d.parviRed ? `A${d.parviRed}:${sh.posledna}${d.posledenRed}` : '',
+      redove: d.darvo.broyZadachi,
     },
+    sverka: sverka(`износ · ${p.list}`, b.sbor, redove.length, kogato),
+  };
+}
+
+/**
+ * СМЕТКИ · листът му, дословно: инструкциите (2–10) · Бутони (11–13) · ОБЕКТИ и
+ * Диаграма Гант (14) · двете глави (15–16) · филтър (17) · дървото на ДЕЛАТА
+ * (18–35, ПРЕПИС от Управление — домът на задачите е там) · ПРИХОД (36) със
+ * секциите му · Разходи (74) със секциите му · „Финансови Отчети за избрания
+ * период" (93) с думите кога идва · и накрая КЕШЪТ (наш блок, негова дума от
+ * 05.09), сложен ПОД неговите редове, за да не мръдне нито един негов адрес.
+ *
+ * Подсборовете му по Имот вътре в секция (A38 „2.1 · ОБЩ Бюджет Сметки") не се
+ * пишат: сборът е на СЕКЦИЯТА, а сборът по Имот идва с формулите (резен 6).
+ */
+function listSmetki(
+  o: Ogledalo,
+  p: ProzoretsVOsnovata,
+  imeNaNastroykite: string,
+  podtablitsi: Map<string, Podtablitsa>,
+  kogato: string,
+): { list: OpisNaList; mesta: MyastoNaTablitsa[]; sverka: Sverka } {
+  const l = novList();
+  const { redove, b, slivaniya, validatsii, otklyucheni, otklyucheniRedove } = l;
+  const KL = KLYUCH_KOLONA_SMETKI;
+  const oblik = OBLIK_NA_SMETKI;
+  const t = tablitsata(o.model, 'dvizheniya');
+  const tvD = o.tablitsi.get('dvizheniya');
+  const taktove = koloniteNaTaktaVKnigata(kogato, BROY_TAKT_KOLONI_V_SMETKI);
+  const izvorNa = izvorNaValidatsiya(imeNaNastroykite, podtablitsi);
+  const sh = shapkaNaLista(l, p, DUMI_OT_KNIGATA.smetki, oblik, KL, taktove);
+  const shirinaNaGlavite = sh.parvaTakt - 1;
+  const jNa = (kolona: string): number =>
+    sh.nachalo[oblik.findIndex((g) => g.dvizhenie === kolona)] ?? 0;
+  redoveNaDarvoto(l, o, oblik, sh, KL, taktove, izvorNa);
+  redove.push([]);
+  b.prazni += 1;
+
+  /** Един ред с пари · родителят пълни A–D · I · J, движението — C · E · F · K. */
+  const redNaDvizhenie = (i: number): Red => {
+    const red: Red = [];
+    const z = redKato(tvD!, i);
+    const kam = z.kletki['kam'];
+    const idNaRoditelya = kam !== undefined && 'tekst' in kam ? kam.tekst : '';
+    const opisNaRoditelya = idNaRoditelya === '' ? undefined : tablitsaNaId(o.model, idNaRoditelya);
+    if (opisNaRoditelya !== undefined) {
+      const tvR = o.tablitsi.get(opisNaRoditelya.klyuch);
+      const ir = tvR?.indeks.get(idNaRoditelya);
+      if (tvR !== undefined && ir !== undefined) {
+        const negov = redKato(tvR, ir);
+        red[0] = tekstNaNomera(nomerNaRed(o, opisNaRoditelya.klyuch, ir));
+        for (const [j, g] of oblik.entries())
+          if (g.ot === 'roditel')
+            red[sh.nachalo[j]!] = roditelKletka(o, g, opisNaRoditelya.klyuch, negov);
+      }
+    }
+    // името на реда бие състоянието на родителя (неговите „[служител 1]")
+    pishiPoOblik(o, t, z, red, oblik, sh, (g) => g.dvizhenie, {
+      validatsii,
+      naRed: redove.length + 1,
+      izvorNa,
+      bezPrazni: true,
+    });
+    const mesets = z.kletki['mesets'];
+    if (mesets !== undefined && 'tekst' in mesets) {
+      const iT = taktove.findIndex((tk) => tk.ot.slice(0, 7) === mesets.tekst);
+      if (iT >= 0) red[sh.parvaTakt - 1 + iT] = TAKT_ZNAK;
+    }
+    red[KL - 1] = z.id;
+    return red;
+  };
+
+  const s = smetkite(o, kogato);
+  const parviRed = redove.length + 1;
+  for (const strana of ['prihod', 'razhod'] as const) {
+    const rLenta = redove.length + 1;
+    redove.push([glava(IMENA_NA_STRANITE[strana])]);
+    slivaniya.push(`A${rLenta}:${bukvaNaKolona(shirinaNaGlavite)}${rLenta}`);
+    b.lenti += 1;
+    for (const sek of strana === 'prihod' ? s.prihod : s.razhod) {
+      const redSek: Red = [glava(sek.tekst)];
+      redSek[jNa('suma')] = sek.sbor / 100;
+      redSek[KL - 1] = `${GRUPA}${SEKTSIYA}${strana}${RAZDELITEL_NA_GRUPATA}${sek.nomer}`;
+      redove.push(redSek);
+      b.grupovi += 1;
+      for (const r of sek.redove) {
+        redove.push(redNaDvizhenie(r.i));
+        b.danni += 1;
+        const otKolona = bukvaNaKolona(jNa('ime') + 1);
+        otklyucheni.push(`${otKolona}${redove.length}:${sh.posledna}${redove.length}`);
+        otklyucheniRedove.push(redove.length);
+      }
+    }
+  }
+  const posledenRed = redove.length;
+  // празният ред след секциите е отключен · там се дописва движение под последната
+  otklyucheni.push(`A${redove.length + 1}:${sh.posledna}${redove.length + 1}`);
+  otklyucheniRedove.push(redove.length + 1);
+  redove.push([]);
+  b.prazni += 1;
+  // неговата лента „Финансови Отчети…" · коефициентите и диаграмите идват с резен 6
+  const rOtcheti = redove.length + 1;
+  redove.push([glava(p.lenti[5] ?? '')]);
+  slivaniya.push(`A${rOtcheti}:${bukvaNaKolona(shirinaNaGlavite)}${rOtcheti}`);
+  b.lenti += 1;
+  redove.push([DUMI_ZA_OTCHETITE]);
+  b.instruktsii += 1;
+  redove.push([]);
+  b.prazni += 1;
+
+  // КЕШЪТ · наш блок с негова дума (05.09) · лента · глава · ред на месец
+  const tK = tablitsata(o.model, 'kesh');
+  const tvK = o.tablitsi.get('kesh');
+  const rKesh = redove.length + 1;
+  redove.push([glava(tK.ime)]);
+  slivaniya.push(`A${rKesh}:${bukvaNaKolona(koloniNaReda(tK).length)}${rKesh}`);
+  b.lenti += 1;
+  const glaviKesh: Red = koloniNaReda(tK).map((k) => glava(k.ime));
+  glaviKesh[KL - 1] = glava(KLYUCH);
+  redove.push(glaviKesh);
+  b.glavi += 1;
+  const parviKesh = redove.length + 1;
+  let posledenKesh = redove.length;
+  if (tvK !== undefined) {
+    for (const i of zhiviteRedove(tvK)) {
+      const z = redKato(tvK, i);
+      const red: Red = koloniNaReda(tK).map((k) =>
+        kletkaZaExcel(o, 'kesh', k.klyuch, z.kletki[k.klyuch] ?? null, z.kletki),
+      );
+      red[KL - 1] = z.id;
+      redove.push(red);
+      b.danni += 1;
+      otklyucheni.push(`A${redove.length}:${sh.posledna}${redove.length}`);
+      otklyucheniRedove.push(redove.length);
+      posledenKesh = redove.length;
+    }
+  }
+  otklyucheni.push(`A${redove.length + 1}:${sh.posledna}${redove.length + 1}`);
+  otklyucheniRedove.push(redove.length + 1);
+  redove.push([]);
+  b.prazni += 1;
+
+  const shirini: Record<number, number> = {
+    1: 10,
+    2: 22,
+    3: 26,
+    4: 6,
+    5: 24,
+    6: 12,
+    7: 12,
+    8: 16,
+    9: 10,
+    10: 14,
+    11: 16,
+  };
+  for (let i = 0; i < taktove.length; i += 1) shirini[sh.parvaTakt + i] = 8;
+  const list = opisNaListSDarvo(l, p.list, KL, shirini, sh.zamraziPod, {
+    9: '0.00',
+    10: '#,##0.00',
+    11: '#,##0.00',
+  });
+  return {
+    list,
+    mesta: [
+      {
+        klyuch: 'dvizheniya',
+        list: p.list,
+        klyuchKolona: KL,
+        obhvat: posledenRed >= parviRed ? `A${parviRed}:${sh.posledna}${posledenRed}` : '',
+        redove: s.broyDvizheniya,
+      },
+      {
+        klyuch: 'kesh',
+        list: p.list,
+        klyuchKolona: KL,
+        obhvat: posledenKesh >= parviKesh ? `A${parviKesh}:${sh.posledna}${posledenKesh}` : '',
+        redove: tvK === undefined ? 0 : zhiviteRedove(tvK).length,
+      },
+    ],
     sverka: sverka(`износ · ${p.list}`, b.sbor, redove.length, kogato),
   };
 }
@@ -801,6 +1125,11 @@ export function knigataOtOgledaloto(o: Ogledalo, kursor: Kursor, kogato: string)
       listove.push(u.list);
       sverki.push(u.sverka);
       mesta.push(u.myasto);
+    } else if (p.klyuch === 'smetki') {
+      const sm = listSmetki(o, p, nastroyki.list, n.podtablitsi, kogato);
+      listove.push(sm.list);
+      sverki.push(sm.sverka);
+      mesta.push(...sm.mesta);
     } else if (p.klyuch === 'ii') {
       const s = listII(p.list, p.lenti, kogato);
       listove.push(s.list);

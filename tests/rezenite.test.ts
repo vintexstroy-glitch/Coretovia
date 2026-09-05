@@ -26,11 +26,11 @@ describe('резените по прозорец', () => {
     }
   });
 
-  it('петте построени прозореца нямат „идва с резен"', () => {
-    for (const k of ['profil', 'imoti', 'ii', 'nastroyki', 'upravlenie']) {
+  it('шестте построени прозореца нямат „идва с резен"', () => {
+    for (const k of ['profil', 'imoti', 'ii', 'nastroyki', 'upravlenie', 'smetki']) {
       expect(REZEN_NA_PROZORETSA).not.toHaveProperty(k);
     }
-    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(3);
+    expect(Object.keys(REZEN_NA_PROZORETSA)).toHaveLength(2);
   });
 
   it('бутоните на Управление, които „идват с резен N", сочат ред от плана с темата си', () => {

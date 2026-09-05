@@ -703,7 +703,15 @@ describe('неговата Книга · мострата срещу празн�
     expect(
       otchet.predlozheniya.filter((p) => p.vid === 'nov-red' && p.tablitsa === 'zadachi'),
     ).toHaveLength(9);
-    expect(otchet.nahodki.filter((n) => n.stepen === 'greshka')).toEqual([]);
+    // грешки има САМО от листа Сметки: в макета му K носи думи вместо числа, а
+    // движението иска сума и месец — всяка липса се КАЗВА с адрес (правило 12)
+    const greshki = otchet.nahodki.filter((n) => n.stepen === 'greshka');
+    expect(greshki.filter((n) => n.list !== 'Сметки')).toEqual([]);
+    expect(greshki.some((n) => n.kakvo.endsWith('не е сума.'))).toBe(true);
+    expect(greshki.some((n) => n.kakvo.includes('задължителна е, редът не влиза'))).toBe(true);
+    expect(
+      otchet.predlozheniya.filter((p) => 'tablitsa' in p && p.tablitsa === 'dvizheniya'),
+    ).toEqual([]);
     expect(
       otchet.nahodki.filter((n) => n.kakvo.startsWith('Номерът „5.1.1.')).map((n) => n.adres),
     ).toEqual(['A42', 'A43', 'A44', 'A45', 'A46', 'A47', 'A48']);

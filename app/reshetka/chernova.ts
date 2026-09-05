@@ -21,6 +21,7 @@ import { tablitsata } from '../../src/model/model.js';
 import { MODEL } from '../../src/model/osnova.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
+import { otgovoratNaPortata } from '../prozorets/deystviya.js';
 import { kletkaOtPoleto, pokazhiGreshka, poleZaKolona } from './redaktsiya.js';
 
 export interface OblikNaChernovata {
@@ -139,12 +140,7 @@ export function otvoriChernova(
     vDvizhenie = true;
     const r = await k.porta.izpalni(komandaId, komanda, { kletki: kletki as Kletki });
     vDvizhenie = false;
-    if ('otkaz' in r) {
-      pokazhiGreshka(k.tyalo, r.zashto.join(' '));
-      return;
-    }
-    pokazhiGreshka(k.tyalo, '');
-    if (r.povtoreno) k.prerisuvay();
+    otgovoratNaPortata(k, r);
   };
 
   tr.addEventListener('keydown', (e) => {

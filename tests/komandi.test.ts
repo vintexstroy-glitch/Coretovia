@@ -483,14 +483,14 @@ describe('сторното и разписката', () => {
     const tovar = {
       otpechatak: otpechatakNaModela(MODEL),
       kursor: o.kursori.get(KNIGA)!,
-      redove: { imoti: 1, obekti: 1, biznesi: 0, zadachi: 0 },
+      redove: { imoti: 1, obekti: 1, biznesi: 0, zadachi: 0, dvizheniya: 0, kesh: 0 },
       iznesenoNa: '2026-09-05T12:30:00.000Z',
     };
     expect(
       otkazat(
         iz.probvay('x', 'kniga.iznesi', {
           ...tovar,
-          redove: { imoti: 2, obekti: 1, biznesi: 0, zadachi: 0 },
+          redove: { imoti: 2, obekti: 1, biznesi: 0, zadachi: 0, dvizheniya: 0, kesh: 0 },
         }),
       ).zashto[0],
     ).toMatch(/imoti 2 ≠ 1/);

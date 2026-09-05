@@ -161,6 +161,7 @@ function proveriKletkite(
   }
   if (n.length > 0) return n;
   n.push(...proveriDatite(t, sled));
+  n.push(...proveriStranata(t, sled));
   if (n.length > 0) return n;
   // Кортежът е свободен · проверява се щом родителят и номенклатурните сегменти са налице
   // (неговото № може да е и 0 — `3.1.1.0` е адрес като всеки друг)
@@ -248,6 +249,35 @@ function vsichkiKletki(t: Tablitsa, kletki: Kletki): Kletki {
 }
 
 /** Датите на реда · краят не е преди началото · и двете са ГГГГ-ММ-ДД (четенето ги е свело). */
+/**
+ * ЗНАКЪТ решава страната (правило 20) · родово, по данните на колоните.
+ *
+ * Таблица, чиито колони носят `strana` (секциите на Сметки), трябва да има ТОЧНО
+ * ЕДНА пълна такава колона, и знакът на парите да е от нейната страна: приходът
+ * е +, разходът е −. Нулата не е движение — отказва се с думи. „Бизнес" е дума и
+ * в двете номенклатури, затова изборът на секция казва коя страна е негова
+ * (неговото B6: „Ако е на загуба се изпраща сметката с знак - в Разходи").
+ */
+function proveriStranata(t: Tablitsa, sled: Red): string[] {
+  const sektsii = t.koloni.filter((k) => k.strana !== undefined);
+  if (sektsii.length === 0) return [];
+  const palni = sektsii.filter((k) => sled[k.klyuch] !== undefined);
+  if (palni.length === 0) return ['Редът с пари не е в секция — избери една.'];
+  if (palni.length > 1)
+    return [`Редът е в две секции (${palni.map((k) => k.ime).join(' · ')}) — остави една.`];
+  const pari = t.koloni.find((k) => k.vid === 'evro' && k.zadalzhitelna);
+  const kl = pari === undefined ? undefined : sled[pari.klyuch];
+  if (pari === undefined || kl === undefined || !('stoynost_st' in kl)) return [];
+  const strana = kl.stoynost_st > 0 ? 'prihod' : kl.stoynost_st < 0 ? 'razhod' : null;
+  if (strana === null) return [`Нула не е движение — „${pari.ime}" иска число със знак.`];
+  const izbrana = palni[0]!;
+  if (izbrana.strana !== strana)
+    return [
+      `Знакът не отговаря на секцията: „${izbrana.ime}" е ${izbrana.strana === 'prihod' ? 'приход (+)' : 'разход (−)'}, а сумата е ${kl.stoynost_st > 0 ? 'положителна' : 'отрицателна'}.`,
+    ];
+  return [];
+}
+
 function proveriDatite(t: Tablitsa, sled: Red): string[] {
   const n: string[] = [];
   for (const kol of t.koloni) {
@@ -278,6 +308,8 @@ interface TovarNovRed {
 }
 
 export interface OshteZaNovRed {
+  /** още предусловия, поименно · родовите остават */
+  readonly predusloviya?: Komanda<TovarNovRed>['predusloviya'];
   readonly myasto?: Myasto;
   /** товарът от избрания ред · за десния бутон върху родител */
   readonly otIzbora?: (izbran: Izbran, k: Kontekst) => TovarNovRed | null;
@@ -314,6 +346,7 @@ export function komandaZaNovRed(
           }
         : null,
     predusloviya: [
+      ...(oshte.predusloviya ?? []),
       {
         ime: 'клетките са живи и номерът е свободен',
         proveri: (v, k) => {

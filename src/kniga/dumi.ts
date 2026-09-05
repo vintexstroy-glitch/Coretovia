@@ -27,6 +27,9 @@ export const KLYUCH_KOLONA_IMOTI = 10;
 export const KLYUCH_KOLONA_NASTROYKI = 6;
 /** колоната „Ключ" на УправлениеДелаПреписки · S · след десетте му глави и осемте такта */
 export const KLYUCH_KOLONA_UPRAVLENIE = 19;
+
+/** същото за листа Сметки · единайсет глави + дванайсет такта, после Ключ (X) */
+export const KLYUCH_KOLONA_SMETKI = 24;
 /** редът „филтър" под главите · неговата дума (Управление B19:R19 · Сметки B17:W17) */
 export const FILTAR = 'филтър';
 /** редът СБОР под колоните · наша дума (негово, 05.09: „С опции за различни сметки отдолу") */
@@ -35,6 +38,11 @@ export const SBOR = 'сбор';
 export const TAKT_ZNAK = '■';
 /** ключът на групов ред · `grupa:‹imotId›·‹категория›` */
 export const GRUPA = 'grupa:';
+/** груповият ред на СЕКЦИЯ в Сметки · `grupa:sektsiya:prihod·3` */
+export const SEKTSIYA = 'sektsiya:';
+/** какво пише под лентата „Финансови Отчети за избрания период" · нашата дума */
+export const DUMI_ZA_OTCHETITE =
+  'Коефициентите и диаграмите за избрания период идват с резен 6 (формулите и моделите).';
 /** разделителят в ключа на групов ред и в ключа на стойност */
 export const RAZDELITEL_NA_GRUPATA = '·';
 
