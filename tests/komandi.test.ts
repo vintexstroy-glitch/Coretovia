@@ -343,6 +343,7 @@ describe('задачата на Управление (ADR-005)', () => {
       do: { tekst: '2026-09-12' },
       otsenka: { nomer: 1 },
       byudzhet: { stoynost_st: 25000000 },
+      otgovornik: null,
       ...oshte,
     },
   });
@@ -435,6 +436,7 @@ describe('задачата на Управление (ADR-005)', () => {
         do: null,
         otsenka: null,
         byudzhet: null,
+        otgovornik: null,
       },
     });
     expect(desni('obekti', 'obekt:k3')[0]?.klyuch).toBe('upravlenie.dobaviZadacha');

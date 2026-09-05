@@ -76,6 +76,7 @@ async function ogledalo() {
         do: null,
         otsenka: null,
         byudzhet: null,
+        otgovornik: null,
       },
     });
   await zadacha('z1', 'obekt:o27', 'СМР', '2026-09-10');

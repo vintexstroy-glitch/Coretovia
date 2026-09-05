@@ -100,6 +100,7 @@ describe('основата на резен 1', () => {
       ['do', 'data', false],
       ['otsenka', 'izbor', false],
       ['byudzhet', 'evro', false],
+      ['otgovornik', 'vrazka', false],
     ]);
     expect(z.koloni[0]?.vrazka).toEqual(['imoti', 'obekti', 'biznesi']);
     expect(z.koloni.map((k) => k.kratko)).toEqual([
@@ -110,6 +111,7 @@ describe('основата на резен 1', () => {
       undefined,
       undefined,
       undefined,
+      'Отговорник',
     ]);
     // слятата клетка · две колони в една · опашката няма своя колона в Книгата
     expect(z.slyati).toEqual([
@@ -122,12 +124,19 @@ describe('основата на резен 1', () => {
       'ot',
       'otsenka',
       'byudzhet',
+      'otgovornik',
     ]);
+    // отговорникът е НАША колона · сочи към хората от листа Служители (негово, 05.09)
+    expect(z.koloni.find((k) => k.klyuch === 'otgovornik')?.vrazka).toEqual([
+      'stopani',
+      'sluzhiteli',
+    ]);
+    expect(z.koloni.find((k) => k.klyuch === 'otgovornik')?.nashaDuma).toBe(true);
     expect(z.podglava?.['ot']).toBe('Начало/Край');
     expect(z.redFiltar).toBe(true);
   });
 
-  it('неговите десет глави на Управление · и четиринайсетте му бутона, дословно', () => {
+  it('неговите десет глави на Управление, плюс НАШИЯ Отговорник · и четиринайсетте му бутона', () => {
     expect(OBLIK_NA_UPRAVLENIE.map((g) => g.glava)).toEqual([
       '№',
       'име Имот',
@@ -139,6 +148,7 @@ describe('основата на резен 1', () => {
       'площ',
       'цена',
       'Бюджет Дела/ Бюджет Сметки',
+      'Отговорник',
     ]);
     expect(OBLIK_NA_UPRAVLENIE.map((g) => g.ot)).toEqual([
       'nomeratsiya',
@@ -151,6 +161,11 @@ describe('основата на резен 1', () => {
       'roditel',
       'roditel',
       'zadacha',
+      'zadacha',
+    ]);
+    // единайсетата глава е НАША · неговите десет остават на адресите си
+    expect(OBLIK_NA_UPRAVLENIE.filter((g) => g.nashaGlava === true).map((g) => g.glava)).toEqual([
+      'Отговорник',
     ]);
     expect(BUTONI_NA_UPRAVLENIE).toHaveLength(14);
     expect(BUTONI_NA_UPRAVLENIE.map((b) => b.ime.split('(')[0]!.trim())).toEqual([

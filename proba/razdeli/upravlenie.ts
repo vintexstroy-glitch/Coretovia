@@ -63,7 +63,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   proveri(
     'редът „филтър" под двете глави · и редът СБОР отдолу',
     `${await p.$$eval('[data-filtar]', (es) => es.length)} · ${await tekstNa(p, '[data-sbor-red] td:first-child')}`,
-    '9 · сбор',
+    '10 · сбор',
   );
   proveri(
     'Гантът е до таблицата · без ленти',
@@ -229,17 +229,17 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   const list = kniga.listove.find((l) => l.ime === UPRAVLENIE);
   const k = list?.kletki ?? [];
   proveri(
-    'две глави · „такт" ×8 · Ключ в S',
-    `${k[16]?.slice(10, 18).join(',')} · ${k[16]?.[18]}`,
-    'такт,такт,такт,такт,такт,такт,такт,такт · Ключ',
+    'две глави · НАШИЯТ Отговорник · „такт" ×8 · Ключ в T',
+    `${k[16]?.[10]} · ${k[16]?.slice(11, 19).join(',')} · ${k[16]?.[19]}`,
+    'Отговорник · такт,такт,такт,такт,такт,такт,такт,такт · Ключ',
   );
   proveri('редът „филтър"', k[18]?.[1], 'филтър');
-  const grupa = k.find((r) => String(r[18] ?? '').startsWith('grupa:imot:') && r[1] === 'Гара Яна');
-  const zadacha = k.find((r) => String(r[18] ?? '').startsWith('zadacha:'));
+  const grupa = k.find((r) => String(r[19] ?? '').startsWith('grupa:imot:') && r[1] === 'Гара Яна');
+  const zadacha = k.find((r) => String(r[19] ?? '').startsWith('zadacha:'));
   proveri('Гара Яна е групов ред с ключ', grupa?.[0], '2');
   proveri(
     'задачата · слятата клетка · ■ в такта',
-    `${zadacha?.[4]} · ${zadacha?.slice(10, 18).filter((v) => v === '■').length}`,
+    `${zadacha?.[4]} · ${zadacha?.slice(11, 19).filter((v) => v === '■').length}`,
     'Дело / Сондаж · 1',
   );
   proveri(
@@ -247,7 +247,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     `${k.find((r) => r[0] === 'сбор')?.[1]} · ${k.find((r) => r[0] === 'сбор')?.[9]}`,
     '1 · 250000',
   );
-  proveri('„Ключ" (S) е скрита', list?.skritiKoloni.join(','), '19');
+  proveri('„Ключ" (T) е скрита', list?.skritiKoloni.join(','), '20');
 
   // ══ 3д · вносът · същата Книга = нула · дописана задача под Гара Яна = нов ред ═
   razdel = '3д · вносът';
@@ -269,7 +269,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   const upr = listove.find((l) => l.ime === UPRAVLENIE)!;
   const redove = upr.redove as (string | number | null)[][];
   const rg = redove.findIndex(
-    (r) => String(r[18] ?? '').startsWith('grupa:imot:') && r[1] === 'Гара Яна',
+    (r) => String(r[19] ?? '').startsWith('grupa:imot:') && r[1] === 'Гара Яна',
   );
   const nov: (string | number | null)[] = [];
   nov[4] = 'Среща / Брокер';

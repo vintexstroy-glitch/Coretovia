@@ -212,3 +212,51 @@ export function dostapaMi(
     })),
   };
 }
+
+/**
+ * КОИ Длъжности раздават Длъжности · НЕГОВО, 05.09: „Длъжности се раздават от
+ * управителите и помощник управители."
+ *
+ * Стопанинът е над двете (базовият му ред е „Редактира всичко" по четирите оси)
+ * и затова също раздава — иначе първият вход не би могъл да назначи никого.
+ */
+export const DLAZHNOSTI_S_RAZDAVANE: readonly string[] = Object.freeze([
+  'Стопанин',
+  'Управител',
+  'Помощник Управител',
+]);
+
+/**
+ * Може ли този човек да РАЗДАВА Длъжности и достъп?
+ *
+ * Раздаване е всяко пипане на колоната „Длъжност" (в Стопани и в Служители) и
+ * на четирите оси на Достъпа: те са ЕДНА и съща врата, гледана от две страни.
+ * Заключим ли само „Създаване на Длъжност с достъп", всеки би могъл да си впише
+ * ред в Служители с Длъжност Управител и да влезе отзад.
+ */
+export function mozheDaRazdavaDlazhnosti(o: Ogledalo, imeyl: string): boolean {
+  if (svedeno(imeyl) === svedeno(o.stopanin) && o.stopanin !== '') return true;
+  const dlazhnost = svedeno(dlazhnosttaNaImeyla(o, imeyl));
+  if (dlazhnost === '') return false;
+  return DLAZHNOSTI_S_RAZDAVANE.some((d) => svedeno(d) === dlazhnost);
+}
+
+/** Думите на отказа · казват КОЙ може, не само че не може (правило 12). */
+export function zashtoNeRazdava(o: Ogledalo, imeyl: string): string {
+  const dlazhnost = dlazhnosttaNaImeyla(o, imeyl);
+  return `Длъжности се раздават от Управител и Помощник Управител (негово, 05.09). Ти си ${
+    dlazhnost === '' ? 'без Длъжност в листа Служители' : dlazhnost
+  }.`;
+}
+
+/**
+ * РАЗДАВА ЛИ достъп това пипане · таблицата и пипнатите колони.
+ *
+ * „Длъжност" в кой да е ред за човек и четирите оси на Достъпа са раздаване;
+ * телефонът и адресът не са.
+ */
+export function razdavaDostap(tablitsa: string, koloni: readonly string[]): boolean {
+  if (tablitsa === TABLITSA) return true;
+  if (tablitsa !== 'stopani' && tablitsa !== 'sluzhiteli') return false;
+  return koloni.includes('dlazhnost');
+}

@@ -61,6 +61,7 @@ async function ogledalo() {
         do: null,
         otsenka: null,
         byudzhet: null,
+        otgovornik: null,
         ...kletki,
       },
     });

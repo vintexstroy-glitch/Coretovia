@@ -71,6 +71,11 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     await tekstNa(p, '[data-dlazhnostta-mi]'),
     'Ти си Стопанин.',
   );
+  proveri(
+    'кой раздава Длъжности се КАЗВА на екрана (негово, 05.09)',
+    await tekstNa(p, '[data-koy-razdava]'),
+    'Ти раздаваш Длъжности.',
+  );
 
   await p.click('[data-buton="sluzhiteli.dobaviSluzhitel"]');
   await p.waitForSelector('[data-chernova="sluzhiteli"] input[data-kolona="ime"]');
@@ -85,11 +90,12 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'Помощник Управител',
   );
   proveri(
-    'Програмата за Задачи го носи · без колона за изпълнител, и това се КАЗВА',
-    `${(await tekstNa(p, '[data-reshetka="programa"] tbody tr')).includes('Помощникът')} · ${(
-      await tekstNa(p, '[data-programa-vest]')
-    ).includes('чака негова дума')}`,
-    'true · true',
+    'Програмата за Задачи го носи · с нули, докато не му дадеш задача',
+    `${(await tekstNa(p, '[data-reshetka="programa"] tbody tr:last-child')).includes('Помощникът')} · ${await p.$eval(
+      '[data-reshetka="programa"] tbody tr:last-child',
+      (e) => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim(),
+    )}`,
+    'true · 2 Помощникът 0 0',
   );
 
   // ══ 6в · Длъжност с достъп · записаният ред бие базовия ══════════════
@@ -112,6 +118,64 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'и точно неговата Длъжност вече не е базова',
     await p.$('[data-bazov="Помощник Управител"]'),
     null,
+  );
+
+  // ══ 6в2 · Отговорникът на задачата · и Програмата, която го брои ═════
+  razdel = '6в2 · Отговорникът';
+  const bezOtgovornikPredi = await tekstNa(p, '[data-programa-vest]');
+  proveri(
+    'докато никой не носи задача, това се КАЗВА',
+    bezOtgovornikPredi.includes('БЕЗ отговорник'),
+    true,
+  );
+  await p.goto(`${ADRES}#/upravlenie`);
+  await p.waitForSelector('tr.red.zadacha td[data-kolona="otgovornik"]');
+  proveri(
+    'колоната Отговорник стои в Управление · и е празна, докато не я попълниш',
+    await tekstNa(p, 'tr.red.zadacha td[data-kolona="otgovornik"]'),
+    '',
+  );
+  await p.dblclick('tr.red.zadacha td[data-kolona="otgovornik"]');
+  await p.waitForSelector('tr.red.zadacha td[data-kolona="otgovornik"] select');
+  const horaVMenyuto = await p.$$eval(
+    'tr.red.zadacha td[data-kolona="otgovornik"] select option',
+    (opts) => opts.map((o) => o.textContent?.trim() ?? '').join(' · '),
+  );
+  proveri(
+    'падащото меню носи ХОРАТА от листа Служители, не Имоти',
+    horaVMenyuto,
+    '— · 1 · Стопанинът на Книгата · 1 · Помощникът',
+  );
+  await p.selectOption('tr.red.zadacha td[data-kolona="otgovornik"] select', {
+    label: '1 · Помощникът',
+  });
+  await p.press('tr.red.zadacha td[data-kolona="otgovornik"] select', 'Enter');
+  await p.waitForFunction(
+    () =>
+      (
+        document.querySelector('tr.red.zadacha td[data-kolona="otgovornik"]')?.textContent ?? ''
+      ).trim() === 'Помощникът',
+  );
+  proveri(
+    'задачата вече носи отговорник',
+    await tekstNa(p, 'tr.red.zadacha td[data-kolona="otgovornik"]'),
+    'Помощникът',
+  );
+
+  await p.goto(`${ADRES}#/sluzhiteli`);
+  await p.waitForSelector('[data-reshetka="programa"]');
+  const redNaPomoshtnika = await p.$eval('[data-reshetka="programa"] tbody tr:last-child', (e) =>
+    (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim(),
+  );
+  proveri(
+    'Програмата за Задачи вече БРОИ · неговите две числа, не тире',
+    /^2 Помощникът \d+ \d+$/.test(redNaPomoshtnika),
+    true,
+  );
+  proveri(
+    'и броят задачи без отговорник падна с една',
+    (await tekstNa(p, '[data-programa-vest]')) === bezOtgovornikPredi,
+    false,
   );
 
   // ══ 6г · Профилът · Кой съм и какво ми дава Длъжността ═══════════════

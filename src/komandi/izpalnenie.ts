@@ -31,6 +31,8 @@ export function probvay(klyuch: string, tovar: unknown, k: Kontekst): Predvarite
   const komanda = komandaPoKlyuch(klyuch);
   if (komanda === undefined) return otkaz(`Няма команда „${klyuch}".`);
   if (!komanda.bezStopanin && k.ogledalo.stopanin === '') return otkaz(NE_E_OTKRITA);
+  const koy = komanda.koyMozhe?.(k) ?? null;
+  if (koy !== null) return otkaz(koy);
   const poShema = proveriPoShema(komanda.shema, tovar);
   if (poShema.length > 0) return otkaz(...poShema);
   const dumi = komanda.predusloviya
@@ -74,13 +76,16 @@ export function butoniZa(
       const tovar = komanda.otIzbora(izbran, k);
       if (tovar === null) continue;
       // черновата се проверява при записа, не при отварянето: празните ѝ клетки не са отказ
-      const dumi = otkrita
-        ? komanda.otvaryaChernova === true
-          ? []
-          : komanda.predusloviya
-              .map((p) => p.proveri(tovar, k))
-              .filter((x): x is string => x !== null)
-        : [NE_E_OTKRITA];
+      const koy = otkrita ? (komanda.koyMozhe?.(k) ?? null) : null;
+      const dumi = !otkrita
+        ? [NE_E_OTKRITA]
+        : koy !== null
+          ? [koy]
+          : komanda.otvaryaChernova === true
+            ? []
+            : komanda.predusloviya
+                .map((p) => p.proveri(tovar, k))
+                .filter((x): x is string => x !== null);
       butoni.push({
         klyuch: komanda.klyuch,
         ime: komanda.ime,
@@ -92,12 +97,14 @@ export function butoniZa(
       });
       continue;
     }
-    const razreshena = komanda.bezStopanin === true ? !otkrita : otkrita;
-    const zashto = razreshena
-      ? ''
-      : komanda.bezStopanin === true
+    const otkritaE = komanda.bezStopanin === true ? !otkrita : otkrita;
+    const koy = otkritaE ? (komanda.koyMozhe?.(k) ?? null) : null;
+    const razreshena = otkritaE && koy === null;
+    const zashto = !otkritaE
+      ? komanda.bezStopanin === true
         ? `Книгата вече е открита от ${k.ogledalo.stopanin}.`
-        : NE_E_OTKRITA;
+        : NE_E_OTKRITA
+      : (koy ?? '');
     butoni.push({
       klyuch: komanda.klyuch,
       ime: komanda.ime,

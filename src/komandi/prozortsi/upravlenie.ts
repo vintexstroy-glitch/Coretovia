@@ -35,6 +35,7 @@ export const upravlenieDobaviZadacha = komandaZaNovRed(
               do: null,
               otsenka: null,
               byudzhet: null,
+              otgovornik: null,
             },
           }
         : null,

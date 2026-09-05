@@ -106,6 +106,13 @@ export interface Komanda<V> {
    * ключа на действието на предложение № i — за заместителя `@predlozhenie:N`.
    */
   readonly otPredlozhenie?: (p: Predlozhenie, idNa: IdNaPredlozhenie) => V | null;
+  /**
+   * КОЙ може да я вика · думите на отказа или `null`.
+   *
+   * Различно от `predusloviya`: те питат за ТОВАРА, това пита за ЧОВЕКА.
+   * Затова се смята и на бутона, преди да има товар (правило 12 · 15).
+   */
+  readonly koyMozhe?: (k: Kontekst) => string | null;
   readonly predusloviya: readonly Preduslovie<V>[];
   dryRun(v: V, k: Kontekst): Predvaritelno;
 }

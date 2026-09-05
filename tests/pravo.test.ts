@@ -12,17 +12,21 @@
 import { describe, expect, it } from 'vitest';
 import { MODEL } from '../src/model/osnova.js';
 import { Izpalnitel } from '../src/porta/izpalnitel.js';
+import { eOtkaz } from '../src/komandi/izpalnenie.js';
 import {
   dlazhnosttaNaImeyla,
   dostapaMi,
   dostapaNaDlazhnostta,
+  DLAZHNOSTI_S_RAZDAVANE,
   DUMI_NA_PRAVOTO,
+  mozheDaRazdavaDlazhnosti,
   mozheDaRedaktira,
   obhvatOtDumite,
   poTyasnoto,
   PRAVA,
   pravoOtDumite,
   pravotoNaImeyla,
+  razdavaDostap,
 } from '../src/smetach/pravo.js';
 import { KNIGA, knigaZaTest, STOPANIN } from './pomoshtni.js';
 
@@ -50,12 +54,17 @@ const chovek = (ime: string, imeyl: string, nomer: number) => ({
 async function otvori() {
   const k = knigaZaTest();
   let takt = 0;
+  // кой пише · сменя се, за да се провери правото на ДРУГ човек, не на Стопанина
+  let koyPishe = STOPANIN;
+  const stani = (imeyl: string) => {
+    koyPishe = imeyl;
+  };
   const iz = await Izpalnitel.otvori({
     vrata: k.vrata,
     dnevnik: k.dnevnik,
     model: MODEL,
     veriga: KNIGA,
-    aktor: () => STOPANIN,
+    aktor: () => koyPishe,
     sega: () => {
       takt += 1;
       return new Date(Date.parse(KOGATO) + takt * 1000).toISOString();
@@ -67,7 +76,7 @@ async function otvori() {
     return r;
   };
   await zapishi('k0', 'stopanin.otkriy', { imeyl: STOPANIN });
-  return { iz, zapishi };
+  return { iz, zapishi, stani };
 }
 
 describe('правото се чете от НЕГОВОТО изречение', () => {
@@ -240,5 +249,86 @@ describe('личният достъп · за Профила', () => {
     expect(d.dlazhnost).toBe('');
     expect(d.osi.map((x) => x.dumi)).toEqual(['', '', '', '']);
     expect(d.osi.map((x) => x.pravo)).toEqual(['Скрито', 'Скрито', 'Скрито', 'Скрито']);
+  });
+});
+
+describe('кой РАЗДАВА Длъжности · негово, 05.09', () => {
+  const dumiteNaOtkaza = (r: unknown): string =>
+    eOtkaz(r) ? r.zashto.join(' ') : 'мина, а не биваше';
+
+  it('Управителят и Помощник Управителят раздават · Наблюдателят и Служителят — не', async () => {
+    const { iz, zapishi } = await otvori();
+    for (const [ime, imeyl, nomer] of [
+      ['Управителят', 'upravitel@example.bg', DLAZHNOST.upravitel],
+      ['Помощникът', 'pomoshtnik@example.bg', DLAZHNOST.pomoshtnik],
+      ['Служителят', 'sluzhitel@example.bg', DLAZHNOST.sluzhitel],
+      ['Наблюдателят', 'nablyudatel@example.bg', DLAZHNOST.nablyudatel],
+    ] as const) {
+      await zapishi(`s-${imeyl}`, 'sluzhiteli.dobaviSluzhitel', chovek(ime, imeyl, nomer));
+    }
+    const o = iz.ogledalo();
+    expect(mozheDaRazdavaDlazhnosti(o, 'upravitel@example.bg')).toBe(true);
+    expect(mozheDaRazdavaDlazhnosti(o, 'pomoshtnik@example.bg')).toBe(true);
+    expect(mozheDaRazdavaDlazhnosti(o, 'sluzhitel@example.bg')).toBe(false);
+    expect(mozheDaRazdavaDlazhnosti(o, 'nablyudatel@example.bg')).toBe(false);
+    expect(mozheDaRazdavaDlazhnosti(o, 'nikoy@example.bg')).toBe(false);
+    // Стопанинът на Книгата е над двамата · иначе първият вход не назначава никого
+    expect(mozheDaRazdavaDlazhnosti(o, STOPANIN)).toBe(true);
+    expect(DLAZHNOSTI_S_RAZDAVANE).toEqual(['Стопанин', 'Управител', 'Помощник Управител']);
+  });
+
+  it('Портата ОТКАЗВА с думи · и бутонът го казва предварително (правило 12)', async () => {
+    const { iz, zapishi, stani } = await otvori();
+    await zapishi(
+      's1',
+      'sluzhiteli.dobaviSluzhitel',
+      chovek('Наблюдателят', 'nablyudatel@example.bg', DLAZHNOST.nablyudatel),
+    );
+    stani('nablyudatel@example.bg');
+    const otkazat = iz.probvay('x1', 'sluzhiteli.dobaviDlazhnost', {
+      kletki: {
+        dlazhnost: { nomer: DLAZHNOST.upravitel },
+        tabove: { tekst: 'Редактира всичко' },
+        hedari: { tekst: 'Редактира всичко' },
+        redove: { tekst: 'Редактира всичко' },
+        zhurnal: { tekst: 'Редактира всичко' },
+      },
+    });
+    expect(dumiteNaOtkaza(otkazat)).toMatch(
+      /Длъжности се раздават от Управител и Помощник Управител .* Ти си Наблюдател\./,
+    );
+    const buton = iz.butoniZa('sluzhiteli').find((b) => b.klyuch === 'sluzhiteli.dobaviDlazhnost')!;
+    expect(buton.razreshena).toBe(false);
+    expect(buton.zashto).toMatch(/Ти си Наблюдател/);
+  });
+
+  it('ЗАДНАТА врата е затворена · Длъжност не се пише и през клетката', async () => {
+    const { iz, zapishi, stani } = await otvori();
+    await zapishi(
+      's1',
+      'sluzhiteli.dobaviSluzhitel',
+      chovek('Наблюдателят', 'nablyudatel@example.bg', DLAZHNOST.nablyudatel),
+    );
+    const id = iz.ogledalo().tablitsi.get('sluzhiteli')!.id[0]!;
+    stani('nablyudatel@example.bg');
+    const popravka = (kletki: Record<string, unknown>) =>
+      iz.probvay('x1', 'red.popraviKletka', { tablitsa: 'sluzhiteli', id, kletki });
+    expect(dumiteNaOtkaza(popravka({ dlazhnost: { nomer: DLAZHNOST.upravitel } }))).toMatch(
+      /Длъжности се раздават/,
+    );
+    // телефонът не е раздаване · него го поправя всеки, който пише редове
+    expect(eOtkaz(popravka({ telefon: { tekst: '0888 000 001' } }))).toBe(false);
+    // махането на човек също раздава достъп (маха го)
+    expect(
+      dumiteNaOtkaza(iz.probvay('x2', 'red.izklyuchi', { tablitsa: 'sluzhiteli', id })),
+    ).toMatch(/Длъжности се раздават/);
+  });
+
+  it('раздаването се ПОЗНАВА по таблицата и по колоните', () => {
+    expect(razdavaDostap('dostap', [])).toBe(true);
+    expect(razdavaDostap('sluzhiteli', ['dlazhnost'])).toBe(true);
+    expect(razdavaDostap('stopani', ['ime', 'dlazhnost'])).toBe(true);
+    expect(razdavaDostap('sluzhiteli', ['telefon', 'adres'])).toBe(false);
+    expect(razdavaDostap('zadachi', ['dlazhnost'])).toBe(false);
   });
 });

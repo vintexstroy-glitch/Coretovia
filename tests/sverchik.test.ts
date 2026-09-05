@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { razpoznayKnigata } from '../src/kniga/chetene.js';
+import { KLYUCH_KOLONA_UPRAVLENIE } from '../src/kniga/dumi.js';
 import {
   type KletkaZaPisane,
   napishiKniga,
@@ -782,7 +783,7 @@ describe('неговата Книга · мострата срещу празн�
 
 describe('Управление · задачите през Книгата (ADR-005)', () => {
   const UPR = PROZORTSI.find((p) => p.klyuch === 'upravlenie')!.list;
-  const KL = 18;
+  const KL = KLYUCH_KOLONA_UPRAVLENIE - 1;
 
   async function sZadachi() {
     const { iz, zapishi } = await nashata();
@@ -802,6 +803,7 @@ describe('Управление · задачите през Книгата (ADR-
           do: null,
           otsenka: null,
           byudzhet: null,
+          otgovornik: null,
           ...oshte,
         },
       });

@@ -49,6 +49,7 @@ import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { type Red as RedNaOgledaloto, redKato, zhiviteRedove } from '../ogledalo/tablitsa.js';
 import type { Kursor } from '../sabitiya/tovari.js';
 import { darvoto } from '../smetach/darvo.js';
+import { programata } from '../smetach/programa.js';
 import { lentaNa, sboroveVKolonite } from '../smetach/gant.js';
 import { dumiNaKletka, imeNaReda, imeNaVrazkata, tekstNaIzbora } from '../smetach/kletki.js';
 import { type KolonaNaTakta, koloniNaTakta } from '../smetach/vreme.js';
@@ -87,7 +88,6 @@ import {
   KLYUCH_KOLONA_SLUZHITELI,
   DUMI_ZA_DLAZHNOST,
   GLAVI_NA_PROGRAMATA,
-  DUMI_ZA_PROGRAMATA,
 } from './dumi.js';
 
 export interface KnigaZaIznos {
@@ -1202,20 +1202,10 @@ const listSluzhiteli: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogat
   b.lenti += 1;
   redove.push(GLAVI_NA_PROGRAMATA.map((g) => glava(g)));
   b.glavi += 1;
-  const tvS = o.tablitsi.get('sluzhiteli');
-  const nomerNaSluzhitel = new Map(podrediPoNomer(o, 'sluzhiteli').map((r) => [r.i, r.nomer]));
-  if (tvS !== undefined) {
-    for (const i of zhiviteRedove(tvS)) {
-      const r = redKato(tvS, i);
-      const ime = r.kletki['ime'];
-      redove.push([
-        tekstNaNomera(nomerNaSluzhitel.get(i) ?? []),
-        ime !== undefined && 'tekst' in ime ? ime.tekst : '',
-        DUMI_ZA_PROGRAMATA,
-        DUMI_ZA_PROGRAMATA,
-      ]);
-      b.danni += 1;
-    }
+  // числата се СМЯТАТ от отговорника на задачата · същият смятач като екрана
+  for (const [i, r] of programata(o, kogato.slice(0, 10)).redove.entries()) {
+    redove.push([String(i + 1), r.ime, r.dneshni, r.sedmichni]);
+    b.danni += 1;
   }
   redove.push([]);
   b.prazni += 1;

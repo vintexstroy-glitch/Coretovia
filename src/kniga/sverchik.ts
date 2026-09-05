@@ -40,7 +40,7 @@
 import type { Kletka, Kletki } from '../model/kletka.js';
 import { VID } from '../model/klyuchove.js';
 import { type Kolona, slotNaKolonata } from '../model/kolona.js';
-import { tablitsata } from '../model/model.js';
+import { tablitsata, tablitsaNaVrazkata } from '../model/model.js';
 import { type Belezi, podravni, poNomer, sledvashtNomer } from '../model/nomenklatura.js';
 import { otpechatakNaModela } from '../model/otpechatak.js';
 import { PREDLOZHENIE, type Predlozhenie, type Razlika } from '../model/predlozhenie.js';
@@ -338,6 +338,11 @@ class Sverchik {
    * Родителят на ред · Имотът на Обект/Бизнес или Имотът/Обектът/Бизнесът на задача ·
    * жив id, или предложение за нов ред в същата Книга (`@predlozhenie:N:‹вид›`).
    */
+  /** Може ли тази колона да сочи към ред с това id · по префикса му (връзката е списък). */
+  sochiKam(kol: Kolona, id: string): boolean {
+    return tablitsaNaVrazkata(this.o.model, kol, id) !== undefined;
+  }
+
   roditel(
     t: Tablitsa,
     r: ProchetenRed,
@@ -347,7 +352,11 @@ class Sverchik {
     if (kletka?.stoynost !== undefined && kletka.stoynost !== null)
       return { kletka: kletka.stoynost, zavisiOt: [] };
     const ime = kletka?.nepoznatRoditel ?? r.grupa?.imotIme ?? '';
-    if (r.grupa?.roditelId) return { kletka: { tekst: r.grupa.roditelId }, zavisiOt: [] };
+    // Групата дава родителя на ДЪРВОТО. Колона, която не сочи натам (Отговорникът
+    // сочи хора от листа Служители), не се пълни от нея — иначе всяка нова връзка
+    // би получила Имота на групата и всеки внос би предлагал поправка.
+    if (r.grupa?.roditelId && this.sochiKam(kol, r.grupa.roditelId))
+      return { kletka: { tekst: r.grupa.roditelId }, zavisiOt: [] };
     // родител, роден в СЪЩАТА Книга · по номера му в A на груповия ред
     const nomerVKnigata = r.grupa?.nomerVKnigata ?? '';
     const novRoditel = nomerVKnigata === '' ? undefined : this.noviRedovePoNomer.get(nomerVKnigata);
@@ -467,14 +476,22 @@ class Sverchik {
       if (kol.vid === 'vrazka') {
         // НЕзадължителна връзка, към която нищо не сочи (неговите заплати и кредити
         // нямат Имот), просто остава празна · находка тук би била шум, не липса
+        // Групата дава родителя на ДЪРВОТО (Имот, Обект или Бизнес). Колона, която
+        // не приема тази таблица — Отговорникът сочи хора — не се пълни от нея:
+        // иначе всяка нова връзка би получила Имота на групата.
+        const grupataEZaKolonata =
+          r.grupa !== null && (kol.vrazka ?? []).includes(r.grupa.roditelTablitsa ?? 'imoti');
+        const otGrupata =
+          grupataEZaKolonata &&
+          r.grupa !== null &&
+          (r.grupa.roditelId !== null ||
+            r.grupa.imotNomer !== null ||
+            r.grupa.imotIme !== '' ||
+            r.grupa.nomerVKnigata !== '');
         const nyamaKam =
           (pk === undefined || pk.stoynost === null || pk.stoynost === undefined) &&
           pk?.nepoznatRoditel === undefined &&
-          (r.grupa === null ||
-            (r.grupa.roditelId === null &&
-              r.grupa.imotNomer === null &&
-              r.grupa.imotIme === '' &&
-              r.grupa.nomerVKnigata === ''));
+          !otGrupata;
         if (nyamaKam && !kol.zadalzhitelna) continue;
         const rod = this.roditel(t, r, pk, kol);
         if (rod === null) {

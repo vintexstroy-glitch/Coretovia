@@ -29,6 +29,7 @@ import { kolonaNa, type Tablitsa } from '../../model/tablitsa.js';
 import { kletkaNa, redKato, zhiviteRedove } from '../../ogledalo/tablitsa.js';
 import { proveriTovar, TIP } from '../../sabitiya/registar.js';
 import { dumiNaKletka, imeNaReda } from '../../smetach/kletki.js';
+import { mozheDaRazdavaDlazhnosti, razdavaDostap, zashtoNeRazdava } from '../../smetach/pravo.js';
 import {
   nomerNaRed,
   nomerOtKletki,
@@ -311,6 +312,8 @@ export interface OshteZaNovRed {
   /** още предусловия, поименно · родовите остават */
   readonly predusloviya?: Komanda<TovarNovRed>['predusloviya'];
   readonly myasto?: Myasto;
+  /** кой МОЖЕ да я вика · думите на отказа (правото, не товарът) */
+  readonly koyMozhe?: Komanda<TovarNovRed>['koyMozhe'];
   /** товарът от избрания ред · за десния бутон върху родител */
   readonly otIzbora?: (izbran: Izbran, k: Kontekst) => TovarNovRed | null;
 }
@@ -331,6 +334,7 @@ export function komandaZaNovRed(
     prozortsi: [t.prozorets],
     stepen: 'pishe',
     myasto: oshte.myasto ?? 'buton',
+    ...(oshte.koyMozhe === undefined ? {} : { koyMozhe: oshte.koyMozhe }),
     ...(oshte.otIzbora === undefined
       ? {}
       : { otIzbora: oshte.otIzbora, otvaryaChernova: true as const }),
@@ -445,6 +449,15 @@ const popraviKletka: Komanda<TovarPopravka> = {
       : null,
   predusloviya: [
     {
+      // ЕДНА врата: който не раздава Длъжности, не ги пише и през клетката
+      ime: 'Длъжност и достъп се раздават от Управител или Помощник Управител',
+      proveri: (v, k) =>
+        razdavaDostap(v.tablitsa, Object.keys(v.kletki)) &&
+        !mozheDaRazdavaDlazhnosti(k.ogledalo, k.aktor)
+          ? zashtoNeRazdava(k.ogledalo, k.aktor)
+          : null,
+    },
+    {
       ime: 'редът съществува и е жив',
       proveri: (v, k) => {
         const r = redat(v, k);
@@ -509,7 +522,8 @@ function zhiviDetsa(
   const rez: { tablitsa: string; broy: number }[] = [];
   for (const t of k.model.tablitsi.values()) {
     const vrazki = t.koloni.filter(
-      (c) => c.vid === 'vrazka' && (c.vrazka ?? []).includes(tablitsa),
+      // връзка, която само СОЧИ (Отговорникът), не прави реда дете · ADR-009
+      (c) => c.vid === 'vrazka' && c.samoSochi !== true && (c.vrazka ?? []).includes(tablitsa),
     );
     if (vrazki.length === 0) continue;
     const tv = k.ogledalo.tablitsi.get(t.klyuch);
@@ -546,6 +560,14 @@ function komandaZaIzklyuchvane(izklyuchen: boolean): Komanda<TovarRed> {
         }
       : {}),
     predusloviya: [
+      {
+        // махането и връщането на човек или на Длъжност също раздават достъп
+        ime: 'Длъжност и достъп се раздават от Управител или Помощник Управител',
+        proveri: (v, k) =>
+          razdavaDostap(v.tablitsa, ['dlazhnost']) && !mozheDaRazdavaDlazhnosti(k.ogledalo, k.aktor)
+            ? zashtoNeRazdava(k.ogledalo, k.aktor)
+            : null,
+      },
       {
         ime: izklyuchen ? 'редът е жив' : 'редът е изключен',
         proveri: (v, k) => {

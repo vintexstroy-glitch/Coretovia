@@ -384,6 +384,7 @@ describe('листът УправлениеДелаПреписки (ADR-005)', 
           do: null,
           otsenka: null,
           byudzhet: null,
+          otgovornik: null,
           ...oshte,
         },
       });
@@ -418,9 +419,10 @@ describe('листът УправлениеДелаПреписки (ADR-005)', 
     expect(list.slivaniya).toContain('A14:A15');
     expect(list.slivaniya).toContain('L14:M14');
     expect(list.slivaniya).toContain('O14:R14');
-    // 16 двете ленти · 17 главите му + „такт" ×8 + Ключ в S · 18 подглавите · 19 „филтър"
+    // 16 двете ленти · 17 главите му + НАШИЯ Отговорник + „такт" ×8 + Ключ в T · 18 подглавите
     expect(k[15]?.[0]).toBe('ОБЕКТИ');
-    expect(k[15]?.[9]).toBe('Диаграма Гант (Календар)');
+    // лентата на Ганта стои НАД тактовете · те почват след единайсетата глава
+    expect(k[15]?.[10]).toBe('Диаграма Гант (Календар)');
     expect(k[16]?.slice(0, 10)).toEqual([
       '№',
       'име Имот',
@@ -433,11 +435,13 @@ describe('листът УправлениеДелаПреписки (ADR-005)', 
       'цена',
       'Бюджет Дела/ Бюджет Сметки',
     ]);
-    expect(k[16]?.slice(10, 18)).toEqual(Array.from({ length: 8 }, () => 'такт'));
-    expect(k[16]?.[18]).toBe('Ключ');
+    // единайсетата глава е НАША · неговите десет остават на адресите си A–J
+    expect(k[16]?.[10]).toBe('Отговорник');
+    expect(k[16]?.slice(11, 19)).toEqual(Array.from({ length: 8 }, () => 'такт'));
+    expect(k[16]?.[19]).toBe('Ключ');
     expect(k[17]?.[5]).toBe('Начало/Край');
     // тактът · осем месеца от предишния · KOGATO е 05.09.2026 → авг 2026 … мар 2027
-    expect(k[17]?.slice(10, 18)).toEqual([
+    expect(k[17]?.slice(11, 19)).toEqual([
       'авг 26',
       'сеп 26',
       'окт 26',
@@ -448,23 +452,23 @@ describe('листът УправлениеДелаПреписки (ADR-005)', 
       'мар 27',
     ]);
     expect(k[18]?.slice(0, 3)).toEqual([null, 'филтър', 'филтър']);
-    expect(list.skritiKoloni).toEqual([19]);
+    expect(list.skritiKoloni).toEqual([20]);
     // дървото · Имотът е групов ред с ключ · задачата под него · слетите клетки · ■ в такта
     expect(k[19]?.slice(0, 3)).toEqual(['1', 'Герман', 'ПИ']);
-    expect(k[19]?.[18]).toBe('grupa:imot:i1');
+    expect(k[19]?.[19]).toBe('grupa:imot:i1');
     expect(k[20]?.slice(4, 7)).toEqual([
       'Дело / Сондаж',
       '2026-09-10 / 2026-09-12',
       'Спешно и Важно',
     ]);
     expect(k[20]?.[9]).toBe(250000);
-    expect(k[20]?.slice(10, 18)).toEqual([null, '■', null, null, null, null, null, null]);
-    expect(k[20]?.[18]).toBe('zadacha:z1');
-    const o1 = k.findIndex((r) => r[18] === 'grupa:obekt:o1');
+    expect(k[20]?.slice(11, 19)).toEqual([null, '■', null, null, null, null, null, null]);
+    expect(k[20]?.[19]).toBe('zadacha:z1');
+    const o1 = k.findIndex((r) => r[19] === 'grupa:obekt:o1');
     expect(k[o1]?.slice(0, 4)).toEqual(['3.1.1.27', 'Студентски Град', 'апартамент', 27]);
     // под Обекта · по началото: Брокер (ноември) е след СМР (без дата)? не — без дата е последно
     expect(k[o1 + 1]?.slice(4, 6)).toEqual(['Среща / Брокер', '2026-11-03']);
-    expect(k[o1 + 1]?.slice(10, 18)).toEqual([null, null, null, '■', null, null, null, null]);
+    expect(k[o1 + 1]?.slice(11, 19)).toEqual([null, null, null, '■', null, null, null, null]);
     expect(k[o1 + 2]?.[4]).toBe('Дело / СМР');
     expect(k[o1 + 2]?.[9]).toBe(1.15);
     // СБОР · брой задачи · бюджетът · по такт, по началото на задачата
@@ -472,13 +476,13 @@ describe('листът УправлениеДелаПреписки (ADR-005)', 
     expect(sbor).toBeGreaterThan(o1 + 2);
     expect(k[sbor]?.[1]).toBe(3);
     expect(k[sbor]?.[9]).toBe(250001.15);
-    expect((k[sbor] ?? []).slice(10, 18).filter((v) => v !== null && v !== undefined)).toEqual([
+    expect((k[sbor] ?? []).slice(11, 19).filter((v) => v !== null && v !== undefined)).toEqual([
       250000,
     ]);
-    expect(k[sbor]?.[11]).toBe(250000);
-    // отключени са редовете със задачи (E..S) и празният ред след дървото; главите и групите — не
+    expect(k[sbor]?.[12]).toBe(250000);
+    // отключени са редовете със задачи (E..T) и празният ред след дървото; главите и групите — не
     expect(list.otklyucheni).toContain('E21');
-    expect(list.otklyucheni).toContain('S21');
+    expect(list.otklyucheni).toContain('T21');
     expect(list.otklyucheni).not.toContain('A20');
     expect(list.otklyucheni).not.toContain('E20');
     expect(list.otklyucheniRedove).toContain(21);

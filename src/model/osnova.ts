@@ -430,6 +430,19 @@ const ZADACHI_KOLONI: readonly Kolona[] = [
     zadalzhitelna: false,
     zatvorena: false,
   },
+  // НЕГОВО, 05.09: „Да се добави отговорник за всяка задача." Колоната я няма в
+  // листа му — затова е НАША дума и стои НАКРАЯ, за да не мръдне негов адрес.
+  {
+    klyuch: 'otgovornik',
+    ime: 'Отговорник',
+    vid: 'vrazka',
+    vrazka: ['stopani', 'sluzhiteli'],
+    samoSochi: true,
+    zadalzhitelna: false,
+    zatvorena: false,
+    nashaDuma: true,
+    kratko: 'Отговорник',
+  },
 ];
 
 const ZADACHI: Tablitsa = Object.freeze({
@@ -716,6 +729,8 @@ export interface GlavaNaOblika {
   readonly shirina?: number;
   /** подглавата на втората физическа колона · неговото G16 „ Край" */
   readonly podglavaVtora?: string;
+  /** главата е НАША · няма я в листа му, затова липсата ѝ там е бележка, не грешка */
+  readonly nashaGlava?: true;
 }
 
 export const OBLIK_NA_UPRAVLENIE: readonly GlavaNaOblika[] = [
@@ -746,6 +761,7 @@ export const OBLIK_NA_UPRAVLENIE: readonly GlavaNaOblika[] = [
   { glava: 'площ', podglava: 'м2', ot: 'roditel', kolona: 'plosht' },
   { glava: 'цена', podglava: 'знак(Евро)', ot: 'roditel', kolona: 'tsena' },
   { glava: 'Бюджет Дела/ Бюджет Сметки', ot: 'zadacha', kolona: 'byudzhet' },
+  { glava: 'Отговорник', ot: 'zadacha', kolona: 'otgovornik', nashaGlava: true },
 ];
 
 /**

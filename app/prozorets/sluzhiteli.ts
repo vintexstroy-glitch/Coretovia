@@ -10,12 +10,17 @@
  * правото само стеснява, и стеснението е решение на човек, не подразбиране).
  */
 
+import { GLAVI_NA_PROGRAMATA } from '../../src/kniga/dumi.js';
 import { tablitsata } from '../../src/model/model.js';
 import { MODEL, PROZORTSI } from '../../src/model/osnova.js';
 import { koloniNaReda } from '../../src/model/tablitsa.js';
 import { redKato, zhiviteRedove } from '../../src/ogledalo/tablitsa.js';
-import { darvoto } from '../../src/smetach/darvo.js';
-import { dostapaNaDlazhnostta, dlazhnosttaNaImeyla } from '../../src/smetach/pravo.js';
+import { programata } from '../../src/smetach/programa.js';
+import {
+  dlazhnosttaNaImeyla,
+  dostapaNaDlazhnostta,
+  mozheDaRazdavaDlazhnosti,
+} from '../../src/smetach/pravo.js';
 import { DOSTAP_PO_PODRAZBIRANE } from '../../src/model/osnova.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { otvoriChernova } from '../reshetka/chernova.js';
@@ -42,6 +47,7 @@ export function narisuvaySluzhiteli(k: KonteksNaEkrana): void {
   const butoni = k.porta.butoniZa('sluzhiteli').filter((b) => b.myasto === 'buton');
   const tablitsi = ['stopani', 'sluzhiteli', 'dostap'].map((x) => tablitsata(MODEL, x));
   const dlazhnosttaMi = dlazhnosttaNaImeyla(o, k.aktor());
+  const dnes = new Date().toISOString().slice(0, 10);
 
   /** Базовите редове на Достъпа, които още не са записани · картина, не данни. */
   const bazoviHTML = (): string => {
@@ -64,23 +70,34 @@ export function narisuvaySluzhiteli(k: KonteksNaEkrana): void {
       .join('');
   };
 
-  /** Програмата за Задачи · по един ред на служител (негови A24:D24). */
+  /**
+   * Програмата за Задачи · неговите A24:D24, вече СМЯТАНИ.
+   *
+   * До резен 4б двете числа стояха с тире, защото Книгата нямаше кой да носи
+   * задачата. Негово, 05.09: „Да се добави отговорник за всяка задача" — оттам
+   * колоната „Отговорник" на Управление сочи човек оттук, и числата се броят.
+   */
   const programaHTML = (): string => {
-    const tv = o.tablitsi.get('sluzhiteli');
-    const darvo = darvoto(o);
-    const redove =
-      tv === undefined
-        ? []
-        : zhiviteRedove(tv).map((i) => {
-            const r = redKato(tv, i);
-            const ime = r.kletki['ime'];
-            return `<tr class="red" data-id="${ekraniraj(r.id)}" data-tablitsa="sluzhiteli"><td class="kletka nomer">${i + 1}</td><td class="kletka tekst" translate="no">${ekraniraj(ime !== undefined && 'tekst' in ime ? ime.tekst : '')}</td><td class="kletka" data-dneshni>—</td><td class="kletka" data-sedmichni>—</td></tr>`;
-          });
+    const pr = programata(o, dnes);
+    const redove = pr.redove
+      .map(
+        (r, i) =>
+          `<tr class="red" data-id="${ekraniraj(r.id)}" data-tablitsa="${ekraniraj(r.tablitsa)}"><td class="kletka nomer">${i + 1}</td><td class="kletka tekst" translate="no">${ekraniraj(r.ime)}</td><td class="kletka chislo" data-dneshni="${ekraniraj(r.id)}">${r.dneshni}</td><td class="kletka chislo" data-sedmichni="${ekraniraj(r.id)}">${r.sedmichni}</td></tr>`,
+      )
+      .join('');
+    const vest =
+      pr.bezOtgovornik === 0
+        ? `Всяка от ${pr.broyZadachi} задачи в Управление има отговорник.`
+        : `${pr.bezOtgovornik} от ${pr.broyZadachi} задачи в Управление са БЕЗ отговорник — не се броят на никого (колоната „Отговорник" е там).`;
+    const kamNezhivi =
+      pr.kamNezhivi === 0
+        ? ''
+        : ` ${pr.kamNezhivi} сочат човек, който вече не е жив ред — поправи ги.`;
     return `<table class="reshetka" data-reshetka="programa">
-        <thead><tr><th>№</th><th>Име Служител</th><th>днешни задачи</th><th>седмични задачи в таблица</th></tr></thead>
-        <tbody class="tablitsa">${redove.join('')}</tbody>
+        <thead><tr>${GLAVI_NA_PROGRAMATA.map((g) => `<th>${ekraniraj(g)}</th>`).join('')}</tr></thead>
+        <tbody class="tablitsa">${redove}</tbody>
       </table>
-      <p class="pod-tablitsata" data-programa-vest>Задачите са ${darvo.broyZadachi} в Управление. Кой служител носи коя задача чака негова дума: Книгата няма колона за изпълнител (ADR-008).</p>`;
+      <p class="pod-tablitsata" data-programa-vest>${ekraniraj(vest)}${ekraniraj(kamNezhivi)} Днес е ${ekraniraj(dnes)}; седмицата почва в понеделник.</p>`;
   };
 
   k.tyalo.innerHTML = `
@@ -91,6 +108,11 @@ export function narisuvaySluzhiteli(k: KonteksNaEkrana): void {
         dlazhnosttaMi === ''
           ? 'Ти още нямаш ред в тези таблици · виждаш всичко, но не пишеш никъде освен ако не си Стопанинът.'
           : `Ти си ${ekraniraj(dlazhnosttaMi)}.`
+      }</span>
+      <span class="vest" data-koy-razdava>${
+        mozheDaRazdavaDlazhnosti(o, k.aktor())
+          ? 'Ти раздаваш Длъжности.'
+          : 'Ти НЕ раздаваш Длъжности · те се раздават от Управител и Помощник Управител (негово, 05.09).'
       }</span>
     </div>
     <p class="greshka" data-greshka></p>
