@@ -74,16 +74,40 @@ vintexstroy-glitch/Coretovia   → 200 · HEAD af51275  (истинската Co
 here once your site has been deployed") и никой няма да бута там, тъй че рискът е
 спящ, не задействан.
 
-**Поправката, по стъпки** (първите три са негови):
+### Второто разминаване · имената се размениха
 
-| # | къде | какво |
-| ---: | :---- | :---- |
-| 1 | `CoretoVia/Coretovia` → Settings → Pages | Source → **None** · това е първото, защото маха риска веднага |
-| 2 | същото → Settings → General → Rename | `Coretovia` → **`MasterBook`** · освобождава името |
-| 3 | същото → най-долу → **Archive this repository** | архивираното не приема нито бутане, нито промяна на настройки — заключва се самò |
-| 4 | `vintexstroy-glitch/Coretovia` → Settings → Transfer ownership | → `CoretoVia` · сега името е свободно |
-| 5 | новото `CoretoVia/Coretovia` → Settings → Pages | Source → **GitHub Actions** |
-| 6 | локално | `git remote set-url origin https://github.com/CoretoVia/Coretovia.git` · наше |
+Първата поправка тръгна от грешния край: преименувано беше **живото** хранилище.
+Състоянието на 06.09, 23:5x, проверено с `curl` и `git ls-remote`:
+
+```
+vintexstroy-glitch/MasterBook  → HEAD da327d6  ← ИСТИНСКАТА Coretovia
+CoretoVia/Coretovia            → HEAD bf84bec  ← замразеният MasterBook
+vintexstroy-glitch/Coretovia   → 301 → vintexstroy-glitch/MasterBook
+vintexstroy-glitch/VintexStroy → 301 → CoretoVia/Coretovia
+```
+
+Тоест ДВЕТЕ хранилища носят името на другото. Затова редът долу е точно такъв:
+**имената се развързват ПЪРВО, прехвърлянето е последно.** Всяко разместване, при
+което две хранилища искат едно име, се блъска — а блъсканица при прехвърляне е
+най-лесният начин да се загуби нещо.
+
+**Поправката, по стъпки** (стъпки 1–6 са негови, 7 е наша):
+
+| # | къде | какво | защо е точно тук |
+| ---: | :---- | :---- | :---- |
+| 1 | `CoretoVia/Coretovia` → Settings → **Pages** | Source → **None** | ПЪРВО, защото това е единственият ЖИВ риск: с Pages на GitHub Actions едно бутане би публикувало замразения MasterBook на нашия произход |
+| 2 | `vintexstroy-glitch/MasterBook` → Settings → General → **Rename** | обратно на **`Coretovia`** | това е ЖИВИЯТ проект · връща му името и освобождава `MasterBook` |
+| 3 | `CoretoVia/Coretovia` → Settings → General → **Rename** | на **`MasterBook`** | сега името `Coretovia` е свободно В ОРГАНИЗАЦИЯТА |
+| 4 | `CoretoVia/MasterBook` → най-долу → **Archive** | архивирай | архивираното не приема нито бутане, нито промяна на настройки — заключва се самò |
+| 5 | `vintexstroy-glitch/Coretovia` → Settings → **Transfer ownership** | → `CoretoVia` | сега вече нищо не се сблъсква |
+| 6 | `CoretoVia/Coretovia` → Settings → **Pages** | Source → **GitHub Actions** | живият адрес се вдига на новия произход |
+| 7 | локално | `git remote set-url origin https://github.com/CoretoVia/Coretovia.git` | наше |
+
+**Стъпка 4 оставя MasterBook в организацията.** Това е съзнателна отстъпка от
+правилото „един произход, един проект" и цената ѝ е нула: архивирано хранилище без
+Pages не сервира нищо на `coretovia.github.io`. Който предпочита чистото, може да
+го прехвърли обратно на личния акаунт — но чак СЛЕД стъпка 2, инак името `MasterBook`
+е заето от живия проект и прехвърлянето се блъска.
 
 **Записва се, вместо да се премълчи**, по същата причина, по която `npm run stil`
 беше червен при `HEAD` и това влезе в ADR-016 §7: ход, който е изглеждал направен,
