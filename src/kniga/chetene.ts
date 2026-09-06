@@ -21,6 +21,17 @@
  * празни. Двете страни се броят по различни пътища, за да може да не затвори.
  */
 
+import {
+  type Drob,
+  kamTsyalo,
+  kolonaOtBukvi,
+  otChislo,
+  otTsyalo,
+  ravni,
+  smetniFormulaTochno,
+  umnozhi,
+} from '../formuli/smetach.js';
+import { dumiZaGreshka } from '../yadro/dumi.js';
 import type { Kletka } from '../model/kletka.js';
 import { type Kolona, slotNaKolonata } from '../model/kolona.js';
 import { tablitsaNaId, tablitsata } from '../model/model.js';
@@ -1152,6 +1163,69 @@ class Chetets {
 }
 
 /** Разпознава Книгата срещу Модела и живото Огледало · клетки, групи, номенклатури, служебно. */
+/**
+ * СВЕРКАТА НА ФОРМУЛИТЕ · нашето смятане срещу КЕША на Excel (ADR-013).
+ *
+ * Excel пази в клетката и формулата, и последно сметнатата стойност. Ние
+ * смятаме същата формула ТОЧНО (с дроби) и сравняваме двете.
+ *
+ * ТРИ ИЗХОДА, и всеки казва различно нещо:
+ *   · съвпадат ТОЧНО — нищо не се пише;
+ *   · съвпадат до цент — БЕЛЕЖКА: Excel е оставил остатък от плаваща запетая
+ *     (неговото `=0.1+0.2-0.3` дава там 5,55×10⁻¹⁷, а не нула);
+ *   · разминават се над цент — НАХОДКА: числото в листа не е онова, което
+ *     формулата му дава.
+ *
+ * Непозната функция не е грешка на човека, а граница на нашия набор — казва се
+ * като бележка и се брои (правило 12).
+ */
+function sveriFormulite(
+  l: ProchetenList,
+  dobavi: (adres: string, kakvo: string, stepen: 'greshka' | 'beleshka') => void,
+): { readonly svereni: number; readonly nesmetnati: number } {
+  const chetets = (adres: string): Drob | undefined => {
+    const m = /^([A-Z]{1,3})(\d{1,7})$/.exec(adres);
+    if (m === null) return undefined;
+    const red = l.kletki[Number(m[2]) - 1];
+    const v = red?.[kolonaOtBukvi(m[1]!) - 1];
+    if (typeof v === 'number') return otChislo(v);
+    return undefined;
+  };
+  let svereni = 0;
+  let nesmetnati = 0;
+  for (const [adres, formula] of l.formuli) {
+    const m = /^([A-Z]{1,3})(\d{1,7})$/.exec(adres);
+    const kesh =
+      m === null ? null : (l.kletki[Number(m[2]) - 1]?.[kolonaOtBukvi(m[1]!) - 1] ?? null);
+    if (typeof kesh !== 'number') continue;
+    let nashe: Drob;
+    try {
+      nashe = smetniFormulaTochno(formula, chetets);
+    } catch (g) {
+      nesmetnati += 1;
+      dobavi(adres, `Формулата „=${formula}" не се смята тук: ${dumiZaGreshka(g)}`, 'beleshka');
+      continue;
+    }
+    svereni += 1;
+    const keshat = otChislo(kesh);
+    if (ravni(nashe, keshat)) continue;
+    if (kamTsyalo(umnozhi(nashe, otTsyalo(100))) === kamTsyalo(umnozhi(keshat, otTsyalo(100)))) {
+      dobavi(
+        adres,
+        `„=${formula}" дава ${kesh} в Excel и точно ${kamTsyalo(umnozhi(nashe, otTsyalo(100))) / 100} тук — остатък от плаваща запетая, не разлика в парите.`,
+        'beleshka',
+      );
+      continue;
+    }
+    dobavi(
+      adres,
+      `„=${formula}" е сметната на ${kesh} в листа, а дава ${kamTsyalo(umnozhi(nashe, otTsyalo(100))) / 100} — числото и сметката му се разминават.`,
+      'greshka',
+    );
+  }
+  return { svereni, nesmetnati };
+}
+
 export function razpoznayKnigata(
   kniga: ProchetenaKniga,
   o: Ogledalo,
@@ -1166,6 +1240,7 @@ export function razpoznayKnigata(
   const sluzhebenList = poList.get(SLUZHEBEN_LIST);
   const sluzhebno = sluzhebenList === undefined ? null : ch.sluzhebno(sluzhebenList);
 
+  let svereniFormuli = 0;
   for (const p of PROZORTSI) {
     const l = poList.get(podravni(p.list));
     if (l === undefined) {
@@ -1173,6 +1248,10 @@ export function razpoznayKnigata(
         ch.nahodka(p.list, 'лист', `Няма лист „${p.list}".`);
       continue;
     }
+    // формулите на листа · срещу кеша, който Excel е оставил в клетките
+    svereniFormuli += sveriFormulite(l, (adres, kakvo, stepen) =>
+      ch.nahodka(p.list, adres, kakvo, stepen),
+    ).svereni;
     if (p.klyuch === 'nastroyki') {
       for (const [k, v] of ch.nomenklaturi(l)) nomenklaturi.set(k, v);
       continue;
@@ -1189,5 +1268,9 @@ export function razpoznayKnigata(
       if (pt !== null) tablitsi.set(t.klyuch, pt);
     }
   }
+  // сверката се записва и когато е нула (правило 7)
+  ch.sverki.push(
+    sverka('четене · формули срещу кеша на Excel', svereniFormuli, svereniFormuli, kogato),
+  );
   return { tablitsi, nomenklaturi, sluzhebno, nahodki: ch.nahodki, sverki: ch.sverki };
 }

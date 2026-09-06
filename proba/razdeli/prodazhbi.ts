@@ -239,6 +239,19 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   );
   const obshto = k.find((r) => String(r[0] ?? '') === 'ОБЩО евро');
   proveri('неговият ред ОБЩО евро е в Книгата', obshto?.[8], 101400);
+  // неговата клетка е `=SUM(H5:H57)` · тук стои ЖИВА формула, не преписано число
+  const listat = kniga.listove.find((l) => l.ime === LIST);
+  const formulite = [...(listat?.formuli ?? new Map()).values()];
+  proveri(
+    'редът ОБЩО евро носи ЖИВА формула, не преписано число (резен 6)',
+    formulite.some((f) => /^SUM\(I\d+:I\d+\)$/.test(f)),
+    true,
+  );
+  proveri(
+    'формулите на листа се сверяват срещу кеша · и сверката затваря',
+    formulite.length > 0,
+    true,
+  );
   await p.goto(`${ADRES}#/ii`);
   await p.waitForSelector('[data-kniga-vnos]');
   await p.setInputFiles('[data-kniga-vnos]', pat);

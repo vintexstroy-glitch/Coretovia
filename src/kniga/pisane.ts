@@ -1362,9 +1362,19 @@ const listProdazhbi: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato
     const posledenRed = redove.length;
     // неговият ред „ОБЩО евро" · слят по ширината на думите му (A58:G58 · A77:G77)
     const rObshto = redove.length + 1;
-    const obshto: Red = t.koloni.map((k) => {
+    const obshto: Red = t.koloni.map((k, ki) => {
       const v = smetnata.obshto[k.klyuch];
-      return v === undefined || v === 0 ? null : k.vid === 'evro' ? v / 100 : v;
+      if (v === undefined || v === 0) return null;
+      // единицата на СБОРА е единицата на КОЛОНАТА: парите се пишат в евро, а
+      // площта — в кв. м. Сборът в кв. см стоеше над колона в кв. м и формулата
+      // го хвана веднага (правило 7 · находка на самата сверка).
+      const chislo = k.vid === 'evro' ? v / 100 : k.merka === 'kvsm' ? v / 10_000 : v;
+      // НЕГОВАТА клетка е `=SUM(H5:H57)` · тук стои същата формула, с кеширан
+      // резултат. Така сборът остава ЖИВ в Excel, а числото се чете и без него
+      // (правило 12: сметката се вижда, не се преписва).
+      if (posledenRed < parviRed) return chislo;
+      const bukva = bukvaNaKolona(ki + 1);
+      return { formula: `SUM(${bukva}${parviRed}:${bukva}${posledenRed})`, rezultat: chislo };
     });
     obshto[0] = OBSHTO_EVRO;
     redove.push(obshto);

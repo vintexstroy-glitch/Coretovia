@@ -53,7 +53,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
       '[data-buton-ekran="otvori"]',
       (e) => `${(e as HTMLButtonElement).disabled} · ${e.getAttribute('title')}`,
     ),
-    'true · идва с резен 6',
+    'true · идва с пясъчника · резен 6б',
   );
   proveri(
     'дървото · трите Имота · сверката затваря',
