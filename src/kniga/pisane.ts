@@ -993,7 +993,8 @@ function blokNaNashaTablitsa(
  * 05.09), сложен ПОД неговите редове, за да не мръдне нито един негов адрес.
  *
  * Подсборовете му по Имот вътре в секция (A38 „2.1 · ОБЩ Бюджет Сметки") не се
- * пишат: сборът е на СЕКЦИЯТА, а сборът по Имот идва с формулите (резен 6).
+ * пишат: сборът е на СЕКЦИЯТА. Сборът по Имот ЧАКА свой резен — формулите (резен
+ * 6) дадоха живата `=SUM(...)` на реда ОБЩО, но не и разбивката по Имот.
  */
 const listSmetki: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) => {
   const l = novList();
@@ -1074,7 +1075,7 @@ const listSmetki: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato) =
   otklyucheniRedove.push(redove.length + 1);
   redove.push([]);
   b.prazni += 1;
-  // неговата лента „Финансови Отчети…" · коефициентите и диаграмите идват с резен 6
+  // неговата лента „Финансови Отчети…" · коефициентите и диаграмите ЧАКАТ свой резен
   const rOtcheti = redove.length + 1;
   redove.push([glava(p.lenti[5] ?? '')]);
   slivaniya.push(`A${rOtcheti}:${bukvaNaKolona(shirinaNaGlavite)}${rOtcheti}`);

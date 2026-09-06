@@ -66,7 +66,15 @@ const PAMET = Object.freeze({
   mesets: 'smetki.mesets',
   samoMeseca: 'smetki.samoMeseca',
   podtab: 'smetki.podtab',
+  /** кои страни са скрити · ПОГЛЕД, не данни: нула събития, нула Журнал */
+  skriti: 'smetki.skriti',
 });
+/** Кой бутон коя страна крие · неговите две клетки от лист Сметки (ред 12–13). */
+const STRANATA_NA_BUTONA: Readonly<Record<string, Strana | undefined>> = Object.freeze({
+  'skriy-prihodi': 'prihod',
+  'skriy-razhodi': 'razhod',
+});
+
 /** неговият „таб НАП" е ПОДТАБ на Сметки (05.09 т.2) · осемте прозореца остават осем */
 const PODTABOVE = [
   { klyuch: 'smetki', ime: 'Сметки' },
@@ -115,6 +123,11 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
   const kesh = keshatNaMeseca(o, mesets, kogato);
   const v = vkarvaneto(o, kogato, samoMeseca ? (m) => m === mesets : undefined);
   const podtab = tekushtPodtab(PAMET.podtab, PODTABOVE);
+  /**
+   * СКРИТИТЕ СТРАНИ · поглед, не данни (правило 23: скритото ПАК се смята).
+   * Скриването пипа екрана и нищо друго — нито сбор, нито Журнал, нито износ.
+   */
+  const skritite = chetiEkranno<readonly Strana[]>(PAMET.skriti, []);
   // ДДС · редът на всеки месец влиза в СМЕТКИ по знака си (негово, 05.09 т.2)
   const dds = ddsat(o, kogato);
   const ddsMesetsi = dds.mesetsi.filter((m) => !samoMeseca || m.mesets === mesets);
@@ -218,11 +231,14 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
     const d = b.deystvie;
     if (d.vid === 'idva')
       return `<button type="button" class="malak" data-buton-ekran="${b.klyuch}" disabled title="${ekraniraj(d.dumi ?? `идва с резен ${d.rezen}`)}">${ekraniraj(litse(b))}</button>`;
+    // СКРИЙ ↔ ПОКАЖИ · бутонът казва какво ще СТАНЕ, не какво е било. Неговата
+    // дума остава в `title`; на лицето стои действието.
+    const strana = STRANATA_NA_BUTONA[b.klyuch];
     const duma =
       b.klyuch === 'skriy-dela'
         ? 'Дела · в Управление'
-        : b.klyuch === 'skriy-razhodi' || b.klyuch === 'skriy-prihodi'
-          ? litse(b)
+        : strana !== undefined && skritite.includes(strana)
+          ? `Покажи ${IMENA_NA_STRANITE[strana]}`
           : litse(b);
     return `<button type="button" class="malak" data-buton-ekran="${b.klyuch}" title="${ekraniraj(b.ime)}">${ekraniraj(duma)}</button>`;
   };
@@ -330,11 +346,11 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
     </section>
     <section class="upravlenie-tyalo" data-smetki>
       <div class="smetki-blokove">
-        ${stranaHTML('prihod', s.prihod, sborPrihod)}
-        ${stranaHTML('razhod', s.razhod, sborRazhod)}
+        ${skritite.includes('prihod') ? '' : stranaHTML('prihod', s.prihod, sborPrihod)}
+        ${skritite.includes('razhod') ? '' : stranaHTML('razhod', s.razhod, sborRazhod)}
         <section class="tablitsa-blok" data-blok="vkarvane">
           <h2 class="lenta" translate="no">Вкарване</h2>
-          <p class="pod-tablitsata">Заплати Кеш · Фактури Кеш · Фактури Карта на едно място (негово, 05.09). Правото на Помощник Управителя идва с резен 4.</p>
+          <p class="pod-tablitsata">Заплати Кеш · Фактури Кеш · Фактури Карта на едно място (негово, 05.09).</p>
           <p class="pod-tablitsata" data-vkarvane-pravo>${
             mozhePriVkarvane
               ? 'Имаш право да вкарваш тук.'
@@ -473,6 +489,34 @@ function zapishiDdsa(k: KonteksNaEkrana): Promise<void> {
   }));
 }
 
+/**
+ * СКРИЙ ↔ ПОКАЖИ една страна · и ПОСЛЕДНАТА видима не се скрива.
+ *
+ * Отказът се КАЗВА (правило 12), вместо екранът да остане празен и човекът да
+ * гадае кой бутон го е изпразнил. Същото решение като при реда на менюто в
+ * MasterBook (ADR-066): последният видим изглед не се скрива.
+ */
+function prevklyuchiStranata(k: KonteksNaEkrana, strana: Strana): void {
+  const sega = chetiEkranno<readonly Strana[]>(PAMET.skriti, []);
+  if (sega.includes(strana)) {
+    zapomniEkranno(
+      PAMET.skriti,
+      sega.filter((x) => x !== strana),
+    );
+    k.prerisuvay();
+    return;
+  }
+  if (sega.length >= 1) {
+    pokazhiGreshka(
+      k.tyalo,
+      `Последната видима страна не се скрива · „${IMENA_NA_STRANITE[strana]}" остава, докато не покажеш другата.`,
+    );
+    return;
+  }
+  zapomniEkranno(PAMET.skriti, [...sega, strana]);
+  k.prerisuvay();
+}
+
 function deystvieNaButona(k: KonteksNaEkrana, b: ButonNaProzoretsa): void {
   const d = b.deystvie;
   switch (d.vid) {
@@ -498,10 +542,14 @@ function deystvieNaButona(k: KonteksNaEkrana, b: ButonNaProzoretsa): void {
     case 'dobavyane':
       location.hash = '#/upravlenie';
       return;
+    case 'skriy-prihodi':
+    case 'skriy-razhodi':
+      prevklyuchiStranata(k, STRANATA_NA_BUTONA[d.klyuch]!);
+      return;
     default:
       pokazhiGreshka(
         k.tyalo,
-        `Бутонът „${b.ime.split('(')[0]!.trim()}" на Сметки идва с втората половина на резен 3.`,
+        `Бутонът „${b.ime.split('(')[0]!.trim()}" на Сметки още няма действие · казва се, вместо да мълчи.`,
       );
   }
 }

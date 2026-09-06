@@ -51,6 +51,41 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     (await tekstoveNa(p, '[data-blok="prihod"] .lenta, [data-blok="razhod"] .lenta')).join(' · '),
     'ПРИХОД · Разходи',
   );
+  // ── Скрий ↔ Покажи · неговите два бутона, построени в резен 6к ──────
+  //
+  // Скриването пипа ЕКРАНА и нищо друго (правило 23: скритото ПАК се смята).
+  // Затова тук се гледа блокът, а не сборът — и накрая всичко се връща, за да
+  // не пренесе разделът състояние на следващия (памет на екрана е `ui.v1.`).
+  await p.click('[data-buton-ekran="skriy-prihodi"]');
+  await p.waitForFunction(() => document.querySelector('[data-blok="prihod"]') === null);
+  proveri(
+    'Скрий Приходи маха блока · и Разходите остават',
+    await p.$$eval('[data-blok="prihod"], [data-blok="razhod"]', (es) => es.length),
+    1,
+  );
+  proveri(
+    'бутонът вече казва ПОКАЖИ · лицето му е действието, не миналото',
+    await tekstNa(p, '[data-buton-ekran="skriy-prihodi"]'),
+    'Покажи ПРИХОД',
+  );
+  // ПОСЛЕДНАТА видима страна не се скрива · и отказът се КАЗВА (правило 12)
+  await p.click('[data-buton-ekran="skriy-razhodi"]');
+  await p.waitForFunction(() =>
+    /Последната видима страна/.test(document.querySelector('[data-greshka]')?.textContent ?? ''),
+  );
+  proveri(
+    'последната видима страна НЕ се скрива · и отказът се казва',
+    await p.$$eval('[data-blok="prihod"], [data-blok="razhod"]', (es) => es.length),
+    1,
+  );
+  await p.click('[data-buton-ekran="skriy-prihodi"]');
+  await p.waitForSelector('[data-blok="prihod"]');
+  proveri(
+    'Покажи Приходи връща блока · двете страни са пак на екрана',
+    await p.$$eval('[data-blok="prihod"], [data-blok="razhod"]', (es) => es.length),
+    2,
+  );
+
   proveri(
     'секциите му са в реда на номенклатурата',
     (await tekstoveNa(p, '[data-reshetka="prihod"] tr.sektsiya td:first-child')).join(' · '),

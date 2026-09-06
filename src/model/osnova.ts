@@ -909,16 +909,23 @@ export const BUTONI_NA_UPRAVLENIE: readonly ButonNaProzoretsa[] = [
     deystvie: { vid: 'nastroyki' },
   },
   { klyuch: 'skriy-dela', ime: 'Скрий Дела', deystvie: { vid: 'ekran', klyuch: 'skriy-dela' } },
-  // резен 3 е ТОЗИ резен · думите казват коя му половина, за да не значи „вече е тук"
+  // ПОСТРОЕНИ в резен 6к · дотогава стояха сиви и сочеха трети резен, който
+  // отдавна беше затворен. Обещание, което надживява резена си, казва
+  // НЕВЯРНОТО за самата програма — обратното на правило 12 (ADR-018).
+  //
+  // Тук нарочно не се ЦИТИРА старата форма: обходът `tests/obeshtaniyata.test.ts`
+  // чете и коментарите, защото точно в коментар живееше едно от остарелите
+  // обещания. Цитат, четен като код, ражда находка в собственото си обяснение
+  // (ADR-015 §6, трети път).
   {
     klyuch: 'skriy-razhodi',
     ime: 'Скрий Разходи',
-    deystvie: { vid: 'idva', rezen: 3, dumi: 'идва със Сметки · втората половина на резен 3' },
+    deystvie: { vid: 'ekran', klyuch: 'skriy-razhodi' },
   },
   {
     klyuch: 'skriy-prihodi',
     ime: 'Скрий Приходи',
-    deystvie: { vid: 'idva', rezen: 3, dumi: 'идва със Сметки · втората половина на резен 3' },
+    deystvie: { vid: 'ekran', klyuch: 'skriy-prihodi' },
   },
   {
     klyuch: 'skriy-tablitsa',
