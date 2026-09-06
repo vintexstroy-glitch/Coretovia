@@ -47,6 +47,9 @@ async function main(): Promise<void> {
     await nap.blok1(ctx);
     await sluzhiteli.blok1(ctx);
     await prodazhbi.blok1(ctx);
+    // НАКРАЯ: котвата иска записан Журнал и ново зареждане, а счупването, с
+    // което се доказва, оставя Журнала по-къс — след него няма какво да върви.
+    await skelet.blok2(ctx);
   } catch (greshka) {
     broyach.dobaviNahodka({
       razdel: broyach.posledenRazdel,

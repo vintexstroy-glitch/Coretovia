@@ -14,7 +14,6 @@ import { GLAVI_NA_PROGRAMATA } from '../../src/kniga/dumi.js';
 import { tablitsata } from '../../src/model/model.js';
 import { MODEL, PROZORTSI } from '../../src/model/osnova.js';
 import { koloniNaReda } from '../../src/model/tablitsa.js';
-import { redKato, zhiviteRedove } from '../../src/ogledalo/tablitsa.js';
 import { programata } from '../../src/smetach/programa.js';
 import {
   dlazhnosttaNaImeyla,
@@ -23,7 +22,7 @@ import {
 } from '../../src/smetach/pravo.js';
 import { DOSTAP_PO_PODRAZBIRANE } from '../../src/model/osnova.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { otvoriChernova, zakachiButonite } from '../reshetka/chernova.js';
+import { zakachiButonite } from '../reshetka/chernova.js';
 import { dopishi, h, sloji, type Zapechatan } from '../reshetka/shablon.js';
 import { reshetkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
 import { butoniteHTML, iznosVestHTML } from './deystviya.js';

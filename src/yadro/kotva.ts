@@ -110,3 +110,50 @@ export function proveriKotvata(
 
   return { nared: true, prichina: '', kotva };
 }
+
+/**
+ * КОТВАТА КАЗВА · изречението за екрана, БЕЗ да се чете целият Журнал.
+ *
+ * `proveriKotvata` е ПРИСЪДАТА; това е ИЗРЕЧЕНИЕТО. Разделени са, защото
+ * присъдата се мери в тест, а изречението го чете човек — и защото корените
+ * (`app/main.ts`) не са място за решение: точно там присъдата стоя построена и
+ * НЕВИКАНА, тоест изключена на последната крачка (ADR-021).
+ *
+ * Чете се САМО последното звено, а не цялата верига: при по-къс Журнал
+ * присъдата се произнася без нито един хеш, а при равни `seq` сравняваният хеш
+ * Е хешът на това звено. Пълната проверка на веригата е ДРУГО и си има бутон.
+ *
+ * ТРИ от четирите състояния НЕ са тревога, и трите се КАЗВАТ (правило 12):
+ * котва още няма (нов браузър, изчистени данни, частен прозорец) · котвата
+ * изостава (записът е минал, а браузърът не е приел нейния) · котвата съвпада.
+ * Мълчание при тях би направило четвъртото — находката — неразличимо от тях.
+ */
+export function kotvataKazva(
+  drajka: DrajkaNaKotva,
+  naematel: string,
+  posledno: { readonly seq: number; readonly hash: string } | undefined,
+): { readonly nared: boolean; readonly dumi: string } {
+  const kotva = drajka.cheti(naematel);
+  if (kotva === null) {
+    return { nared: true, dumi: 'Котва още няма на този браузър · захваща се при първия запис.' };
+  }
+
+  const posledenSeq = posledno?.seq ?? 0;
+  if (posledenSeq > kotva.seq) {
+    return {
+      nared: true,
+      dumi:
+        `Котвата помни seq ${kotva.seq}, а Журналът стига до ${posledenSeq} — записът е минал, ` +
+        'преди тя да се забие. Тя е допълнителна мярка, не втора истина.',
+    };
+  }
+
+  const proverka = proveriKotvata(kotva, posledenSeq, (seq) =>
+    seq === posledenSeq ? posledno?.hash : undefined,
+  );
+  if (!proverka.nared) return { nared: false, dumi: proverka.prichina };
+  return {
+    nared: true,
+    dumi: `Котвата съвпада с Журнала на seq ${kotva.seq} · нищо не е махано отзад.`,
+  };
+}

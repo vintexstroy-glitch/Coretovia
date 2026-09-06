@@ -83,7 +83,7 @@ export async function izpalniOtMenyuto(
     const zatvori = otvoriProzorets({
       zaglavie: 'Сторно на последната промяна',
       pod: 'Журналът не се пипа: сторното е ново събитие с причина, а Огледалото се пресгъва.',
-      tyalo: h`<form data-storno-forma class="red-poleta"><input class="pole" data-prichina placeholder="причина" required><button type="submit">Сторнирай</button></form><p class="greshka" data-storno-greshka></p>`,
+      tyalo: h`<form data-storno-forma class="red-poleta"><input class="pole" name="prichina" data-prichina placeholder="причина" required><button type="submit">Сторнирай</button></form><p class="greshka" data-storno-greshka></p>`,
     });
     const forma = document.querySelector<HTMLFormElement>('[data-storno-forma]');
     forma?.querySelector<HTMLInputElement>('[data-prichina]')?.focus();

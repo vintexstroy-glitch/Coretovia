@@ -34,7 +34,7 @@ import {
 import { otsenkata } from '../../src/smetach/kalkulator/stoynost.js';
 import { pishi } from '../../src/yadro/pari.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { otvoriChernova, zakachiButonite } from '../reshetka/chernova.js';
+import { zakachiButonite } from '../reshetka/chernova.js';
 import { h, sloji, type Zapechatan } from '../reshetka/shablon.js';
 import { kletkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
 import { zakachiZebrata } from '../reshetka/zebra.js';

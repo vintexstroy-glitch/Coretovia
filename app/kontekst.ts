@@ -18,6 +18,14 @@ export interface KonteksNaEkrana {
   zadayAktor(imeyl: string): void;
   /** думите за хранилището и крана · четат се при всяко рисуване, кранът се мени */
   hranilishte(): string;
+  /**
+   * КОТВАТА · мери се ВЕДНЪЖ при тръгване, защото Вратата я забива при всеки
+   * запис: докато разделът върви, тя не може да се разсинхронизира сама.
+   *
+   * `nared` е ФАЛШИВО само при находка. „Котва още няма" е състояние, не
+   * тревога — но пак се казва, инак находката не се различава от тишината.
+   */
+  kotvata(): { readonly nared: boolean; readonly dumi: string };
   proveriVerigata(): Promise<string>;
   /** SHA-256 на качен файл · за отпечатъка на внесената Книга · само коренът държи хеша */
   otpechatakNaBaytove(baytove: ArrayBuffer): Promise<string>;

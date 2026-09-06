@@ -1,11 +1,18 @@
 import { fileURLToPath } from 'node:url';
 import type { KonteksNaProhoda } from '../yadro/kontekst.ts';
-import { otvori, tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
+import { otvori, poletaBezIme, tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
 
 const MOSTRA = fileURLToPath(new URL('../../tests/mostri/Coretovia-mostra.xlsx', import.meta.url));
 
 /** 0 · скелетът · страницата · хранилището · осемте прозореца · Книгата се чете в браузъра */
 import { tishina } from '../yadro/tishina.ts';
+
+/** Отваря Профил след ново зареждане · котвата се чете ВЕДНЪЖ, при тръгване. */
+async function otvoriProfilNanovo(p: KonteksNaProhoda['stranitsa']): Promise<void> {
+  await otvori(p);
+  await p.click('[data-prozorets="profil"]');
+  await p.waitForSelector('[data-kotva]');
+}
 
 export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   const { stranitsa: p, broyach } = ctx;
@@ -27,6 +34,12 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'Вратата е отворена',
     (await tekstNa(p, '[data-hranilishte]')).endsWith('Вратата е отворена'),
     true,
+  );
+  proveri('полетата на формата имат име', await poletaBezIme(p), 0);
+  proveri(
+    'котва още няма',
+    await tekstNa(p, '[data-kotva]'),
+    'Котва още няма на този браузър · захваща се при първия запис.',
   );
 
   // ══ 0б · веригата ═════════════════════════════════════════════════════
@@ -103,5 +116,89 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'Журналът не е пипнат от четенето',
     await tekstNa(p, '[data-vest]'),
     'Книгата е празна · 0 събития',
+  );
+}
+
+/**
+ * 0е · КОТВАТА · единственото, което пази от СКЪСЯВАНЕ ОТЗАД.
+ *
+ * Идва НАКРАЯ на прохода по две причини: иска записан Журнал, и иска НОВО
+ * зареждане — котвата се чете веднъж, при тръгване.
+ *
+ * Тук не се обещава; тук се СЧУПВА нарочно. Последното звено се маха от живия
+ * носител и се иска приложението да го КАЖЕ. И понеже същият блок пита и
+ * „Провери веригата", той показва защо котвата изобщо съществува: веригата
+ * отговаря „цяла" — по-къса верига Е безупречна верига.
+ */
+export async function blok2(ctx: KonteksNaProhoda): Promise<void> {
+  const { stranitsa: p, broyach } = ctx;
+  const razdel = '0е · котвата';
+  const proveri = (kakvo: string, vidyano: unknown, ochakvano: unknown): boolean =>
+    broyach.proveri(razdel, kakvo, vidyano, ochakvano);
+
+  // ══ преди счупването · СВЕРКА, не преписано число ══════════════════════
+  // seq-ът, който котвата помни, трябва да е броят събития на екрана. Числото
+  // се ЧЕТЕ от вестта, за да не се разминава с прохода при всеки нов резен.
+  await otvoriProfilNanovo(p);
+  const vest = await tekstNa(p, '[data-vest]');
+  const broySabitiya = Number(vest.split(' ')[0]);
+  proveri('Журналът има събития', broySabitiya > 0, true);
+  proveri(
+    'котвата помни върха му',
+    await tekstNa(p, '[data-kotva]'),
+    `Котвата съвпада с Журнала на seq ${broySabitiya} · нищо не е махано отзад.`,
+  );
+  proveri('и това не е тревога', await p.$eval('[data-kotva]', (e) => e.className), 'vest');
+
+  // ══ счупването · последното звено си отива от ЖИВИЯ носител ════════════
+  await p.evaluate(
+    () =>
+      new Promise((gotovo, provali) => {
+        const zayavka = indexedDB.open('coretovia');
+        zayavka.onerror = () => provali(zayavka.error);
+        zayavka.onsuccess = () => {
+          const db = zayavka.result;
+          const t = db.transaction('sabitiya', 'readwrite');
+          const kursor = t.objectStore('sabitiya').openCursor(null, 'prev');
+          kursor.onsuccess = () => kursor.result?.delete();
+          t.oncomplete = () => {
+            db.close();
+            gotovo(undefined);
+          };
+          t.onerror = () => provali(t.error);
+        };
+      }),
+  );
+
+  // ══ след счупването · находката се КАЗВА, и то в червено ═══════════════
+  await otvoriProfilNanovo(p);
+  proveri(
+    'едно събитие по-малко',
+    await tekstNa(p, '[data-vest]'),
+    `${broySabitiya - 1} събития в Журнала · ${vest.split(' · ')[1]}`,
+  );
+  const dumite = await tekstNa(p, '[data-kotva]');
+  proveri(
+    'котвата брои липсващото',
+    dumite.startsWith(
+      `Журналът стига до seq ${broySabitiya - 1}, а котвата помни seq ${broySabitiya}`,
+    ),
+    true,
+  );
+  proveri('и го назовава', dumite.endsWith('Липсват 1 събитие — Журналът е скъсяван отзад.'), true);
+  proveri('това ВЕЧЕ е тревога', await p.$eval('[data-kotva]', (e) => e.className), 'greshka');
+
+  // ══ и ЗАЩО котвата съществува ═════════════════════════════════════════
+  // Веригата няма как да види махнатото отзад: остатъкът е безупречна верига,
+  // само по-къса. Ако този ред някога почне да казва „къса се", котвата вече
+  // не е единственият пазач — и това е добра новина, не провалена проверка.
+  await p.click('[data-proveri]');
+  await p.waitForFunction(() =>
+    (document.querySelector('[data-veriga]')?.textContent ?? '').includes('Веригата'),
+  );
+  proveri(
+    'веригата пак казва „цяла" · сляпото петно',
+    await tekstNa(p, '[data-veriga]'),
+    `Веригата е цяла · ${broySabitiya - 1} от ${broySabitiya - 1} звена.`,
   );
 }

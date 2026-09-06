@@ -1324,7 +1324,6 @@ const listProdazhbi: PisachNaList = (o, p, imeNaNastroykite, podtablitsi, kogato
   const l = novList();
   const { redove, b, slivaniya, otklyucheni, otklyucheniRedove } = l;
   const KL = KLYUCH_KOLONA_PRODAZHBI;
-  const posledna = bukvaNaKolona(KL);
   const mesta: MyastoNaTablitsa[] = [];
   const smetnati = prodazhbite(o, kogato);
   const sverki: Sverka[] = [];

@@ -63,7 +63,7 @@ export function narisuvayProfil(k: KonteksNaEkrana): void {
             <h2>Открий Книгата</h2>
             <p>Книгата е празна. Първото събитие е Стопанинът — имейлът на този, който я открива. Записва се веднъж.</p>
             <form data-otkriy class="red-poleta">
-              <input type="email" class="pole" data-imeyl placeholder="имейл" required value="${k.aktor()}">
+              <input type="email" class="pole" name="imeyl" autocomplete="email" data-imeyl placeholder="имейл" required value="${k.aktor()}">
               <button type="submit" data-otkriy-buton>Открий Книгата</button>
             </form>
             <p class="greshka" data-greshka></p>
@@ -74,6 +74,7 @@ export function narisuvayProfil(k: KonteksNaEkrana): void {
     <section class="sektsiya" data-sektsiya="hranilishte">
       <h2>Хранилището</h2>
       <p data-hranilishte>${k.hranilishte()}</p>
+      <p class="${k.kotvata().nared ? 'vest' : 'greshka'}" data-kotva>${k.kotvata().dumi}</p>
       <button type="button" class="vtorichen" data-proveri>Провери веригата</button>
       <p data-veriga></p>
     </section>

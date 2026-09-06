@@ -9,7 +9,7 @@
 
 import { blokoveNaDumite } from '../../src/model/dumite.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { otvoriChernova, zakachiButonite } from '../reshetka/chernova.js';
+import { zakachiButonite } from '../reshetka/chernova.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
 import { reshetkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
 import { h, sloji } from '../reshetka/shablon.js';

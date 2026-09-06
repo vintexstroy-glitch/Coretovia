@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { prochetiKniga } from '../../src/kniga/ooxml.ts';
 import type { KonteksNaProhoda } from '../yadro/kontekst.ts';
-import { tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
+import { poletaBezIme, tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
 import { mesetsatNaProhoda } from '../yadro/kalendar.ts';
 import { ADRES } from '../yadro/server.ts';
 
@@ -169,6 +169,7 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   proveri('Кеш дадено', await tekstNa(p, '[data-tsifra="kesh-dadeno"]'), EVRO_1500);
   proveri('Кеш изтеглено', await tekstNa(p, '[data-tsifra="kesh-izvlechenie"]'), EVRO_1500);
   proveri('Кеш вкарано (по редовете)', await tekstNa(p, '[data-tsifra="kesh-vkarano"]'), EVRO_1500);
+  proveri('полетата на двете форми имат име', await poletaBezIme(p), 0);
   const sverki = await tekstNa(p, '[data-kesh-sverki]');
   proveri(
     'и двете сверки затварят · дадено ↔ изтеглено ↔ вкарано по редовете',

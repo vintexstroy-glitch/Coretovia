@@ -7,11 +7,15 @@
  * без нито един викащ като МЪРТВО (праг нула), и с право: пренесено, но
  * непазено, е пренесено на вяра. Затова тук всяка от тези части получава
  * своя проверка, къса и без домейн — до резена, който я вика в живия код.
+ *
+ * КОТВАТА вече е минала оттам: `kotvataKazva` се вика от корена (резен 6р), и
+ * долният блок е нейният тест, не нейният заместител.
  */
 
 import { describe, expect, it } from 'vitest';
 import {
   KotvaVPametta,
+  kotvataKazva,
   LichnoESamoTvoe,
   MERKA,
   PoSvoyataVeriga,
@@ -44,6 +48,46 @@ describe('котвата · последното звено, записано И
     expect(proveriKotvata(kotva, 5, () => 'drug').nared).toBe(false);
     // Без котва няма с какво да се мери · това е „наред", казано на глас.
     expect(proveriKotvata(null, 9, hashove).nared).toBe(true);
+  });
+
+  it('изречението за екрана · находката е ЕДНА от четирите състояния', () => {
+    const k = new KotvaVPametta();
+    const zveno = { seq: 5, hash: 'h5' };
+
+    // 1 · нов браузър · няма с какво да се мери, и това се КАЗВА
+    const bezKotva = kotvataKazva(k, 'kniga', zveno);
+    expect(bezKotva.nared).toBe(true);
+    expect(bezKotva.dumi).toContain('Котва още няма');
+
+    k.zabij('kniga', { seq: 5, hash: 'h5', kogato: KOGATO });
+
+    // 2 · съвпада
+    expect(kotvataKazva(k, 'kniga', zveno)).toEqual({
+      nared: true,
+      dumi: 'Котвата съвпада с Журнала на seq 5 · нищо не е махано отзад.',
+    });
+
+    // 3 · НАХОДКАТА · Журналът е скъсен отзад до seq 3
+    const skasen = kotvataKazva(k, 'kniga', { seq: 3, hash: 'h3' });
+    expect(skasen.nared).toBe(false);
+    expect(skasen.dumi).toContain('скъсяван отзад');
+
+    // 3б · находка и когато Журналът е ИЗТРИТ докрай
+    expect(kotvataKazva(k, 'kniga', undefined).nared).toBe(false);
+
+    // 3в · същият връх, друг хеш · историята до котвата е пренаписана
+    const podmenen = kotvataKazva(k, 'kniga', { seq: 5, hash: 'drug' });
+    expect(podmenen.nared).toBe(false);
+    expect(podmenen.dumi).toContain('пренаписана');
+
+    // 4 · котвата ИЗОСТАВА · запис е минал, преди тя да се забие. НЕ е находка:
+    // иначе всеки браузър, отказал `localStorage`, би вдигал фалшива тревога.
+    const izostava = kotvataKazva(k, 'kniga', { seq: 9, hash: 'h9' });
+    expect(izostava.nared).toBe(true);
+    expect(izostava.dumi).toContain('не втора истина');
+
+    // 5 · чужда верига · котвата е НА НАЕМАТЕЛ, не обща
+    expect(kotvataKazva(k, 'druga', { seq: 1, hash: 'h1' }).dumi).toContain('Котва още няма');
   });
 });
 

@@ -21,6 +21,20 @@ export async function tekstNa(p: Page, izbor: string): Promise<string> {
   return (await p.$eval(izbor, (e) => (e as HTMLElement).innerText)).trim();
 }
 
+/**
+ * КОЛКО ПОЛЕТА ВЪВ ФОРМА НЯМАТ ИМЕ · на ТОЗИ екран.
+ *
+ * Браузърът го съобщава сам („A form field element should have an id or name
+ * attribute"), но в раздела Issues, който никой обход не чете. Тук числото
+ * става проверка: поле без име не може да бъде попълнено от запомненото.
+ */
+export async function poletaBezIme(p: Page): Promise<number> {
+  return p.$$eval(
+    'form input, form select, form textarea',
+    (es) => es.filter((e) => !e.getAttribute('name') && !e.getAttribute('id')).length,
+  );
+}
+
 /** Текстовете на всички елементи по белег. */
 export async function tekstoveNa(p: Page, izbor: string): Promise<string[]> {
   await p.waitForSelector(izbor);

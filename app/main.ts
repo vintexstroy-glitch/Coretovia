@@ -19,6 +19,7 @@ import { Izpalnitel } from '../src/porta/izpalnitel.js';
 import { TIP } from '../src/sabitiya/registar.js';
 import {
   KotvaVLocalStorage,
+  kotvataKazva,
   proveriVerigata,
   Vrata,
   VsichkoRazresheno,
@@ -41,11 +42,12 @@ async function main(): Promise<void> {
   // Ключалката между разделите я има само където браузърът дава Web Locks;
   // без нея Вратата пак върви — с опашка в рамките на този раздел.
   const klyuchalka = klyuchalkaMezhduRazdeli();
+  const kotva = new KotvaVLocalStorage('coretovia:kotva');
   const vrata = new Vrata({
     dnevnik,
     pravata: new VsichkoRazresheno(),
     sha: sha256Web,
-    kotva: new KotvaVLocalStorage('coretovia:kotva'),
+    kotva,
     ...(klyuchalka ? { klyuchalka } : {}),
     parvoto: TIP.stopaninZapisan,
     bezOtkrivane: (n) => n.includes('~'),
@@ -62,6 +64,13 @@ async function main(): Promise<void> {
     sega: () => new Date().toISOString(),
   });
   const hranilishte = await osiguriHranilishte();
+  // КОТВАТА се ЗАБИВАШЕ при всеки запис, а никой не я ЧЕТЕШЕ: единственото,
+  // което пази от скъсяване отзад, беше построено и изключено на последната
+  // крачка. Тук се ЧЕТЕ — и КАЗВА, вместо да дърпа крана: кранът живее в
+  // ПАМЕТТА, причината му — в `localStorage`, тъй че се дърпа наново при всяко
+  // зареждане, а `vazstanovi` няма нито един викащ. Едно фалшиво разминаване би
+  // зазидало приложението завинаги само за четене (ADR-020 §5).
+  const dumiteZaKotvata = kotvataKazva(kotva, KNIGA, await dnevnik.posledno(KNIGA));
 
   sloji(
     ekran,
@@ -95,6 +104,7 @@ async function main(): Promise<void> {
       aktor = imeyl;
       zapomniEkranno(PAMET_AKTOR, imeyl);
     },
+    kotvata: () => dumiteZaKotvata,
     hranilishte: () =>
       `постоянство: ${hranilishte.postoyanstvo} · заето: ${kolkoMyasto(
         hranilishte.zaeto,

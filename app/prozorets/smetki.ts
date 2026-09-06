@@ -55,7 +55,6 @@ import { kletkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
 import {
   gantIDumiHTML,
   izpalniOtMenyuto,
-  otgovoratNaPortata,
   zakachiDyasnoMenyu,
   zapaziKnigata,
   zapishiOtForma,
@@ -263,11 +262,11 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
     return h`<section class="tablitsa-blok" data-blok="nap">
       <h2 class="lenta" translate="no">ДДС по месеци</h2>
       <form class="red-kesh" data-dds-forma>
-        <label class="malak">месец <input class="pole malak" data-dds-mesets value="${mesets}" size="7"></label>
-        <label class="malak">начислен <input class="pole malak" data-dds-nachislen value="${vPoleto(zaMeseca?.nachislen)}" inputmode="decimal"></label>
-        <label class="malak">данъчен кредит <input class="pole malak" data-dds-kredit value="${vPoleto(zaMeseca?.kredit)}" inputmode="decimal"></label>
-        <label class="malak">декларирано <input class="pole malak" data-dds-deklarirano value="${vPoleto(zaMeseca?.deklarirano)}" inputmode="decimal"></label>
-        <label class="malak">платено <input class="pole malak" data-dds-plateno value="${vPoleto(zaMeseca?.plateno)}" inputmode="decimal"></label>
+        <label class="malak">месец <input class="pole malak" name="dds-mesets" data-dds-mesets value="${mesets}" size="7"></label>
+        <label class="malak">начислен <input class="pole malak" name="dds-nachislen" data-dds-nachislen value="${vPoleto(zaMeseca?.nachislen)}" inputmode="decimal"></label>
+        <label class="malak">данъчен кредит <input class="pole malak" name="dds-kredit" data-dds-kredit value="${vPoleto(zaMeseca?.kredit)}" inputmode="decimal"></label>
+        <label class="malak">декларирано <input class="pole malak" name="dds-deklarirano" data-dds-deklarirano value="${vPoleto(zaMeseca?.deklarirano)}" inputmode="decimal"></label>
+        <label class="malak">платено <input class="pole malak" name="dds-plateno" data-dds-plateno value="${vPoleto(zaMeseca?.plateno)}" inputmode="decimal"></label>
         <button type="submit" class="malak" data-dds-zapishi>Запиши ДДС</button>
         <span class="vest" translate="no">дължимо = начислен − кредит · остатък = дължимо − платено</span>
       </form>
@@ -303,12 +302,12 @@ export function narisuvaySmetki(k: KonteksNaEkrana): void {
         )}
       </div>
       <form class="red-kesh" data-kesh-forma>
-        <label class="malak">месец <input class="pole malak" data-kesh-mesets value="${mesets}" size="7"></label>
-        <label class="malak">дадени за Заплати Кеш <input class="pole malak" data-kesh-zaplati value="${kesh.zaplati === 0 ? '' : pishiVPole(kesh.zaplati)}" inputmode="decimal"></label>
-        <label class="malak">дадени за Фактури Кеш <input class="pole malak" data-kesh-fakturi value="${kesh.fakturi === 0 ? '' : pishiVPole(kesh.fakturi)}" inputmode="decimal"></label>
-        <label class="malak">изтеглено по извлечение <input class="pole malak" data-kesh-izvlechenie value="${kesh.izvlechenie === 0 ? '' : pishiVPole(kesh.izvlechenie)}" inputmode="decimal"></label>
+        <label class="malak">месец <input class="pole malak" name="kesh-mesets" data-kesh-mesets value="${mesets}" size="7"></label>
+        <label class="malak">дадени за Заплати Кеш <input class="pole malak" name="kesh-zaplati" data-kesh-zaplati value="${kesh.zaplati === 0 ? '' : pishiVPole(kesh.zaplati)}" inputmode="decimal"></label>
+        <label class="malak">дадени за Фактури Кеш <input class="pole malak" name="kesh-fakturi" data-kesh-fakturi value="${kesh.fakturi === 0 ? '' : pishiVPole(kesh.fakturi)}" inputmode="decimal"></label>
+        <label class="malak">изтеглено по извлечение <input class="pole malak" name="kesh-izvlechenie" data-kesh-izvlechenie value="${kesh.izvlechenie === 0 ? '' : pishiVPole(kesh.izvlechenie)}" inputmode="decimal"></label>
         <button type="submit" class="malak" data-kesh-zapishi>Запиши кеша</button>
-        <label class="otmetka malak"><input type="checkbox" data-samo-meseca ${samoMeseca ? 'checked' : ''}> само този месец</label>
+        <label class="otmetka malak"><input type="checkbox" name="samo-meseca" data-samo-meseca ${samoMeseca ? 'checked' : ''}> само този месец</label>
         <span class="vest" data-kesh-sverki translate="no">${kesh.sverki
           .map((sv) => `${sv.kakvo}: ${sv.nared ? 'затваря' : `разлика ${pishi(sv.razlika)}`}`)
           .join(' · ')}</span>

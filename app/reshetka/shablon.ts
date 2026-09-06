@@ -184,9 +184,11 @@ function politika(): SPolitika {
 
 /** Слага запечатан HTML в възел · ЕДИНСТВЕНИЯТ път до `innerHTML` в целия екран. */
 export function sloji(kade: Element, kakvo: Zapechatan): void {
-  // biome-ignore lint/security/noDangerouslySetInnerHtml: единственият дом на
-  // `innerHTML` в целия екран · съдържанието е запечатано от `h`, а обходът на
-  // чистотата пази никой друг да не пише тук (праг НУЛА)
+  // Единственият дом на `innerHTML` в целия екран · съдържанието е запечатано
+  // от `h`, а обходът на чистотата пази никой друг да не пише тук (праг НУЛА).
+  // Заглушаване тук НЯМА: правилото, което заглушавах, е за React-свойството
+  // `dangerouslySetInnerHTML` и не се задейства върху присвояване. Заглушител,
+  // който не заглушава нищо, е надпис — и самият Biome го съобщава.
   kade.innerHTML = politika().createHTML(kakvo.__zapechatanHTML) as string;
 }
 

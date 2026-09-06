@@ -20,7 +20,6 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 const STRANITSATA = readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
 

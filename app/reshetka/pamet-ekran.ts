@@ -94,7 +94,7 @@ export function vazstanoviEkrana(prefiks: string, snimka: Readonly<Record<string
     const zaMahane: string[] = [];
     for (let i = 0; i < h.length; i += 1) {
       const klyuch = h.key(i);
-      if (klyuch !== null && klyuch.startsWith(PREFIKS + prefiks)) zaMahane.push(klyuch);
+      if (klyuch?.startsWith(PREFIKS + prefiks)) zaMahane.push(klyuch);
     }
     for (const k of zaMahane) h.removeItem(k);
     for (const [k, v] of Object.entries(snimka)) h.setItem(PREFIKS + k, JSON.stringify(v));
