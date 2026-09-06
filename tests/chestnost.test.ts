@@ -12,10 +12,12 @@
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // @ts-expect-error · обходът е .mjs без декларации · внася се само чистата функция
-import { rabotni } from '../stroezh/chestnost.mjs';
+import { rabotni, yadroD, yadroG, yadroZ } from '../stroezh/chestnost.mjs';
 
 const IZVOR = readFileSync(new URL('../stroezh/chestnost.mjs', import.meta.url), 'utf8');
 
@@ -29,7 +31,7 @@ function pragovete(): Map<string, number> {
 }
 
 describe('честността на проверките', () => {
-  it('обходите са ОСЕМ · нов се добавя ТУК, за да не мине незабелязан', () => {
+  it('обходите са ЕДИНАЙСЕТ · нов се добавя ТУК, за да не мине незабелязан', () => {
     expect([...pragovete().keys()]).toEqual([
       'Б · гол селектор върху двусмислен белег',
       'Е · четене без изчакване след действие',
@@ -39,6 +41,9 @@ describe('честността на проверките', () => {
       'Г · цикъл с очакване върху списък, който може да е празен',
       'Д · подпроцес в тест без обявено време',
       'З · праг за скорост върху едно измерване',
+      'И · проверка, която пише в дървото на проекта',
+      'Й · обход по файлове без твърдение колко е видял',
+      'К · в прохода: праг вместо число',
     ]);
   });
 
@@ -55,11 +60,11 @@ describe('честността на проверките', () => {
     expect(pragovete().get('В · константа без нито един пин с ръка')).toBe(0);
   });
 
-  it('и ВСИЧКИ ОСЕМ са на нула · няма вече храпов праг', () => {
+  it('и ВСИЧКИТЕ ЕДИНАЙСЕТ са на нула · няма вече храпов праг', () => {
     // Дотук поне един обход носеше днешното си число за праг. От резен 46 всички
     // са платени, тъй че нула значи нула навсякъде. Върне ли се храпов праг,
     // редът тук се сменя ЗАЕДНО с него — и се вижда в диф, вместо да се промъкне.
-    expect([...pragovete().values()]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect([...pragovete().values()]).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   // подпроцес · времето е ОБЯВЕНО, за да не пада тестът под товар (обход Д)
@@ -69,82 +74,103 @@ describe('честността на проверките', () => {
     // Нарочното счупване в резен 44 мина точно така: махнах падането, тестът
     // остана зелен. Оттук нататък се пуска ИСТИНСКО копие с нарочно свален
     // праг и се гледа кодът на изхода, не буквите.
-    const proba = new URL('../stroezh/.chestnost-proba.mjs', import.meta.url);
-    // Копието стои В `stroezh/`, защото самият обход намира корена спрямо себе
-    // си (`new URL('..', import.meta.url)`) — другаде би мерил друго дърво.
+    // КОПИЕТО ЖИВЕЕ ИЗВЪН ДЪРВОТО · и пак мери дървото.
+    //
+    // Дотук стоеше в `stroezh/`, защото обходът търсеше корена спрямо себе си.
+    // Но `imena.test.ts`, `prenosimost.test.ts` и `poveritelnost.test.ts`
+    // обхождат същите папки УСПОРЕДНО: временният файл се появяваше и изчезваше
+    // под тях и някой от трите падаше без причина. Оттук коренът се подава
+    // (`CHESTNOST_KOREN`), а копието е във временната папка на машината.
+    const koren = fileURLToPath(new URL('..', import.meta.url));
+    const proba = join(mkdtempSync(join(tmpdir(), 'chestnost-')), 'proba.mjs');
     writeFileSync(proba, IZVOR.replace(/prag: \d+, kart: obhodA/, 'prag: -1, kart: obhodA'));
     try {
       let kod = 0;
       let izhod = '';
       try {
-        izhod = execFileSync('node', [fileURLToPath(proba)], { encoding: 'utf8' });
+        izhod = execFileSync('node', [proba], {
+          encoding: 'utf8',
+          env: { ...process.env, CHESTNOST_KOREN: koren },
+        });
       } catch (g) {
         kod = (g as { status: number }).status;
         izhod = String((g as { stdout: string }).stdout);
       }
       expect(kod).toBe(1);
       expect(izhod).toContain('НАХОДКИ');
+      // и мери ИСТИНСКОТО дърво, не празна папка · инак падането не значи нищо
+      expect(izhod).toContain('двусмислени белега');
     } finally {
       rmSync(proba, { force: true });
     }
   }, 60_000);
 
   /**
-   * НАРОЧНОТО СЧУПВАНЕ · трите нови обхода, доказани върху ИСТИНСКИ вход.
+   * НАРОЧНОТО СЧУПВАНЕ · трите нови обхода, доказани БЕЗ файл в дървото.
    *
    * Обход, който още не е ловил нищо, е надпис: не се знае дали мълчи, защото е
-   * чисто, или защото не работи. Затова тук се пише файл с ТРИТЕ форми, пуска се
-   * командата и се иска всеки от Г · Д · З да го намери.
+   * чисто, или защото не работи. Затова тук му се подава счупен вход и се иска
+   * да го намери поименно.
    *
-   * Файлът НЕ завършва на `.test.ts`, за да не го подхване vitest; обходът обаче
-   * чете всеки `.ts` в `tests/`, тъй че го вижда. Трие се в `finally` — иначе
-   * един провал би оставил находка, която трови всяко следващо пускане.
+   * ВХОДЪТ Е РЕДОВЕ, НЕ ФАЙЛ. Първата версия пишеше `.ts` в `tests/` — и това
+   * беше СЪСТЕЗАНИЕ: `imena.test.ts`, `prenosimost.test.ts` и
+   * `poveritelnost.test.ts` обхождат същата папка успоредно, тъй че временният
+   * файл се появява и изчезва под тях. Дефектът, който този резен лови, влезе
+   * през вратата на собственото си доказателство.
    */
-  it('трите нови обхода ЛОВЯТ · доказано с нарочно счупване', () => {
-    const schupen = new URL('./_schupeno-za-obhoda.ts', import.meta.url);
-    writeFileSync(
-      schupen,
-      [
-        "import { describe, expect, it } from 'vitest';",
-        "import { execFileSync } from 'node:child_process';",
-        '',
-        "describe('нарочно счупено', () => {",
-        "  it('Г · цикъл без твърдение за броя', () => {",
-        '    const spisak: number[] = [];',
-        '    for (const x of spisak) expect(x).toBe(1);',
-        '  });',
-        '',
-        "  it('Д · подпроцес без обявено време', () => {",
-        "    const izhod = execFileSync('node', ['-e', 'console.log(1)'], { encoding: 'utf8' });",
-        "    expect(izhod).toContain('1');",
-        '  });',
-        '',
-        "  it('З · праг върху едно измерване', () => {",
-        '    const t0 = performance.now();',
-        '    const ms = performance.now() - t0;',
-        '    expect(ms).toBeLessThan(1000);',
-        '  });',
-        '});',
-        '',
-      ].join('\n'),
-      'utf8',
-    );
-    try {
-      let izhod = '';
-      try {
-        izhod = execFileSync('node', ['stroezh/chestnost.mjs'], { encoding: 'utf8' });
-      } catch (g) {
-        izhod = String((g as { stdout: string }).stdout);
-      }
-      // всеки от трите НАМИРА своята форма · нула тук значи сляп обход
-      expect(izhod).toMatch(/Г · цикъл с очакване върху списък, който може да е празен: [1-9]/);
-      expect(izhod).toMatch(/Д · подпроцес в тест без обявено време: [1-9]/);
-      expect(izhod).toMatch(/З · праг за скорост върху едно измерване: [1-9]/);
-      expect(izhod).toContain('_schupeno-za-obhoda.ts');
-    } finally {
-      rmSync(schupen, { force: true });
-    }
-  }, 60_000);
+  it('трите нови обхода ЛОВЯТ · доказано с нарочно счупен ВХОД', () => {
+    const schupeno = [
+      'describe(„нарочно счупено", () => {',
+      '  it(„Г · цикъл без твърдение за броя", () => {',
+      '    const spisak: number[] = [];',
+      '    for (const x of spisak) expect(x).toBe(1);',
+      '  });',
+      '',
+      '  it(„Д · подпроцес без обявено време", () => {',
+      '    const izhod = execFileSync(„node", [„-e", „1"]);',
+      '    expect(izhod).toBeDefined();',
+      '  });',
+      '',
+      '  it(„З · праг върху едно измерване", () => {',
+      '    const t0 = performance.now();',
+      '    const ms = performance.now() - t0;',
+      '    expect(ms).toBeLessThan(1000);',
+      '  });',
+      '});',
+    ].map((red) => red.replaceAll('„', "'").replaceAll('"', "'"));
+
+    expect(yadroG(schupeno, 'проба.ts')).toHaveLength(1);
+    expect(yadroG(schupeno, 'проба.ts')[0]).toContain('цикъл върху „spisak"');
+    expect(yadroD(schupeno, 'проба.ts')).toHaveLength(1);
+    expect(yadroZ(schupeno, 'проба.ts')).toHaveLength(1);
+  });
+
+  it('и ПУСКАТ поправеното · същите три форми, вече излекувани', () => {
+    const zdravo = [
+      'it(„Г · с твърдение за броя", () => {',
+      '  expect(spisak).toHaveLength(2);',
+      '  for (const x of spisak) expect(x).toBe(1);',
+      '});',
+      '',
+      'it(„Д · с обявено време", () => {',
+      '  const izhod = execFileSync(„node", [„-e", „1"]);',
+      '  expect(izhod).toBeDefined();',
+      '}, 60_000);',
+      '',
+      'it(„З · най-доброто от три", () => {',
+      '  let ms = Infinity;',
+      '  for (let i = 0; i < 3; i += 1) {',
+      '    const t0 = performance.now();',
+      '    ms = Math.min(ms, performance.now() - t0);',
+      '  }',
+      '  expect(ms).toBeLessThan(1000);',
+      '});',
+    ].map((red) => red.replaceAll('„', "'").replaceAll('"', "'"));
+
+    expect(yadroG(zdravo, 'проба.ts')).toEqual([]);
+    expect(yadroD(zdravo, 'проба.ts')).toEqual([]);
+    expect(yadroZ(zdravo, 'проба.ts')).toEqual([]);
+  });
 
   it('ПРОЗОРЕЦЪТ брои РАБОТЕЩИ редове · коментар не е разстояние', () => {
     // Дупката, намерена със счупване в самия резен 44: обходът гледаше „до три
@@ -166,14 +192,15 @@ describe('честността на проверките', () => {
     // е върнат на голото `slice` — тогава дупката е пак отворена, а тестът ѝ
     // мълчи. Тази половина се проверява по извора, защото обходът чете диска:
     // да се извика с изкуствени редове, той трябва да спре да е обход.
-    expect(IZVOR.match(/rabotni\(redove, i/g)?.length).toBe(4);
-    // ЧЕТИРИ, не пет: обход Б има свой прозорец и той НАРОЧНО брои голи редове —
-    // онова, което търси, Е коментар („ОБХВАТ: ЦЯЛАТА СТРАНИЦА"). Прескочи ли
-    // коментарите, обявеното изключение става невидимо.
+    expect(IZVOR.match(/rabotni\(redove, i/g)?.length).toBe(5);
+    // ПЕТ · трите стари викащи плюс обявеният праг на обход К. Обход Б има свой
+    // прозорец и той НАРОЧНО брои голи редове — онова, което търси, Е коментар
+    // („ОБХВАТ: ЦЯЛАТА СТРАНИЦА"). Прескочи ли коментарите, обявеното
+    // изключение става невидимо.
   });
 
   // подпроцес · времето е ОБЯВЕНО, за да не пада тестът под товар (обход Д)
-  it('днес минава · осемте обхода са под праговете си', () => {
+  it('днес минава · единайсетте обхода са под праговете си', () => {
     const izhod = execFileSync('node', ['stroezh/chestnost.mjs'], { encoding: 'utf8' });
     expect(izhod).toContain('Честно: нито един обход над прага си');
     expect(izhod).toContain('Б · гол селектор върху двусмислен белег: 0');
@@ -184,5 +211,8 @@ describe('честността на проверките', () => {
     expect(izhod).toContain('Г · цикъл с очакване върху списък, който може да е празен: 0');
     expect(izhod).toContain('Д · подпроцес в тест без обявено време: 0');
     expect(izhod).toContain('З · праг за скорост върху едно измерване: 0');
+    expect(izhod).toContain('И · проверка, която пише в дървото на проекта: 0');
+    expect(izhod).toContain('Й · обход по файлове без твърдение колко е видял: 0');
+    expect(izhod).toContain('К · в прохода: праг вместо число: 0');
   }, 60_000);
 });

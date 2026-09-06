@@ -58,6 +58,7 @@ describe('поверителността на хранилището', () => {
 
   it('няма телефонен номер в нито един текстов файл', () => {
     const nahodki: string[] = [];
+    expect(VSICHKI.length).toBeGreaterThan(100);
     for (const f of VSICHKI.filter((f) => TEKSTOVI.some((k) => f.endsWith(k)))) {
       if (f.endsWith('poveritelnost.test.ts')) continue;
       for (const [i, red] of readFileSync(f, 'utf8').split('\n').entries()) {
@@ -75,6 +76,7 @@ describe('поверителността на хранилището', () => {
 
   it('няма имейл извън позволените', () => {
     const nahodki: string[] = [];
+    expect(VSICHKI.length).toBeGreaterThan(100);
     for (const f of VSICHKI.filter((f) => TEKSTOVI.some((k) => f.endsWith(k)))) {
       const tekst = readFileSync(f, 'utf8');
       for (const m of tekst.matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g)) {

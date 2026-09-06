@@ -38,8 +38,11 @@ const KIRILITSA = /[Ѐ-ӿ]/;
 describe('нито едно смесено име', () => {
   it('в целия код', () => {
     const nahodki: string[] = [];
+    const vsichki = PAPKI.flatMap(faylove);
+    // колко е ПРЕГЛЕДАЛ · празен списък дава зелено, без да е гледал (обход Й)
+    expect(vsichki.length).toBeGreaterThan(100);
 
-    for (const paty of PAPKI.flatMap(faylove)) {
+    for (const paty of vsichki) {
       const redove = readFileSync(paty, 'utf8').split('\n');
       for (const [i, red] of redove.entries()) {
         // `\n` пред българска дума не е смесено име — маха се преди четенето.

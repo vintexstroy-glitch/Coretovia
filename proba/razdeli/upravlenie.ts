@@ -5,6 +5,7 @@ import { napishiKniga, prochetiKniga } from '../../src/kniga/ooxml.ts';
 import { opisOtProcheten } from '../yadro/kniga.ts';
 import type { KonteksNaProhoda } from '../yadro/kontekst.ts';
 import { tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
+import { denOtMesetsa } from '../yadro/kalendar.ts';
 import { ADRES } from '../yadro/server.ts';
 
 /** променената Книга на прохода · във временната папка, не в дървото (правило 21) */
@@ -15,11 +16,13 @@ const GRESHKA = '[data-zalepeno="upravlenie"] + [data-greshka]';
 /** еврото по нормата му · тясна пауза (U+202F) между хилядите и пред знака */
 const EVRO_250000 = '250\u202F000,00\u202F€';
 
-function denNapred(dni: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + dni);
-  return d.toISOString().slice(0, 10);
-}
+/**
+ * Датите на задачата · В ЕДИН И СЪЩ месец, винаги.
+ *
+ * Дотук стоеше „днес + 5" и „днес + 9". В около четири дни на месец двете падат
+ * в РАЗЛИЧНИ месеца, задачата покрива две колони на Ганта, и очакването за едно
+ * ■ пада — без нито един ред променен код (обход З · ADR-015).
+ */
 
 /** 3 · Управление · полетата и бутоните · задача от десния бутон · филтър · сбор · Гант · Книгата · вносът */
 export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
@@ -93,8 +96,8 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   const ch = 'tr.chernova[data-chernova="zadachi"]';
   await p.selectOption(`${ch} select[data-kolona="vid"]`, '1');
   await p.fill(`${ch} input[data-kolona="ime"]`, 'Сондаж');
-  await p.fill(`${ch} input[data-kolona="ot"]`, denNapred(5));
-  await p.fill(`${ch} input[data-kolona="do"]`, denNapred(9));
+  await p.fill(`${ch} input[data-kolona="ot"]`, denOtMesetsa(10));
+  await p.fill(`${ch} input[data-kolona="do"]`, denOtMesetsa(14));
   await p.selectOption(`${ch} select[data-kolona="otsenka"]`, '1');
   await p.fill(`${ch} input[data-kolona="byudzhet"]`, '250 000');
   await p.press(`${ch} input[data-kolona="byudzhet"]`, 'Enter');

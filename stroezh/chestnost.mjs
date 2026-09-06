@@ -15,7 +15,7 @@
  * ГРАНИЦАТА, КАЗАНА НА ГЛАС. Не всеки клас се лови от машина. Тук се брои
  * онова, което Е броимо по ФОРМА, и никъде не се твърди, че това са ВСИЧКИ.
  *
- * ОСЕМ ОБХОДА, и последните три дойдоха от НЕГОВ въпрос (06.09): „тестовете на
+ * ЕДИНАЙСЕТ ОБХОДА, и последните шест дойдоха от НЕГОВ въпрос (06.09): „тестовете на
  * резените, които не са завършени или са с грешки, не са ли проблем?" Отговорът
  * беше: изключени тестове няма, но ИМА скрити — проверка, която не може да
  * падне (Г), и две, които падат без нищо да е счупено (Д · З). Те вече се БРОЯТ,
@@ -28,7 +28,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // `fileURLToPath`, а НЕ `.pathname` (резен 94 · ADR-152): на Windows
 // `.pathname` връща „/C:/…" и `join` го превръща в „C:\\C:\\…".
-const KOREN = fileURLToPath(new URL('..', import.meta.url));
+//
+// КОРЕНЪТ МОЖЕ ДА ДОЙДЕ ОТВЪН · `CHESTNOST_KOREN`.
+//
+// Тестът, който доказва падането, пуска КОПИЕ на този обход. Дотук копието
+// трябваше да седи ДО оригинала, за да мери същото дърво — и точно затова
+// пишеше файл вътре в хранилището. А `imena.test.ts` и `prenosimost.test.ts`
+// обхождат същите папки УСПОРЕДНО: временният файл се появява и изчезва под
+// тях, и някой от трите пада на всяко десето пускане, без нищо да е счупено.
+//
+// Затова коренът вече е вход: копието живее във временната папка, а мери
+// хранилището. Състезание, което се вижда, се маха; състезание, което се
+// приема, се връща (обход И).
+const KOREN = process.env['CHESTNOST_KOREN'] ?? fileURLToPath(new URL('..', import.meta.url));
 
 function faylove(papka, kray = '.ts') {
   const spisak = [];
@@ -475,12 +487,18 @@ function eDanni(red) {
  * или има твърдение за БРОЯ до шест работни реда над себе си — `toHaveLength`,
  * `.length` срещу число, или `toEqual([…])` с елементи.
  */
-function obhodG() {
+/**
+ * ЯДРОТО на обход Г · работи върху РЕДОВЕ, не върху диск.
+ *
+ * Изнесено, за да може доказателството да го викне с изкуствени редове, вместо
+ * да пише счупен файл в хранилището. Файл в дървото е състезание с всеки друг
+ * тест, който обхожда същата папка (обход И).
+ */
+export function yadroG(redove, f = '—') {
   const CIKAL = /for\s*\(\s*const\s+\w+\s+of\s+([^)]+)\)\s*\{?\s*(?:for\s*\([^)]*\)\s*)?expect\(/;
   const BROY = /toHaveLength\(|\.length\s*(?:,[^)]*)?\)\s*\.\s*(?:toBe|toBeGreaterThan|toEqual)|toEqual\(\s*\[[^\]]/;
   const nam = [];
-  for (const f of [...faylove('tests'), ...faylove('proba')]) {
-    const redove = cheti(f).split('\n');
+  {
     redove.forEach((red, i) => {
       if (eDanni(red)) return;
       const m = CIKAL.exec(red);
@@ -495,6 +513,12 @@ function obhodG() {
     });
   }
   return nam;
+}
+
+function obhodG() {
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
+    yadroG(cheti(f).split('\n'), f),
+  );
 }
 
 /**
@@ -513,11 +537,11 @@ function obhodG() {
  * ЛЕК: `it(…, ВРЕМЕ)` с обявено време. Числото се вижда и се обсъжда; мълчаливото
  * подразбрано — не.
  */
-function obhodD() {
+/** ЯДРОТО на обход Д · върху редове (виж `yadroG`). */
+export function yadroD(redove, f = '—') {
   const VIK = /\b(?:execFileSync|execSync|spawnSync|execFile|spawn)\s*\(/;
   const nam = [];
-  for (const f of [...faylove('tests'), ...faylove('proba')]) {
-    const redove = cheti(f).split('\n');
+  {
     redove.forEach((red, i) => {
       if (eDanni(red) || !VIK.test(red) || red.trim().startsWith('import')) return;
       const blok = blokatNaTesta(redove, i);
@@ -529,6 +553,12 @@ function obhodD() {
     });
   }
   return nam;
+}
+
+function obhodD() {
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
+    yadroD(cheti(f).split('\n'), f),
+  );
 }
 
 /**
@@ -544,13 +574,13 @@ function obhodD() {
  * ЛЕК: НАЙ-ДОБРОТО от няколко измервания. Най-доброто е онова, което кодът може,
  * когато машината не му пречи — а прагът пита точно за кода.
  */
-function obhodZ() {
+/** ЯДРОТО на обход З · върху редове (виж `yadroG`). */
+export function yadroZ(redove, f = '—') {
   const MYARKA = /performance\.now\(\)|Date\.now\(\)/;
   const PRAG = /\.\s*(?:toBeLessThan|toBeLessThanOrEqual)\s*\(/;
   const POVTOR = /Math\.min\s*\(|for\s*\(\s*let\s+\w+\s*=\s*0\s*;/;
   const nam = [];
-  for (const f of [...faylove('tests'), ...faylove('proba')]) {
-    const redove = cheti(f).split('\n');
+  {
     redove.forEach((red, i) => {
       if (eDanni(red) || !PRAG.test(red)) return;
       // мярка ли се сравнява · и има ли ПОВТОРЕНИЕ някъде в същата проверка
@@ -561,6 +591,137 @@ function obhodZ() {
     });
   }
   return nam;
+}
+
+function obhodZ() {
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
+    yadroZ(cheti(f).split('\n'), f),
+  );
+}
+
+/**
+ * ОБХОД И · ПРОВЕРКА, КОЯТО ПИШЕ В ДЪРВОТО НА ПРОЕКТА.
+ *
+ * Тест, който създава файл вътре в хранилището, се СЪСТЕЗАВА с всеки друг тест,
+ * който обхожда същата папка. Файлът се появява и изчезва под него; някой от
+ * двата пада без причина, а следващото пускане е зелено.
+ *
+ * Хванато 06.09 върху ДВА случая наведнъж — и единият беше СОБСТВЕНОТО
+ * доказателство на новите обходи: то пишеше `.ts` в `tests/`, докато
+ * `imena.test.ts` · `prenosimost.test.ts` · `poveritelnost.test.ts` четат същата
+ * папка успоредно. Дефектът влезе през вратата на лека си.
+ *
+ * БЕЗОПАСНО е писане във ВРЕМЕННА папка (`tmpdir()`), защото никой обход не я
+ * гледа. Затова тук се търси писане, в чиято проверка `tmpdir` не се среща.
+ */
+export function yadroI(redove, f = '—') {
+  const PISHE = /\b(?:writeFileSync|appendFileSync|mkdirSync|cpSync|renameSync|copyFileSync)\s*\(/;
+  const nam = [];
+  redove.forEach((red, i) => {
+    if (eDanni(red) || !PISHE.test(red) || red.trim().startsWith('import')) return;
+    const blok = blokatNaTesta(redove, i);
+    // извън тест (помощник на самия проход) не се брои: там писането е работата
+    if (blok.nachalo < 0) return;
+    if (blok.redove.some((x) => /tmpdir\s*\(|os\.tmpdir/.test(x))) return;
+    nam.push(`${f}:${i + 1} — тестът пише В ДЪРВОТО · състезава се с всеки обход`);
+  });
+  return nam;
+}
+
+function obhodI() {
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
+    yadroI(cheti(f).split('\n'), f),
+  );
+}
+
+/**
+ * ОБХОД Й · ОБХОД ПО ФАЙЛОВЕ, КОЙТО НЕ БРОИ КАКВО Е ВИДЯЛ.
+ *
+ * Тест, който чете диска, събира находки и завършва с `toEqual([])`, е ЗЕЛЕН и
+ * когато не е прегледал нито един файл. Зеленото тогава значи „не съм гледал", а
+ * не „чисто е" — и точно тези тестове пазят най-скъпите правила: поверителността
+ * (правило 29), един факт един дом (17), архивът (16).
+ *
+ * Списъците им се строят от ОТНОСИТЕЛНИ пътища и от разширения (`.mjs`, `.ts`):
+ * друга работна директория или преименувана папка ги изпразва мълчаливо.
+ *
+ * ЛЕК: едно твърдение колко е прегледано, преди да се твърди какво не е намерено.
+ */
+export function yadroY(redove, f = '—') {
+  const CHETE = /\b(?:readdirSync|readFileSync|globSync|readdir|statSync)\s*\(/;
+  const PRAZNO = /expect\(\s*\w+\s*\)\s*\.\s*toEqual\(\s*\[\s*\]\s*\)/;
+  // твърдение за КОЛИЧЕСТВО · дължина или БРОЯЧ, все едно как се казва
+  const BROY =
+    /\.length\s*(?:,[^)]*)?\)\s*\.\s*(?:toBe|toBeGreaterThan|toEqual)|toHaveLength\(|\)\s*\.\s*toBeGreaterThan\(/;
+  const nam = [];
+  redove.forEach((red, i) => {
+    if (eDanni(red) || !PRAZNO.test(red)) return;
+    const blok = blokatNaTesta(redove, i);
+    if (blok.nachalo < 0) return;
+    // чете ли изобщо диска ТОЗИ тест · или помощник, викан в него
+    if (!blok.redove.some((x) => CHETE.test(x))) return;
+    if (blok.redove.some((x) => BROY.test(x))) return;
+    nam.push(`${f}:${i + 1} — обход по файлове без твърдение колко е видял`);
+  });
+  return nam;
+}
+
+function obhodY() {
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
+    yadroY(cheti(f).split('\n'), f),
+  );
+}
+
+/**
+ * ОБХОД К · В ПРОХОДА: НЕРАВЕНСТВО ТАМ, КЪДЕТО БРОЯТ Е ИЗВЕСТЕН.
+ *
+ * `proveri('деветте му колони', broy > 0, true)` минава при девет, при сто и при
+ * една. Проходът гледа КОНКРЕТЕН екран с КОНКРЕТНИ числа — там прагът не е
+ * предпазливост, а отказ да се каже кое е вярното число.
+ *
+ * Най-скъпата форма е УДВОЯВАНЕТО: повреда, която ражда по два реда вместо по
+ * един, вдига броя, а `> 30` продължава да е истина. Обходът лови едната посока
+ * и пуска другата — точно онази, която повредите избират.
+ *
+ * Хванато от агенти на 06.09, върху ЧЕТИРИ места, и едното беше писано същия ден
+ * от мен: `formulite.length > 0` стоеше СЛЕД ред, който вече изисква непразнота —
+ * тавтология, която не може да падне изобщо.
+ *
+ * БЕЗОПАСНО е неравенство, обявено с коментар `ПРАГ: ГОРНАТА ГРАНИЦА Е ОТВОРЕНА`
+ * до три реда над него. Обявеното изключение е решение; зашитото — дупка.
+ */
+export function yadroK(redove, f = '—') {
+  const SRAVNENIE = /\)\s*(?:>|>=|<|<=)\s*[0-9_]+\s*,?\s*$|\.length\s*(?:>|>=|<|<=)\s*[0-9_]+/;
+  const OBYAVEN_PRAG = /ПРАГ: ГОРНАТА ГРАНИЦА Е ОТВОРЕНА/;
+  const nam = [];
+  redove.forEach((red, i) => {
+    if (eDanni(red) || !SRAVNENIE.test(red)) return;
+    // вътре ли е в `proveri(` · и е ли очакването `true`
+    let nachalo = -1;
+    for (let j = i; j >= 0 && i - j < 12; j -= 1) {
+      if (/\bproveri\s*\(/.test(redove[j])) {
+        nachalo = j;
+        break;
+      }
+    }
+    if (nachalo < 0) return;
+    let kray = i;
+    for (let j = i; j < redove.length && j - i < 8; j += 1) {
+      if (/^\s*\)\s*;?\s*$/.test(redove[j])) {
+        kray = j;
+        break;
+      }
+    }
+    const blok = redove.slice(nachalo, kray + 1);
+    if (!blok.some((x) => /^\s*true\s*,?\s*$/.test(x))) return;
+    if (rabotni(redove, i - 1, 3, -1).some((x) => OBYAVEN_PRAG.test(x))) return;
+    nam.push(`${f}:${i + 1} — праг вместо число · и удвояването минава`);
+  });
+  return nam;
+}
+
+function obhodK() {
+  return faylove('proba').flatMap((f) => yadroK(cheti(f).split('\n'), f));
 }
 
 const faylove_t = () => faylove('tests').map((f) => [f, cheti(f)]);
@@ -586,6 +747,9 @@ const OBHODI = [
   { ime: 'Г · цикъл с очакване върху списък, който може да е празен', prag: 0, kart: obhodG },
   { ime: 'Д · подпроцес в тест без обявено време', prag: 0, kart: obhodD },
   { ime: 'З · праг за скорост върху едно измерване', prag: 0, kart: obhodZ },
+  { ime: 'И · проверка, която пише в дървото на проекта', prag: 0, kart: obhodI },
+  { ime: 'Й · обход по файлове без твърдение колко е видял', prag: 0, kart: obhodY },
+  { ime: 'К · в прохода: праг вместо число', prag: 0, kart: obhodK },
 ];
 
 // ПУСКА СЕ САМО КАТО КОМАНДА. Изнесеното (`rabotni`) трябва да може да се внесе

@@ -279,9 +279,9 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'Сметки',
   );
   proveri(
-    'над трийсет предложения · нищо не е прието',
-    (await p.$$eval('[data-predlozheniya] tr.red', (es) => es.length)) > 30,
-    true,
+    'предложенията са ТОЧНО толкова, колкото казва отчетът · нищо не е прието',
+    await p.$$eval('[data-predlozheniya] tr.red', (es) => es.length),
+    Number(/^(\d+) предложения/.exec(await tekstNa(p, '[data-otchet-vest]'))?.[1] ?? 0),
   );
   proveri(
     'служебен лист няма · не е наша Книга',

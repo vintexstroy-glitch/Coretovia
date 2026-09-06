@@ -2,10 +2,18 @@ import { readFileSync } from 'node:fs';
 import { prochetiKniga } from '../../src/kniga/ooxml.ts';
 import type { KonteksNaProhoda } from '../yadro/kontekst.ts';
 import { tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
+import { mesetsatNaProhoda } from '../yadro/kalendar.ts';
 import { ADRES } from '../yadro/server.ts';
 
 const SMETKI = 'Сметки';
-const MESETS = '2026-09';
+/**
+ * Месецът е ТЕКУЩИЯТ, не закован.
+ *
+ * „2026-09" щеше да спре да работи след 01.11.2026: листът Сметки реже
+ * колоните си от предишния месец нататък, тъй че старият месец излиза извън
+ * прозореца и „■" не се пише никъде (ADR-015).
+ */
+const MESETS = mesetsatNaProhoda();
 /** еврото по нормата му · тясна пауза (U+202F) */
 const EVRO_500 = '500,00 €';
 const EVRO_MINUS_500 = '-500,00 €';
@@ -71,9 +79,9 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'true · true',
   );
   proveri(
-    'полето горе брои находките',
-    Number(await tekstNa(p, '[data-tsifra="nap-nahodki"]')) > 0,
-    true,
+    'полето горе брои находките · ТОЧНО колкото са редовете в таблицата',
+    Number(await tekstNa(p, '[data-tsifra="nap-nahodki"]')),
+    redoveNaNahodkite.length,
   );
 
   // ══ 5в · редът на ДДС влиза в Сметки и в резултата ═══════════════════

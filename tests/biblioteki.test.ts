@@ -56,11 +56,13 @@ describe('библиотеките в готовия пакет', () => {
 
   it('никой в src/ не телефонира · без fetch, без XMLHttpRequest, без WebSocket', () => {
     const nahodki: string[] = [];
+    let pregledani = 0;
     const obhod = (papka: string): void => {
       for (const ime of readdirSync(papka)) {
         const pat = join(papka, ime);
         if (statSync(pat).isDirectory()) obhod(pat);
         else if (ime.endsWith('.ts')) {
+          pregledani += 1;
           for (const [i, red] of readFileSync(pat, 'utf8').split('\n').entries()) {
             if (
               /\b(fetch|XMLHttpRequest|WebSocket)\s*\(/.test(red) &&
@@ -74,6 +76,8 @@ describe('библиотеките в готовия пакет', () => {
       }
     };
     obhod('src');
+    // колко е ПРЕГЛЕДАЛ · празен обход дава зелено, без да е гледал (обход Й)
+    expect(pregledani).toBeGreaterThan(50);
     expect(nahodki).toEqual([]);
   });
 });

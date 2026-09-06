@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { prochetiKniga } from '../../src/kniga/ooxml.ts';
 import type { KonteksNaProhoda } from '../yadro/kontekst.ts';
 import { tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
+import { mesetsatNaProhoda } from '../yadro/kalendar.ts';
 import { ADRES } from '../yadro/server.ts';
 
 const SMETKI = 'Сметки';
@@ -10,7 +11,14 @@ const ZALEPENO = '[data-zalepeno="smetki"]';
 const EVRO_1200 = '1 200,00 €';
 const EVRO_MINUS_1500 = '-1 500,00 €';
 const EVRO_1500 = '1 500,00 €';
-const MESETS = '2026-09';
+/**
+ * Месецът е ТЕКУЩИЯТ, не закован.
+ *
+ * „2026-09" щеше да спре да работи след 01.11.2026: листът Сметки реже
+ * колоните си от предишния месец нататък, тъй че старият месец излиза извън
+ * прозореца и „■" не се пише никъде (ADR-015).
+ */
+const MESETS = mesetsatNaProhoda();
 
 /** 4 · Сметки · трите реда залепено · движение · знакът · кешът · Книгата и вносът */
 export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
@@ -30,8 +38,8 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   );
   proveri(
     'вторият ред е за КЕШ · с трите му числа и сверката',
-    (await p.$$eval('[data-kesh-forma] input.pole', (es) => es.length)) >= 4,
-    true,
+    await p.$$eval('[data-kesh-forma] input.pole', (es) => es.length),
+    4,
   );
   proveri(
     'третият ред са бутоните · неговите четиринайсет плюс „Добави ред с пари"',

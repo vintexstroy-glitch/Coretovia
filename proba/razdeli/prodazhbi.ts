@@ -248,9 +248,9 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     true,
   );
   proveri(
-    'формулите на листа се сверяват срещу кеша · и сверката затваря',
-    formulite.length > 0,
-    true,
+    'двайсет живи формули · по една на всяка НЕпразна колона в двата реда ОБЩО',
+    formulite.filter((f) => /^SUM\([A-Z]+\d+:[A-Z]+\d+\)$/.test(f)).length,
+    20,
   );
   await p.goto(`${ADRES}#/ii`);
   await p.waitForSelector('[data-kniga-vnos]');

@@ -41,12 +41,14 @@ describe('осемте прозореца', () => {
 
   it('никъде другаде в src/ не стои име на лист като низ · един дом (правило 17)', () => {
     const nahodki: string[] = [];
+    let pregledani = 0;
     const obhod = (papka: string): void => {
       for (const ime of readdirSync(papka)) {
         const pat = join(papka, ime);
         if (statSync(pat).isDirectory()) obhod(pat);
         else if (ime.endsWith('.ts') && !pat.replace(/\\/g, '/').endsWith('src/model/osnova.ts')) {
           const tekst = readFileSync(pat, 'utf8');
+          pregledani += 1;
           for (const p of PROZORTSI) {
             if (tekst.includes(`'${p.list}'`) || tekst.includes(`"${p.list}"`))
               nahodki.push(`${pat} · ${p.list}`);
@@ -55,6 +57,7 @@ describe('осемте прозореца', () => {
       }
     };
     obhod('src');
+    expect(pregledani).toBeGreaterThan(50);
     expect(nahodki).toEqual([]);
   });
 });
