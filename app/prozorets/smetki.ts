@@ -58,6 +58,7 @@ import {
   otgovoratNaPortata,
   zakachiDyasnoMenyu,
   zapaziKnigata,
+  zapishiOtForma,
 } from './deystviya.js';
 
 const TABLITSA = 'dvizheniya';
@@ -437,22 +438,13 @@ function narisuvayGanta(k: KonteksNaEkrana, sektsii: readonly Sektsiya[], mesets
     sverka.textContent = `ленти ${lenti.length} · движения ${redove.length} · колони ${koloni.length}`;
 }
 
-async function zapishiKesha(k: KonteksNaEkrana): Promise<void> {
-  const chetiPole = (beleg: string): string =>
-    k.tyalo.querySelector<HTMLInputElement>(`[data-kesh-${beleg}]`)?.value.trim() ?? '';
-  const { otSuma } = await import('../../src/yadro/pari.js');
-  const suma = (v: string): Kletka | null => (v === '' ? null : { stoynost_st: otSuma(v) });
-  try {
-    const r = await k.porta.izpalni(crypto.randomUUID(), 'smetki.zapishiKesh', {
-      mesets: chetiPole('mesets'),
-      zaplati: suma(chetiPole('zaplati')),
-      fakturi: suma(chetiPole('fakturi')),
-      izvlechenie: suma(chetiPole('izvlechenie')),
-    });
-    otgovoratNaPortata(k, r);
-  } catch (g) {
-    pokazhiGreshka(k.tyalo, g instanceof Error ? g.message : String(g));
-  }
+function zapishiKesha(k: KonteksNaEkrana): Promise<void> {
+  return zapishiOtForma(k, 'kesh', 'smetki.zapishiKesh', (pole, suma) => ({
+    mesets: pole('mesets'),
+    zaplati: suma(pole('zaplati')),
+    fakturi: suma(pole('fakturi')),
+    izvlechenie: suma(pole('izvlechenie')),
+  }));
 }
 
 /** Редът на ДДС за месеца на екрана · за да не се трият чужди числа при запис. */
@@ -468,26 +460,17 @@ function zaMesetsa(k: KonteksNaEkrana): { izdadeni: Kletka | null; plateni: Klet
   };
 }
 
-async function zapishiDdsa(k: KonteksNaEkrana): Promise<void> {
-  const pole = (beleg: string): string =>
-    k.tyalo.querySelector<HTMLInputElement>(`[data-dds-${beleg}]`)?.value.trim() ?? '';
-  const { otSuma } = await import('../../src/yadro/pari.js');
-  const suma = (v: string): Kletka | null => (v === '' ? null : { stoynost_st: otSuma(v) });
-  try {
-    const r = await k.porta.izpalni(crypto.randomUUID(), 'smetki.zapishiDds', {
-      mesets: pole('mesets'),
-      nachislen: suma(pole('nachislen')),
-      kredit: suma(pole('kredit')),
-      deklarirano: suma(pole('deklarirano')),
-      plateno: suma(pole('plateno')),
-      // числата от счетоводството не са в тази форма · пазят се такива, каквито са
-      izdadeni: zaMesetsa(k)?.izdadeni ?? null,
-      plateni: zaMesetsa(k)?.plateni ?? null,
-    });
-    otgovoratNaPortata(k, r);
-  } catch (g) {
-    pokazhiGreshka(k.tyalo, g instanceof Error ? g.message : String(g));
-  }
+function zapishiDdsa(k: KonteksNaEkrana): Promise<void> {
+  return zapishiOtForma(k, 'dds', 'smetki.zapishiDds', (pole, suma) => ({
+    mesets: pole('mesets'),
+    nachislen: suma(pole('nachislen')),
+    kredit: suma(pole('kredit')),
+    deklarirano: suma(pole('deklarirano')),
+    plateno: suma(pole('plateno')),
+    // числата от счетоводството не са в тази форма · пазят се такива, каквито са
+    izdadeni: zaMesetsa(k)?.izdadeni ?? null,
+    plateni: zaMesetsa(k)?.plateni ?? null,
+  }));
 }
 
 function deystvieNaButona(k: KonteksNaEkrana, b: ButonNaProzoretsa): void {

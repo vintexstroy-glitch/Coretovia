@@ -23,6 +23,7 @@ import { tablitsata } from '../model/model.js';
 import type { Tablitsa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { kletkaNa, zhiviteRedove } from '../ogledalo/tablitsa.js';
+import { deliZakragleno } from '../yadro/pari.js';
 import { sverka, type Sverka } from '../yadro/sverka.js';
 
 /** Ключовете на двете му таблици · в реда на листа (първа сграда, после втора). */
@@ -167,12 +168,16 @@ function prodazhbata(o: Ogledalo, t: Tablitsa, i: number, id: string): Prodazhba
  */
 export function evroZaKvadrat(tsena_st: number, kvadratura_kvsm: number): number {
   if (kvadratura_kvsm <= 0) return 0;
-  return Math.round((tsena_st * 10000) / kvadratura_kvsm);
+  // `deliZakragleno`, а НЕ `Math.round`: правило 3 („никакъв float") и защото
+  // двете не дават едно и също при минус — `Math.round(-2.5)` е -2, а половинката
+  // тук се закръгля ОТ нулата. Сторното е обърнат знак, тъй че разликата излиза
+  // на сверка, която не затваря. Домът на деленето е ЕДИН (`yadro/pari.ts`).
+  return deliZakragleno(tsena_st * 10000, kvadratura_kvsm);
 }
 
 /** Цената от евро/квадрат · за сверката на втората му таблица. */
 export function tsenaOtKvadrat(evroKvadrat_st: number, kvadratura_kvsm: number): number {
-  return Math.round((evroKvadrat_st * kvadratura_kvsm) / 10000);
+  return deliZakragleno(evroKvadrat_st * kvadratura_kvsm, 10000);
 }
 
 function tablitsataNaProdazhbite(

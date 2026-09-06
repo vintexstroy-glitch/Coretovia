@@ -11,6 +11,7 @@ import { otpechatakNaModela } from '../../src/model/otpechatak.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import type { Buton, Izbran } from '../../src/porta/porta.js';
 import type { DumaOtKnigata } from '../../src/model/dumi-ot-knigata.js';
+import type { Kletka } from '../../src/model/kletka.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { pokazhiMenyu, type Tochka } from '../reshetka/menyu.js';
 import { ekraniraj, svaliFayl } from '../reshetka/obshto.js';
@@ -35,6 +36,39 @@ export function butoniteHTML(butoni: readonly Buton[]): string {
         `<button type="button" data-buton="${b.klyuch}" ${b.razreshena ? '' : 'disabled'} title="${ekraniraj(b.zashto)}">${ekraniraj(b.ime)}</button>`,
     )
     .join('');
+}
+
+/**
+ * ЗАПИС ОТ ЗАЛЕПЕНА ФОРМА · един дом за двете форми на Сметки (резен 6з).
+ *
+ * Кешът и ДДС-ът се пишеха с два еднакви по ФОРМА блока: четец на поле по
+ * белег → мързеливо теглене на `otSuma` → празното става `null` → през Портата
+ * → отказът се КАЗВА. Обход 8 („пет дословно еднакви реда") не ги виждаше,
+ * защото се различаваха по един префикс на белега; обход 8б ги обяви още на
+ * първото си пускане.
+ *
+ * ПАРИТЕ СЕ ТЕГЛЯТ ПРИ НАТИСКАНЕ · `otSuma` живее в `yadro/pari.js`, което не
+ * бива да влачи при тръгване. Празното поле дава `null`, а НЕ нула: нулата е
+ * записано решение, липсата — не (правило 12).
+ */
+export async function zapishiOtForma(
+  k: KonteksNaEkrana,
+  prefiks: string,
+  klyuch: string,
+  tovarat: (
+    pole: (beleg: string) => string,
+    suma: (v: string) => Kletka | null,
+  ) => Record<string, unknown>,
+): Promise<void> {
+  const pole = (beleg: string): string =>
+    k.tyalo.querySelector<HTMLInputElement>(`[data-${prefiks}-${beleg}]`)?.value.trim() ?? '';
+  const { otSuma } = await import('../../src/yadro/pari.js');
+  const suma = (v: string): Kletka | null => (v === '' ? null : { stoynost_st: otSuma(v) });
+  try {
+    otgovoratNaPortata(k, await k.porta.izpalni(crypto.randomUUID(), klyuch, tovarat(pole, suma)));
+  } catch (g) {
+    pokazhiGreshka(k.tyalo, dumiZaGreshka(g));
+  }
 }
 
 export function iznosVestHTML(): string {

@@ -53,6 +53,28 @@ function obhvatite(izhod: string): Map<string, number> {
   return po;
 }
 
+/**
+ * Находките НА ЕДИН обход · и защо не стига `toContain` върху целия изход.
+ *
+ * Един и същ файл се появява в няколко обхода наведнъж (`dubel-v.ts` е и „без
+ * тест"). Твърдение върху целия изход тогава минава и когато обходът, който
+ * проверяваме, мълчи — тоест зелено без покритие. Затова редовете се режат по
+ * СВОЯ обход.
+ */
+function nahodkiteNa(izhod: string, obhod: string): string[] {
+  const redove = izhod.split('\n');
+  const ot = redove.findIndex(
+    (r) => r.trim().startsWith(`· ${obhod}:`) || r.includes(`✗ ${obhod}:`),
+  );
+  if (ot < 0) return [];
+  const iz: string[] = [];
+  for (const r of redove.slice(ot + 1)) {
+    if (/^\s+[·✗]\s/.test(r) || r.trim() === '') break;
+    iz.push(r.trim());
+  }
+  return iz;
+}
+
 /** Броим файловете сами · за да не вярваме на обхода за собствения му обхват. */
 function preboroy(papka: string, sabrani: string[] = []): string[] {
   for (const ime of readdirSync(join(KOREN, papka), { withFileTypes: true })) {
@@ -82,7 +104,7 @@ describe('чистотата на кода', () => {
     expect(IZVOR).toContain('function izravni(pat)');
   });
 
-  it('деветте обхода ОБЯВЯВАТ обхвата си · и нито един не е нула', () => {
+  it('ДЕСЕТТЕ обхода ОБЯВЯВАТ обхвата си · и нито един не е нула', () => {
     const { kod, izhod } = pusni();
     expect(kod).toBe(0);
     const po = obhvatite(izhod);
@@ -98,6 +120,7 @@ describe('чистотата на кода', () => {
       '6 · несвързан',
       '7 · без тест',
       '8 · дублирано',
+      '8б · дублирано по структура',
     ]);
     for (const [ime, broy] of po) expect(broy, `обхватът на „${ime}"`).toBeGreaterThan(0);
   }, 60_000);
@@ -111,14 +134,14 @@ describe('чистотата на кода', () => {
     expect(obhvatite(izhod).get('7 · без тест')).toBe(kod.length - vhodni);
   }, 60_000);
 
-  it('и ВСИЧКИТЕ ДЕВЕТ ловят · доказано с нарочно счупено ДЪРВО', () => {
+  it('и ВСИЧКИТЕ ДЕСЕТ ловят · доказано с нарочно счупено ДЪРВО', () => {
     /**
      * ДЪРВОТО ЖИВЕЕ ВЪВ ВРЕМЕННАТА ПАПКА. Тест, който пише в хранилището, се
      * състезава с всеки друг, който обхожда същата папка — точно дефектът, който
      * обход И лови, и той веднъж влезе през вратата на собственото си
      * доказателство (ADR-015 §6).
      *
-     * И ДЕВЕТТЕ, не някои: обход, който още не е ловил нищо, е надпис — не се
+     * И ДЕСЕТТЕ, не някои: обход, който още не е ловил нищо, е надпис — не се
      * знае дали мълчи, защото е чисто, или защото не работи (ADR-015 §7). Дотук
      * `chistota` нямаше НИТО ЕДНО доказателство; едно от деветте му мълчания се
      * оказа счупен обход, който рапортуваше нула, без да е погледнал.
@@ -174,7 +197,23 @@ describe('чистотата на кода', () => {
       pishi('src', 'dubel-a.ts', ['export function edno(a, b, c) {', ...blok, '}']);
       pishi('src', 'dubel-b.ts', ['export function dve(a, b, c) {', ...blok, '}']);
 
+      // 8б · дублирано ПО СТРУКТУРА · същата форма, ДРУГИ имена.
+      //
+      // Обход 8 иска дословно съвпадение и този файл му е невидим — точно
+      // затова 8б съществува. Ако доказателството ползваше пак `dubel-a`,
+      // щеше да показва, че 8б лови дословното, а не онова, за което е.
+      pishi('src', 'dubel-v.ts', [
+        'export function tri(x, y, z) {',
+        '  const nachalo = x + y + z + x * y * z - x / (y + 1) + Math.max(x, y, z);',
+        '  const sledvashto = nachalo * 2 + x - y + z * 3 - Math.min(x, y, z) + 7;',
+        '  const treto = sledvashto + nachalo - x + y - z + Math.abs(x - y) + 11;',
+        '  const posledno = treto * nachalo - sledvashto + Math.round(x / (z + 1)) + 13;',
+        '  return posledno + treto + sledvashto + nachalo;',
+        '}',
+      ]);
+
       pishi('app', 'main.ts', [
+        "import { tri } from '../src/dubel-v.js';",
         "import { chetiri, prazno } from '../src/zhivo.js';",
         "import { izlishno } from '../src/izlishno.js';",
         "import { edno } from '../src/dubel-a.js';",
@@ -205,9 +244,18 @@ describe('чистотата на кода', () => {
         '6 · несвързан',
         '7 · без тест',
         '8 · дублирано',
+        '8б · дублирано по структура',
       ]);
       for (const [ime, broy] of po) expect(broy, `обход „${ime}" не лови`).toBeGreaterThan(0);
 
+      // 8б лови ФОРМАТА, не буквите · сочи се `dubel-v`, чиито имена са ДРУГИ,
+      // а не `dubel-b`, който е дословно копие. Търсенето е В НЕГОВИЯ обход:
+      // същият файл се появява и под „без тест", тъй че `toContain` върху целия
+      // изход би минало и ако 8б мълчи.
+      const strukturni = nahodkiteNa(izhod, '8б · дублирано по структура');
+      expect(strukturni.join(' ')).toContain('src/dubel-v.ts');
+      // и обход 8 (дословният) НЕ го вижда · това е разликата между двата
+      expect(nahodkiteNa(izhod, '8 · дублирано').join(' ')).not.toContain('dubel-v');
       // и НЕ обвинява невинното · инак „лови" би значело „лови всичко"
       expect(izhod).toContain('nikoyNeGoVika');
       expect(izhod).not.toContain('„chetiri"');

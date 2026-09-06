@@ -15,7 +15,7 @@ import { poNomer } from '../model/nomenklatura.js';
 import { kolonaNa } from '../model/tablitsa.js';
 import type { Ogledalo } from '../ogledalo/ogledalo.js';
 import { kletkaNa } from '../ogledalo/tablitsa.js';
-import { pishi } from '../yadro/pari.js';
+import { deliZakragleno, pishi } from '../yadro/pari.js';
 import { nomerNaRed, tekstNaNomera } from './nomeratsiya.js';
 
 const SPRYANA = ' · спряна';
@@ -23,7 +23,7 @@ const SPRYANA = ' · спряна';
 /** кв. см → кв. м · с два знака · закръглено веднъж, на стотни, за да няма „1,100" */
 function kvSmKatoKvM(kvsm: number): string {
   const znak = kvsm < 0 ? '-' : '';
-  const stotni = Math.round(Math.abs(kvsm) / 100);
+  const stotni = deliZakragleno(Math.abs(kvsm), 100);
   return `${znak}${Math.floor(stotni / 100)},${String(stotni % 100).padStart(2, '0')}`;
 }
 

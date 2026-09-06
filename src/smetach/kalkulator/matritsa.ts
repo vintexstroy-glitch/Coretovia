@@ -23,6 +23,7 @@ import {
   type Tegla,
   type VidObekt,
 } from './nastroyki.js';
+import { deliZakragleno } from '../../yadro/pari.js';
 
 export class GreshkaMatritsa extends Error {
   constructor(message: string) {
@@ -161,7 +162,7 @@ export function ostavashtiOtSgradata_bt(nastroyki?: NastroykiNaKalkulatora): num
   const m = nastroyki ?? PO_PODRAZBIRANE;
   if (m.polezen_zhivot_g <= 0) return 0;
   const iztekli = Math.min(Math.max(m.vazrast_g, 0), m.polezen_zhivot_g);
-  return EDINITSA_BT - Math.round((iztekli * EDINITSA_BT) / m.polezen_zhivot_g);
+  return EDINITSA_BT - deliZakragleno(iztekli * EDINITSA_BT, m.polezen_zhivot_g);
 }
 
 export interface Saglasuvane {
@@ -254,5 +255,5 @@ export function ochakvanNaem_st(
   const m = nastroyki ?? PO_PODRAZBIRANE;
   const naem_st_kvm = m.naem_st_kvm[vid];
   if (naem_st_kvm === undefined) return 0;
-  return Math.round((obshta_kvsm * naem_st_kvm) / 10_000);
+  return deliZakragleno(obshta_kvsm * naem_st_kvm, 10_000);
 }
