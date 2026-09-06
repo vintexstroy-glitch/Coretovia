@@ -20,7 +20,10 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   razdel = '7а · двете таблици';
   await p.goto(`${ADRES}#/prodazhbi`);
   await p.waitForSelector('[data-reshetka="prodazhbi"]');
-  const lenti = await tekstoveNa(p, 'section[data-blok] h2.lenta');
+  const lenti = await tekstoveNa(
+    p,
+    'section[data-blok="prodazhbi"] h2.lenta, section[data-blok="prodazhbi2"] h2.lenta',
+  );
   proveri(
     'двете му ленти · първата сграда и втората, дословно',
     `${lenti[0]?.includes('Студентски град')} · ${lenti[1]?.includes('Малинова долина')}`,
@@ -173,6 +176,45 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'редът ОБЩО евро под таблицата · сборът по колона',
     await tekstNa(p, '[data-reshetka="prodazhbi2"] tfoot [data-obshto="tsena"]'),
     '126\u202F620,00\u202F€',
+  );
+
+  // ══ 7е · Калкулаторът НАД двете таблици · втората ценова колона ══════
+  razdel = '7е · Калкулаторът';
+  await p.waitForSelector('[data-reshetka="kalkulator"]');
+  proveri(
+    'калкулаторът стои НАД двете таблици (негово, 05.09)',
+    await p.$$eval('section[data-blok]', (es) => es.map((e) => (e as HTMLElement).dataset['blok'])),
+    ['kalkulator', 'prodazhbi', 'prodazhbi2'],
+  );
+  proveri(
+    'деветте му колони · трите подхода, оценената, договорената и разликата',
+    (await tekstoveNa(p, '[data-reshetka="kalkulator"] thead th')).join(' · '),
+    'обект · вид · кв. м · пазарен · доходен · разходен · ОЦЕНЕНА · договорена · разлика',
+  );
+  const redoveNaOtsenkata = await tekstoveNa(p, '[data-reshetka="kalkulator"] tbody tr');
+  proveri(
+    'видът се ЧЕТЕ от неговото име · „апарт. № 1" е апартамент',
+    (redoveNaOtsenkata[0] ?? '').split('\t').slice(0, 2).join(' · '),
+    'апарт. № 1 · апартамент',
+  );
+  proveri(
+    'двете цени стоят ЕДНА ДО ДРУГА · и разликата се вижда',
+    (redoveNaOtsenkata[0] ?? '').split('\t').slice(-3).join(' · '),
+    '208\u202F652,68\u202F€ · 101\u202F400,00\u202F€ · 107\u202F252,68\u202F€',
+  );
+  proveri(
+    'теглата и инвариантът се КАЗВАТ на екрана',
+    (await tekstNa(p, '[data-kalkulator-dumi]')).includes(
+      'тегла 50 / 10 / 40 на сто (пазарен · доходен · разходен). Разходният НЕ води в нито един случай: държи се',
+    ),
+    true,
+  );
+  proveri(
+    'чие е кое число се КАЗВА · базите му и нашите проучени параметри',
+    `${(await tekstNa(p, '[data-kalkulator-chii]')).includes('апартамент 3\u202F000,00\u202F€/м² (негово)')} · ${(
+      await tekstNa(p, '[data-kalkulator-chii]')
+    ).includes('негови сред тях са НИТО ЕДНО')}`,
+    'true · true',
   );
 
   // ══ 7д · Книгата носи листа · и се чете обратно без предложения ══════

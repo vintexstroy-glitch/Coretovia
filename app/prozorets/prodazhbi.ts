@@ -24,6 +24,14 @@ import {
   prodazhbite,
   type TablitsaNaProdazhbite,
 } from '../../src/smetach/prodazhbi.js';
+import {
+  bazataENegova,
+  IMENA_NA_VIDOVETE_OBEKT,
+  NEGOVI_PARAMETRI,
+  parametaraENegov,
+  razhodniyatNeVodi,
+} from '../../src/smetach/kalkulator/nastroyki.js';
+import { otsenkata } from '../../src/smetach/kalkulator/stoynost.js';
 import { pishi } from '../../src/yadro/pari.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { otvoriChernova, zakachiButonite } from '../reshetka/chernova.js';
@@ -45,6 +53,11 @@ const DUMI_NA_SASTOYANIETO: Readonly<Record<TablitsaNaProdazhbite['sastoyanie'],
     aktivna: 'АКТИВНА · чака плащания или Акт 16',
     prazna: 'празна · още няма продажби',
   });
+
+/** Петте вида, в реда на матрицата · за реда с базите под калкулатора. */
+const VIDOVE_OBEKT_ZA_EKRANA = Object.keys(
+  IMENA_NA_VIDOVETE_OBEKT,
+) as (keyof typeof IMENA_NA_VIDOVETE_OBEKT)[];
 
 /** Квадратурата се пише в кв. м · числото се пази в цели кв. см. */
 function kvadrati(kvsm: number): string {
@@ -114,6 +127,43 @@ export function narisuvayProdazhbi(k: KonteksNaEkrana): void {
     return `<tr class="sbor">${tds}</tr>`;
   };
 
+  /**
+   * КАЛКУЛАТОРЪТ · негово: „Добави и калкулатора над Продажбите."
+   *
+   * Стои НАД двете таблици и дава втора ценова колона до неговата: договорената
+   * цена и ОЦЕНЕНАТА, една до друга, с разликата помежду им („А продава, Б
+   * оценява"). Числата, които са НАШИ, се КАЗВАТ такива (ADR-012).
+   */
+  const kalkulatorHTML = (): string => {
+    const ots = otsenkata(o, sega);
+    const n = ots.nastroyki;
+    const redove = ots.redove
+      .map(
+        (r) =>
+          `<tr class="red" data-otsenka="${ekraniraj(r.id)}"><td class="kletka tekst" translate="no">${ekraniraj(r.ime)}</td><td class="kletka" data-vid="${ekraniraj(r.id)}" title="${r.poDumata === '' ? 'нито една дума не съвпадна · оценява се като „друго"' : `познат по думата „${ekraniraj(r.poDumata)}"`}">${ekraniraj(IMENA_NA_VIDOVETE_OBEKT[r.vid])}</td><td class="kletka chislo" translate="no">${ekraniraj(kvadrati(r.kvadratura))}</td><td class="kletka evro" translate="no">${ekraniraj(pishi(r.pazaren_st))}</td><td class="kletka evro" translate="no">${ekraniraj(pishi(r.dohoden_st))}</td><td class="kletka evro" translate="no">${ekraniraj(pishi(r.razhoden_st))}</td><td class="kletka evro" data-saglasuvana="${ekraniraj(r.id)}" translate="no">${ekraniraj(pishi(r.saglasuvane.tochno_st))}</td><td class="kletka evro" translate="no">${ekraniraj(pishi(r.dogovorena_st))}</td><td class="kletka evro ${r.razlika_st === 0 ? '' : r.razlika_st > 0 ? 'nad' : 'pod'}" data-razlika="${ekraniraj(r.id)}" translate="no">${ekraniraj(pishi(r.razlika_st))}</td></tr>`,
+      )
+      .join('');
+    const bazi = VIDOVE_OBEKT_ZA_EKRANA.map(
+      (vid) =>
+        `${IMENA_NA_VIDOVETE_OBEKT[vid]} ${pishi(n.baza_st[vid])}/м² (${bazataENegova(vid) ? 'негово' : 'наше'})`,
+    ).join(' · ');
+    return `<section class="tablitsa-blok" data-blok="kalkulator">
+        <h2 class="lenta">Калкулатор · Стойност на Състояние</h2>
+        <p class="pod-tablitsata" data-kalkulator-dumi>Оценява се по ТРИ подхода и се съгласува с тегла ${n.tegla.pazaren_bt / 100} / ${n.tegla.dohoden_bt / 100} / ${n.tegla.razhoden_bt / 100} на сто (пазарен · доходен · разходен). Разходният НЕ води в нито един случай: ${razhodniyatNeVodi(n.tegla) ? 'държи се' : 'НАРУШЕНО'}.</p>
+        <table class="reshetka kalkulator" data-reshetka="kalkulator">
+          <thead><tr><th>обект</th><th>вид</th><th>кв. м</th><th title="площ × база по вид">пазарен</th><th title="очакван наем ÷ доходност">доходен</th><th title="земя + строителна − овехтяване">разходен</th><th>ОЦЕНЕНА</th><th>договорена</th><th>разлика</th></tr></thead>
+          <tbody class="tablitsa">${redove}</tbody>
+          <tfoot><tr class="sbor"><td colspan="6">ОБЩО</td><td class="evro" data-otseneni translate="no">${ekraniraj(pishi(ots.otseneni_st))}</td><td class="evro" data-dogovoreni translate="no">${ekraniraj(pishi(ots.dogovoreni_st))}</td><td class="evro" data-razlikata translate="no">${ekraniraj(pishi(ots.razlika_st))}</td></tr></tfoot>
+        </table>
+        <p class="pod-tablitsata" data-kalkulator-chii>Базите: ${ekraniraj(bazi)}. Разходните шест числа са НАШИ и проучени (земя ${pishi(n.zemya_st_kvm.apartament)}/м² · строителна ${pishi(n.stroitelna_st_kvm.apartament)}/м² · полезен живот ${n.polezen_zhivot_g} г. · възраст ${n.vazrast_g} г.); негови сред тях са ${NEGOVI_PARAMETRI.length === 0 ? 'НИТО ЕДНО' : NEGOVI_PARAMETRI.filter((x) => parametaraENegov(x)).join(' · ')}.</p>
+        ${
+          ots.otpadnali.length === 0
+            ? ''
+            : `<p class="pod-tablitsata" data-otpadnali>Отпаднали подходи (нулева стойност, теглото им е пренасочено): ${ekraniraj(ots.otpadnali.join(' · '))}.</p>`
+        }
+      </section>`;
+  };
+
   const tablitsaHTML = (s: TablitsaNaProdazhbite): string => {
     const t = tablitsata(MODEL, s.klyuch);
     const glavi = t.koloni
@@ -149,6 +199,7 @@ export function narisuvayProdazhbi(k: KonteksNaEkrana): void {
     </div>
     <p class="greshka" data-greshka></p>
     ${dumiteHTML(DUMI_OT_KNIGATA.prodazhbi)}
+    ${kalkulatorHTML()}
     ${v.tablitsi.map(tablitsaHTML).join('')}
     <p class="pod-tablitsata" data-proverkite>Проверката е СМЕТНАТА: цена минус вноските от същата страна. Продажба с нулев остатък е ПЛАТЕНА; ЗАВЪРШЕНА е онази, при която е дошъл и Акт 16 (негово, 05.09). Нулата значи платено и се записва като сверка (правило 7). Колоната „Ключ" стои в ${ekraniraj(String(KLYUCH_KOLONA_PRODAZHBI))}-та колона на листа, скрита.</p>
     ${iznosVestHTML()}`;
