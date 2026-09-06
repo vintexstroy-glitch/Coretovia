@@ -105,9 +105,16 @@ describe('мерките на скоростта', () => {
   it(`сгъването на ${BROY_SABITIYA} събития е под ${PRAG_SGAVANE_MS} ms · и сверката затваря`, () => {
     const s = sabitiya();
     expect(s).toHaveLength(BROY_SABITIYA);
-    const t0 = performance.now();
-    const o = fold(s, MODEL, KOGATO);
-    const ms = performance.now() - t0;
+    // НАЙ-ДОБРОТО от три · същото като при дървото по-долу и по същата причина:
+    // едно измерване под пълен пакет мери планировчика, не кода. Този тест падна
+    // веднъж при тежък успореден товар, докато сгъването беше наред.
+    let ms = Number.POSITIVE_INFINITY;
+    let o = fold(s, MODEL, KOGATO);
+    for (let opit = 0; opit < 3; opit += 1) {
+      const t0 = performance.now();
+      o = fold(s, MODEL, KOGATO);
+      ms = Math.min(ms, performance.now() - t0);
+    }
     expect(o.sverka.nared).toBe(true);
     expect(o.prilozheni).toBe(BROY_SABITIYA);
     expect(o.tablitsi.get('zadachi')?.broy).toBe(BROY_ZADACHI);
