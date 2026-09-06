@@ -3,7 +3,7 @@
 //
 // Правило 17: думите му имат един дом в кода. Файлът НЕ се пише на ръка; при нова
 // Книга се пуска генераторът. Редът на прозорците е редът на `PROZORTSI`.
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,6 +55,8 @@ out.push(
 );
 out.push('  Object.freeze({');
 let broy = 0;
+/** Записите ПООТДЕЛНО · за сверката. Виж `--proveri` долу защо не стигат байтове. */
+const zapisi = [];
 for (const list of MOSTRA) {
   const k = KLYUCH[list.ime];
   if (k === undefined) throw new Error(`непознат лист в мострата: ${list.ime}`);
@@ -62,11 +64,54 @@ for (const list of MOSTRA) {
   list.redove.forEach((red, i) => {
     if (!eInstruktsiya(red)) return;
     out.push(`      { red: ${i + 1}, nomer: ${esc(String(red[0]))}, tekst: ${esc(red[1])} },`);
+    zapisi.push(`${k} | ${i + 1} | ${esc(String(red[0]))} | ${esc(red[1])}`);
     broy += 1;
   });
   out.push('    ],');
 }
 out.push('  });');
 out.push('');
-writeFileSync(join(KOREN, 'src', 'model', 'dumi-ot-knigata.ts'), out.join('\n'));
-console.log(`dumi-ot-knigata.ts · ${broy} думи в ${MOSTRA.length} прозореца`);
+const TSEL = join(KOREN, 'src', 'model', 'dumi-ot-knigata.ts');
+
+if (process.argv.includes('--proveri')) {
+  /**
+   * `--proveri` · НЕ ПИШЕ, а СВЕРЯВА (резен 6ж · ADR-016).
+   *
+   * Генериран файл, който никой не сверява, се разсинхронизира тихо: думите му
+   * живеят в `zadanie/*.md`, в мострата и тук, а дотук нито `npm run proverka`,
+   * нито CI пускаха генератора. С този вход портата го БРОИ, без да пише нищо.
+   *
+   * СВЕРЯВА СЕ ПО ЗАПИСИ, НЕ ПО БАЙТОВЕ. Генераторът пише всеки запис на ЕДИН
+   * ред; `biome` после прегъва дългите. Двата файла са едни и същи ДАННИ в две
+   * различни ФОРМИ, тъй че байтовото сравнение би връщало червено всеки път —
+   * тоест порта, която вика при всяко пускане и човек я изключва до седмица.
+   *
+   * А важното е ТОЧНО онова, което се сверява тук: неговите думи ДОСЛОВНО
+   * (правило 21), номерът им и редът им в Книгата.
+   */
+  const IZRAZ =
+    /(\w+):\s*\[|\{\s*red:\s*(\d+),\s*nomer:\s*('(?:[^'\\]|\\.)*'),\s*tekst:\s*('(?:[^'\\]|\\.)*')/g;
+  const segashni = [];
+  let prozorets = '';
+  for (const m of readFileSync(TSEL, 'utf8').matchAll(IZRAZ)) {
+    if (m[1] !== undefined) prozorets = m[1];
+    else segashni.push(`${prozorets} | ${m[2]} | ${m[3]} | ${m[4]}`);
+  }
+  const razlika = [
+    ...zapisi.filter((z) => !segashni.includes(z)).map((z) => `  само в МОСТРАТА: ${z}`),
+    ...segashni.filter((z) => !zapisi.includes(z)).map((z) => `  само във ФАЙЛА:  ${z}`),
+  ];
+  if (razlika.length > 0 || zapisi.length !== segashni.length) {
+    console.error('\ndumi-ot-knigata.ts СЕ РАЗМИНАВА с мострата:');
+    console.error(`  мостра: ${zapisi.length} · файл: ${segashni.length}`);
+    for (const r of razlika.slice(0, 20)) console.error(r);
+    console.error('\nПусни `npm run dumi` и виж дифа.\n');
+    process.exit(1);
+  }
+  console.log(
+    `dumi-ot-knigata.ts · сверен · ${broy} думи = ${segashni.length} във файла · разлика 0`,
+  );
+} else {
+  writeFileSync(TSEL, out.join('\n'));
+  console.log(`dumi-ot-knigata.ts · ${broy} думи в ${MOSTRA.length} прозореца`);
+}

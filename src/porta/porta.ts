@@ -15,7 +15,7 @@ import type { Sverka } from '../yadro/sverka.js';
 
 export type { Buton, Otkaz } from '../komandi/izpalnenie.js';
 export type { OpisNaKomanda } from '../komandi/katalog.js';
-export type { Izbran, Predvaritelno, Razlika } from '../komandi/komanda.js';
+export type { Izbran, Predvaritelno } from '../komandi/komanda.js';
 
 export interface RezultatNaIzpalnenie {
   readonly komandaId: string;

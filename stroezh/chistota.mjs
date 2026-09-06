@@ -65,11 +65,32 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, basename } from 'node:path';
+import { join, relative, basename, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/**
+ * ПЪТИЩАТА СЕ ИЗРАВНЯВАТ НА ЕДНО МЯСТО · поправка, платена скъпо.
+ *
+ * Обход 7 („без тест") се самоизключваше с `if (!f.includes('/src/')) continue;`
+ * по средата на файла. На Windows `join` дава `C:\…\src\…` — условието е вярно
+ * за ВСЕКИ файл, `continue` се изпълнява винаги, и обходът рапортуваше НУЛА,
+ * без да е погледнал нито един файл. Зелено на Ubuntu и зелено на Windows
+ * значеха две различни неща, а числата в `docs/03-plan.md` се преписваха от
+ * Windows.
+ *
+ * Затова разделителят се изравнява ВЕДНЪЖ, при събирането; оттам нататък нито
+ * един обход не го пипа. Node чете и с права черта на Windows.
+ */
+function izravni(pat) {
+  return pat.split(sep).join('/');
+}
+
 // `fileURLToPath`, а НЕ `.pathname` (резен 94 · ADR-152) · виж `chestnost.mjs`.
-const KOREN = fileURLToPath(new URL('..', import.meta.url));
+// `CHISTOTA_KOREN` е за теста на самия обход: пуска командата върху ИЗКУСТВЕНО
+// дърво, за да се докаже, че обходите ловят (ADR-015 §7 · обход И).
+const KOREN = izravni(
+  process.env['CHISTOTA_KOREN'] ?? fileURLToPath(new URL('..', import.meta.url)),
+);
 
 /** `--vsichki` показва ЦЕЛИТЕ списъци · без него се съкращават до 40 реда. */
 const VSICHKI = process.argv.includes('--vsichki');
@@ -78,7 +99,7 @@ const VSICHKI = process.argv.includes('--vsichki');
 
 function vsichkiFaylove(papka, sabrani = []) {
   for (const ime of readdirSync(papka)) {
-    const pat = join(papka, ime);
+    const pat = izravni(join(papka, ime));
     if (statSync(pat).isDirectory()) {
       if (ime === 'node_modules' || ime === 'dist' || ime.startsWith('.')) continue;
       vsichkiFaylove(pat, sabrani);
@@ -96,9 +117,22 @@ const prohod = vsichkiFaylove(join(KOREN, 'proba'));
 const tekstat = new Map();
 for (const f of [...kod, ...testove, ...prohod]) tekstat.set(f, readFileSync(f, 'utf8'));
 
+/**
+ * КОЛКО ФАЙЛА Е ВИДЯЛ ВСЕКИ ОБХОД · и защо това е отделно число.
+ *
+ * Нула находки значи едно от две неща — „чисто е" или „не съм гледал", — а
+ * докладът дотук не ги различаваше. Точно това скри мъртвия обход 7. Затова
+ * всеки обход СЪОБЩАВА обхвата си и той се печата до броя находки; тестът иска
+ * обхватът да е над нула (ADR-015 · обход Й, приложен към самия себе си).
+ */
+const vidyani = new Map();
+function vidyal(obhod, broy, edinitsa = 'файла') {
+  vidyani.set(obhod, { broy, edinitsa });
+}
+
 const nahodki = [];
 function nahodka(obhod, kade, red, kakvo) {
-  nahodki.push({ obhod, kade: relative(KOREN, kade), red, kakvo });
+  nahodki.push({ obhod, kade: izravni(relative(KOREN, kade)), red, kakvo });
 }
 
 /**
@@ -471,6 +505,11 @@ for (const [ime, z] of imenata) {
   }
 }
 
+vidyal('1 · мъртво', imenata.size, 'имена');
+vidyal('2 · излишен export', imenata.size, 'имена');
+vidyal('3 · само тест', imenata.size, 'имена');
+vidyal('3б · изнесено за теста', imenata.size, 'имена');
+
 // ── 3 · ПРАЗНО ПОЛЕ, КОЕТО УЧАСТВА ────────────────────────────────────────
 
 /**
@@ -502,6 +541,8 @@ for (const f of kod) {
     }
   });
 }
+
+vidyal('4 · празно поле', kod.length);
 
 // ── 4 · ИЗЛИШНИ РЕДОВЕ ────────────────────────────────────────────────────
 
@@ -568,26 +609,57 @@ for (const f of kod) {
   }
 }
 
+vidyal('5 · излишен ред', kod.length);
+
+// ── КАРТАТА НА ВНОСА · един индекс, два обхода ────────────────────────────
+
+/**
+ * КОЙ КОГО ВНАСЯ · по РАЗРЕШЕН ПЪТ, не по базово име.
+ *
+ * Дотук обходи 6 и 7 търсеха `/‹базово име›.js'` в слепения текст. Единайсет
+ * базови имена се повтарят в `src` и `app` (`dumi` · `imoti` · `modeli` ·
+ * `nastroyki` · `obshto` · `prodazhbi` · `shema` · `sluzhiteli` · `smetki` ·
+ * `tablitsa` · `upravlenie`), тъй че тест, който внася `smetach/smetki.js`,
+ * обявяваше за тестван и `komandi/prozortsi/smetki.ts`. Четири файла минаваха
+ * така безплатно.
+ *
+ * Затова всеки специфер се РАЗРЕШАВА спрямо своя файл и `.js` се връща към
+ * `.ts` — съвпадението става точно и еднозначно.
+ *
+ * ДИНАМИЧНИЯТ ВНОС Е ВНОС. `kniga/ooxml.js` се тегли при НАТИСКАНЕ, за да не
+ * влачи 258 KB при тръгване — обход, който брои само `from '…'`, го обявява за
+ * несвързан и праща човек да трие работещо мързеливо теглене.
+ */
+const SPETSIFER = /(?:from|import\()\s*'([^']+)'/g;
+
+function vnesenoOt(fayl) {
+  const nabor = new Set();
+  for (const [, spets] of tekstat.get(fayl).matchAll(SPETSIFER)) {
+    if (!spets.startsWith('.')) continue;
+    nabor.add(izravni(resolve(dirname(fayl), spets)).replace(/\.js$/, '.ts'));
+  }
+  return nabor;
+}
+
+const vnasya = new Map();
+for (const f of [...kod, ...testove, ...prohod]) vnasya.set(f, vnesenoOt(f));
+
 // ── 5 · СВЪРЗАНОСТ · файл, който никой не внася ───────────────────────────
 
 const VHODNI = new Set(['main.ts', 'index.ts', 'izdanie.ts', 'vite-okolna-sreda.d.ts']);
 
+const vnesenite = new Set();
+for (const [f, nabor] of vnasya) for (const cel of nabor) if (cel !== f) vnesenite.add(cel);
+
+let vidyaniSvarzanost = 0;
 for (const f of kod) {
   if (VHODNI.has(basename(f))) continue;
-  const ime = basename(f, '.ts');
-  /**
-   * ДИНАМИЧНИЯТ ВНОС Е ВНОС. `app/klod.ts` се тегли при НАТИСКАНЕ на бутона, за
-   * да го няма в офлайн изданието — обход, който брои само `from '…'`, го
-   * обявява за несвързан и праща човек да трие работеща свързваща част.
-   */
-  const vnasyat = [...kod, ...testove, ...prohod].filter(
-    (drug) =>
-      drug !== f && new RegExp(`(?:from|import\\()\\s*'[^']*/${ime}\\.js'`).test(tekstat.get(drug)),
-  );
-  if (vnasyat.length === 0) {
+  vidyaniSvarzanost += 1;
+  if (!vnesenite.has(f)) {
     nahodka('6 · несвързан', f, 0, 'файлът не се внася от НИКЪДЕ');
   }
 }
+vidyal('6 · несвързан', vidyaniSvarzanost);
 
 // ── 6 · БЕЗ ТЕСТ ──────────────────────────────────────────────────────────
 
@@ -595,26 +667,36 @@ for (const f of kod) {
  * БАРЕЛЪТ БРОИ. `src/yadro/index.ts` изнася наново Вратата, Журнала и
  * останалите — тест, който внася от него, ТЕСТВА тях. Обход, който търси само
  * прякото име, обяви девет тествани файла за нетествани.
+ *
+ * Един скок, не верига: тест → барел → файл. Пълната достижимост би обявила за
+ * тестван всеки файл, до който се стига отнякъде — тоест почти всичко.
  */
-const barelite = kod.filter((f) => basename(f) === 'index.ts');
-const prezBarel = new Map();
-for (const b of barelite) {
-  for (const [, pat] of tekstat
-    .get(b)
-    .matchAll(/export\s+(?:\*|\{[^}]*\})\s*from\s+'\.\/([\w-]+)\.js'/g)) {
-    prezBarel.set(pat, basename(b, '.ts'));
+const dokosnatiOtTest = new Set();
+for (const t of [...testove, ...prohod]) {
+  for (const cel of vnasya.get(t)) {
+    dokosnatiOtTest.add(cel);
+    if (basename(cel) === 'index.ts' && vnasya.has(cel)) {
+      for (const prez of vnasya.get(cel)) dokosnatiOtTest.add(prez);
+    }
   }
 }
 
-const vsichkiTestove = [...testove, ...prohod].map((f) => tekstat.get(f)).join('\n');
-const testvaBarela = /\/index\.js'/.test(vsichkiTestove);
+/**
+ * ГЛЕДА И `app/`, не само `src/`.
+ *
+ * Дотук обходът се ограничаваше до домейна. Но екранът е най-слабо
+ * покритата част на хранилището и точно там числото трябва да се вижда.
+ * Обход, който гледа половината код и мълчи за другата, е по-малката форма на
+ * същия дефект. Числото е СЪСТОЯНИЕ (няма праг), а не дефект.
+ */
+let vidyaniBezTest = 0;
 for (const f of kod) {
-  if (!f.includes('/src/')) continue;
-  const ime = basename(f, '.ts');
-  if (new RegExp(`/${ime}\\.js'`).test(vsichkiTestove)) continue;
-  if (testvaBarela && prezBarel.has(ime)) continue;
+  if (VHODNI.has(basename(f))) continue;
+  vidyaniBezTest += 1;
+  if (dokosnatiOtTest.has(f)) continue;
   nahodka('7 · без тест', f, 0, 'нито един тест не внася този файл');
 }
+vidyal('7 · без тест', vidyaniBezTest);
 
 // ── 7 · ДУБЛИРАНО · еднакви блокове ───────────────────────────────────────
 
@@ -663,6 +745,8 @@ for (const f of kod) {
     }
   }
 }
+
+vidyal('8 · дублирано', kod.length);
 
 // ── докладът ──────────────────────────────────────────────────────────────
 
@@ -714,9 +798,12 @@ for (const obhod of [
   const prag = PRAGOVE[obhod];
   const previshen = prag !== undefined && spisak.length > prag;
   if (previshen) cherveno += 1;
+  // Обхватът стои ДО броя находки: нула без обхват значи „не съм гледал".
+  const obhvat = vidyani.get(obhod);
   console.log(
     `  ${previshen ? '✗' : '·'} ${obhod}: ${spisak.length}` +
-      (prag === undefined ? '' : ` · праг ${prag}`),
+      (prag === undefined ? '' : ` · праг ${prag}`) +
+      (obhvat === undefined ? '' : ` · видени ${obhvat.broy} ${obhvat.edinitsa}`),
   );
   // По подразбиране се показват първите 40 · `--vsichki` показва всички.
   // Съкратен списък е за четене; целият — за работа по него.
@@ -725,6 +812,13 @@ for (const obhod of [
     console.log(`      ${n.kade}${n.red ? `:${n.red}` : ''} — ${n.kakvo}`);
   }
   if (spisak.length > dokade) console.log(`      … и още ${spisak.length - dokade}`);
+}
+
+// ОБХОД С НУЛЕВ ОБХВАТ Е СЧУПЕН, не чист. Точно това скри обход 7.
+const slepi = [...vidyani].filter(([, o]) => o.broy === 0).map(([ime]) => ime);
+if (slepi.length > 0) {
+  console.log(`\n  ✗ обходи с НУЛЕВ обхват: ${slepi.join(' · ')}`);
+  cherveno += slepi.length;
 }
 
 console.log('');

@@ -278,7 +278,11 @@ function obhodA() {
       .split('\n')
       .forEach((red, i) => {
         const t = red.trim();
-        if (t.startsWith('//') || t.startsWith('*')) return;
+        // ЦЯЛ РЕД В КАВИЧКИ Е ДАННИ, не код. Доказателството на един обход
+        // носи счупената форма като ТЕКСТ; обход, който я чете като код,
+        // обявява находка в собственото си доказателство (ADR-015 §6). Останалите
+        // шест ядра вече го правят; А и В останаха без това до резен 6д.
+        if (eDanni(red) || t.startsWith('//') || t.startsWith('*')) return;
         if (/\b[a-z]\w*\(\s*[A-Z][A-Z_0-9]{3,}\s*[+\-*/]/.test(red)) {
           nam.push(`${f}:${i + 1} — ${t.slice(0, 62)}`);
         }
@@ -315,7 +319,10 @@ function obhodA() {
  * пин би замълчал за другия.
  */
 function obhodV() {
-  const faylove = [...faylove_t(), ...faylove_p()];
+  // СЪЩОТО ЗА В: той чете ЦЕЛИЯ файл, не ред по ред, тъй че `eDanni` няма
+  // къде да влезе после. Редовете-данни падат ПРЕДИ слепването.
+  const bezDanni = (izvor) => izvor.replace(/^[ \t]*['"`].*['"`],?[ \t]*$/gm, '');
+  const faylove = [...faylove_t(), ...faylove_p()].map(([f, izvor]) => [f, bezDanni(izvor)]);
   // ПИНЪТ може да е ОБВИТ · `Object.keys(K)`, `[...K]`, `K.pole` са същото
   // твърдение върху същата константа. Първата мярка искаше ГОЛОТО име и обяви
   // за непинати ЧЕТИРИ места, които СА пинати — намерено, докато ги пишех.
@@ -496,29 +503,26 @@ function eDanni(red) {
  */
 export function yadroG(redove, f = '—') {
   const CIKAL = /for\s*\(\s*const\s+\w+\s+of\s+([^)]+)\)\s*\{?\s*(?:for\s*\([^)]*\)\s*)?expect\(/;
-  const BROY = /toHaveLength\(|\.length\s*(?:,[^)]*)?\)\s*\.\s*(?:toBe|toBeGreaterThan|toEqual)|toEqual\(\s*\[[^\]]/;
+  const BROY =
+    /toHaveLength\(|\.length\s*(?:,[^)]*)?\)\s*\.\s*(?:toBe|toBeGreaterThan|toEqual)|toEqual\(\s*\[[^\]]/;
   const nam = [];
-  {
-    redove.forEach((red, i) => {
-      if (eDanni(red)) return;
-      const m = CIKAL.exec(red);
-      if (!m) return;
-      const izraz = m[1].trim();
-      // литерален масив не може да е празен изненадващо
-      if (izraz.startsWith('[')) return;
-      // твърдението за броя може да стои където и да е В СЪЩАТА проверка
-      const blok = blokatNaTesta(redove, i);
-      if (blok.redove.some((x) => BROY.test(x))) return;
-      nam.push(`${f}:${i + 1} — цикъл върху „${izraz}" · празен списък минава ТИХО`);
-    });
-  }
+  redove.forEach((red, i) => {
+    if (eDanni(red)) return;
+    const m = CIKAL.exec(red);
+    if (!m) return;
+    const izraz = m[1].trim();
+    // литерален масив не може да е празен изненадващо
+    if (izraz.startsWith('[')) return;
+    // твърдението за броя може да стои където и да е В СЪЩАТА проверка
+    const blok = blokatNaTesta(redove, i);
+    if (blok.redove.some((x) => BROY.test(x))) return;
+    nam.push(`${f}:${i + 1} — цикъл върху „${izraz}" · празен списък минава ТИХО`);
+  });
   return nam;
 }
 
 function obhodG() {
-  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
-    yadroG(cheti(f).split('\n'), f),
-  );
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) => yadroG(cheti(f).split('\n'), f));
 }
 
 /**
@@ -541,24 +545,20 @@ function obhodG() {
 export function yadroD(redove, f = '—') {
   const VIK = /\b(?:execFileSync|execSync|spawnSync|execFile|spawn)\s*\(/;
   const nam = [];
-  {
-    redove.forEach((red, i) => {
-      if (eDanni(red) || !VIK.test(red) || red.trim().startsWith('import')) return;
-      const blok = blokatNaTesta(redove, i);
-      if (blok.nachalo < 0) return;
-      // време има, ако затварящият ред го носи (`}, 120_000);`) или викът го подава
-      if (/\}\s*,\s*[0-9_]+\s*\)/.test(redove[blok.kray])) return;
-      if (/timeout\s*:/.test(redove.slice(i, Math.min(i + 6, redove.length)).join(' '))) return;
-      nam.push(`${f}:${i + 1} — подпроцес в тест без обявено време · пада под товар`);
-    });
-  }
+  redove.forEach((red, i) => {
+    if (eDanni(red) || !VIK.test(red) || red.trim().startsWith('import')) return;
+    const blok = blokatNaTesta(redove, i);
+    if (blok.nachalo < 0) return;
+    // време има, ако затварящият ред го носи (`}, 120_000);`) или викът го подава
+    if (/\}\s*,\s*[0-9_]+\s*\)/.test(redove[blok.kray])) return;
+    if (/timeout\s*:/.test(redove.slice(i, Math.min(i + 6, redove.length)).join(' '))) return;
+    nam.push(`${f}:${i + 1} — подпроцес в тест без обявено време · пада под товар`);
+  });
   return nam;
 }
 
 function obhodD() {
-  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
-    yadroD(cheti(f).split('\n'), f),
-  );
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) => yadroD(cheti(f).split('\n'), f));
 }
 
 /**
@@ -580,23 +580,19 @@ export function yadroZ(redove, f = '—') {
   const PRAG = /\.\s*(?:toBeLessThan|toBeLessThanOrEqual)\s*\(/;
   const POVTOR = /Math\.min\s*\(|for\s*\(\s*let\s+\w+\s*=\s*0\s*;/;
   const nam = [];
-  {
-    redove.forEach((red, i) => {
-      if (eDanni(red) || !PRAG.test(red)) return;
-      // мярка ли се сравнява · и има ли ПОВТОРЕНИЕ някъде в същата проверка
-      const blok = blokatNaTesta(redove, i);
-      if (!blok.redove.some((x) => MYARKA.test(x))) return;
-      if (blok.redove.some((x) => POVTOR.test(x))) return;
-      nam.push(`${f}:${i + 1} — праг върху ЕДНО измерване · мери машината, не кода`);
-    });
-  }
+  redove.forEach((red, i) => {
+    if (eDanni(red) || !PRAG.test(red)) return;
+    // мярка ли се сравнява · и има ли ПОВТОРЕНИЕ някъде в същата проверка
+    const blok = blokatNaTesta(redove, i);
+    if (!blok.redove.some((x) => MYARKA.test(x))) return;
+    if (blok.redove.some((x) => POVTOR.test(x))) return;
+    nam.push(`${f}:${i + 1} — праг върху ЕДНО измерване · мери машината, не кода`);
+  });
   return nam;
 }
 
 function obhodZ() {
-  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
-    yadroZ(cheti(f).split('\n'), f),
-  );
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) => yadroZ(cheti(f).split('\n'), f));
 }
 
 /**
@@ -629,9 +625,7 @@ export function yadroI(redove, f = '—') {
 }
 
 function obhodI() {
-  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
-    yadroI(cheti(f).split('\n'), f),
-  );
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) => yadroI(cheti(f).split('\n'), f));
 }
 
 /**
@@ -667,9 +661,7 @@ export function yadroY(redove, f = '—') {
 }
 
 function obhodY() {
-  return [...faylove('tests'), ...faylove('proba')].flatMap((f) =>
-    yadroY(cheti(f).split('\n'), f),
-  );
+  return [...faylove('tests'), ...faylove('proba')].flatMap((f) => yadroY(cheti(f).split('\n'), f));
 }
 
 /**

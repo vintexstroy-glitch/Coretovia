@@ -12,14 +12,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // @ts-expect-error · обходът е .mjs без декларации · внася се само чистата функция
 import { rabotni, yadroD, yadroG, yadroZ } from '../stroezh/chestnost.mjs';
 
-const IZVOR = readFileSync(new URL('../stroezh/chestnost.mjs', import.meta.url), 'utf8');
+const KOREN = fileURLToPath(new URL('..', import.meta.url));
+const IZVOR = readFileSync(join(KOREN, 'stroezh', 'chestnost.mjs'), 'utf8');
 
 /** Праговете, извадени от ЖИВИЯ извор · име → число. */
 function pragovete(): Map<string, number> {
@@ -81,7 +82,7 @@ describe('честността на проверките', () => {
     // обхождат същите папки УСПОРЕДНО: временният файл се появяваше и изчезваше
     // под тях и някой от трите падаше без причина. Оттук коренът се подава
     // (`CHESTNOST_KOREN`), а копието е във временната папка на машината.
-    const koren = fileURLToPath(new URL('..', import.meta.url));
+    const koren = KOREN;
     const proba = join(mkdtempSync(join(tmpdir(), 'chestnost-')), 'proba.mjs');
     writeFileSync(proba, IZVOR.replace(/prag: \d+, kart: obhodA/, 'prag: -1, kart: obhodA'));
     try {
@@ -214,5 +215,122 @@ describe('честността на проверките', () => {
     expect(izhod).toContain('И · проверка, която пише в дървото на проекта: 0');
     expect(izhod).toContain('Й · обход по файлове без твърдение колко е видял: 0');
     expect(izhod).toContain('К · в прохода: праг вместо число: 0');
+  }, 60_000);
+
+  /**
+   * ВСИЧКИТЕ ЕДИНАЙСЕТ ЛОВЯТ · доказано върху ИЗКУСТВЕНО ДЪРВО.
+   *
+   * Дотук доказани бяха ТРИ (Г · Д · З) — те имат изнесено ядро и то се вика с
+   * редове. Останалите осем нямаха нищо: Б · Е · Ж · А · В нямат ядро изобщо, а
+   * И · Й · К имат изнесено ядро, което НИТО ЕДИН тест не викаше. Тоест осем
+   * обхода бяха НАДПИС по собствената мярка на ADR-015 §7: „обход, който още не
+   * е ловил нищо, е надпис — не се знае дали мълчи, защото е чисто, или защото
+   * не работи."
+   *
+   * ЛЕКЪТ Е ЕДИН ЗА ВСИЧКИТЕ, вместо осем ядра: коренът вече е вход
+   * (`CHESTNOST_KOREN`), тъй че цялата команда се пуска върху дърво, направено
+   * нарочно счупено — по едно място за всеки обход. Това доказва и СВЪРЗВАНЕТО
+   * (обход, вписан в списъка, но невикан, пак ще мълчи), не само израза.
+   *
+   * ДЪРВОТО Е ВЪВ ВРЕМЕННАТА ПАПКА · писане в хранилището е състезание с всеки
+   * друг обход (обход И, платен със собственото доказателство на резен 6в).
+   *
+   * РЕДОВЕТЕ СА ЛИТЕРАЛИ · цял ред в кавички се пропуска от обходите (`eDanni`),
+   * тъй че счупените форми тук не обвиняват самия този файл.
+   */
+  it('и ВСИЧКИТЕ ЕДИНАЙСЕТ ловят · доказано с нарочно счупено ДЪРВО', () => {
+    const koren = mkdtempSync(join(tmpdir(), 'chestnost-darvo-'));
+    try {
+      for (const p of ['app', 'src', 'tests', 'proba']) mkdirSync(join(koren, p));
+
+      // белегът `pole` живее в ДВА екрана · оттам е двусмислен (обход Б)
+      for (const ime of ['ekran-a.ts', 'ekran-b.ts']) {
+        writeFileSync(join(koren, 'app', ime), 'const html = `<p data-pole="1"></p>`;\n');
+      }
+
+      const prohod = [
+        'export async function schupeno(p, proveri, redovete) {',
+        "  const a = await p.$eval('[data-pole]', (e) => e.textContent);",
+        "  await p.click('[data-buton]');",
+        "  const b = await p.$eval('[data-vest]', (e) => e.textContent);",
+        "  await p.click('[data-otvori]');",
+        "  await p.fill('[data-ime]', 'x');",
+        "  await p.click('button[type=submit]');",
+        '  proveri(',
+        "    'редовете са над трийсет',",
+        '    redovete.length > 30,',
+        '    true,',
+        '  );',
+        '  return [a, b];',
+        '}',
+        '',
+      ].join('\n');
+      writeFileSync(join(koren, 'proba', 'schupeno.ts'), prohod);
+
+      const testat = [
+        "import { execFileSync } from 'node:child_process';",
+        "import { readdirSync, writeFileSync } from 'node:fs';",
+        "import { NASHATA_MYARKA } from '../src/mero.js';",
+        '',
+        "it('А · входът се смята от същата константа', () => {",
+        '  const t = sled(NAPRED_DNI + 1);',
+        '  expect(t).toBe(1);',
+        '});',
+        '',
+        "it('В · сверява се срещу константа, без нито един пин', () => {",
+        '  expect(zhivoto).toEqual(NASHATA_MYARKA);',
+        '});',
+        '',
+        "it('Г · цикъл върху списък, който може да е празен', () => {",
+        '  for (const s of sverkite) expect(s.nared).toBe(true);',
+        '});',
+        '',
+        "it('Д · подпроцес без обявено време', () => {",
+        "  execFileSync('node', ['-e', '1']);",
+        '});',
+        '',
+        "it('З · праг върху ЕДНО измерване', () => {",
+        '  const nachalo = performance.now();',
+        '  smetni();',
+        '  expect(performance.now() - nachalo).toBeLessThan(200);',
+        '});',
+        '',
+        "it('И · пише В ДЪРВОТО на проекта', () => {",
+        "  writeFileSync('tests/vremenno.ts', 'x');",
+        '});',
+        '',
+        "it('Й · обход по файлове без твърдение колко е видял', () => {",
+        "  const nam = readdirSync('src').filter((f) => f.endsWith('.ts'));",
+        '  expect(nam).toEqual([]);',
+        '});',
+        '',
+      ].join('\n');
+      writeFileSync(join(koren, 'tests', 'schupeno.test.ts'), testat);
+
+      let kod = 0;
+      let izhod = '';
+      try {
+        izhod = execFileSync('node', [join(KOREN, 'stroezh', 'chestnost.mjs')], {
+          encoding: 'utf8',
+          env: { ...process.env, CHESTNOST_KOREN: koren },
+        });
+      } catch (g) {
+        kod = (g as { status: number }).status;
+        izhod = String((g as { stdout: string }).stdout ?? '');
+      }
+
+      expect(kod).toBe(1);
+      // всеки обход по ИМЕ, с брой НАД нула · инак „ловят" би значело „някои"
+      const po = new Map<string, number>();
+      // ИМЕТО НОСИ ДВОЕТОЧИЕ („К · в прохода: праг…") · ненаситното четене го реже
+      // на първото двоеточие и дава празна карта — тоест зелено без да е проверило нищо.
+      for (const m of izhod.matchAll(/^\s+[·✗]\s+(.+):\s+(\d+)\s+·/gm)) {
+        po.set(m[1]!.trim(), Number(m[2]));
+      }
+      expect([...po.keys()]).toEqual([...pragovete().keys()]);
+      for (const [ime, broy] of po) expect(broy, `обход „${ime}" не лови`).toBeGreaterThan(0);
+    } finally {
+      rmSync(koren, { recursive: true, force: true });
+    }
   }, 60_000);
 });

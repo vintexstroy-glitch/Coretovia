@@ -22,7 +22,9 @@
     "stil": "biome check .",
     "mostra": "node stroezh/mostra-kniga.mjs",
     "dumi": "node stroezh/dumi-ot-knigata.mjs",
-    "proverka": "npm run typecheck && npm test && npm run chistota && npm run chestnost && npm run sloeve && npm run litsenzi && npm run stil"
+    "proverka": "npm run typecheck && npm test && npm run chistota && npm run chestnost && npm run sloeve && npm run knip && npm run litsenzi && npm run dumi:proveri && npm run stil",
+    "knip": "knip",
+    "dumi:proveri": "node stroezh/dumi-ot-knigata.mjs --proveri"
   },
   "dependencies": {
     "exceljs": "4.4.0"

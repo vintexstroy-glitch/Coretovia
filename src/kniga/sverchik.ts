@@ -59,7 +59,7 @@ import type {
 } from './chetene.js';
 import { namerIzbor } from './chetene.js';
 
-export type { Predlozhenie, Razlika } from '../model/predlozhenie.js';
+export type { Predlozhenie } from '../model/predlozhenie.js';
 export { PREDLOZHENIE } from '../model/predlozhenie.js';
 
 export interface Otchet {
