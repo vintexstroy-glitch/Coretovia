@@ -30,6 +30,7 @@ describe('речникът е ЕДИН · и има шест стойности'
   });
 
   it('всеки има ИМЕ · речник без дума е ключ, не такт', () => {
+    expect(TAKTOVE).toHaveLength(6);
     for (const t of TAKTOVE) expect(IMENA_NA_TAKTOVETE[t], t).not.toBe('');
   });
 

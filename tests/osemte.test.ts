@@ -28,6 +28,7 @@ describe('осемте прозореца', () => {
 
   it('ключовете са уникални и на латиница', () => {
     const klyuchove = PROZORTSI.map((p) => p.klyuch);
+    expect(klyuchove).toHaveLength(8);
     expect(new Set(klyuchove).size).toBe(8);
     for (const k of klyuchove) expect(k).toMatch(/^[a-z]+$/);
   });

@@ -36,7 +36,22 @@ function faylove(papka: string, sabrani: string[] = []): string[] {
 const VSICHKI = faylove('.');
 
 describe('поверителността на хранилището', () => {
+  /**
+   * ОБХОДЪТ НАИСТИНА ЛИ Е МИНАЛ · преди да се твърди какво НЕ е намерил.
+   *
+   * Трите проверки долу обхождат `VSICHKI` и мълчат, ако той е празен: тогава
+   * зеленото значи „не съм гледал", а не „чисто е". Списъкът се строи от
+   * ОТНОСИТЕЛЕН път — друга работна директория го изпразва, без нищо да гръмне.
+   * Затова първо се брои, че обходът е видял хранилището (обход Г · 06.09).
+   */
+  it('обходът е видял хранилището · иначе зеленото долу не значи нищо', () => {
+    expect(VSICHKI.length).toBeGreaterThan(100);
+    expect(VSICHKI).toContain('CLAUDE.md');
+    expect(VSICHKI.some((f) => f.endsWith('src/model/osnova.ts'))).toBe(true);
+  });
+
   it('единствените .xlsx са мострите в tests/mostri/', () => {
+    expect(VSICHKI.length).toBeGreaterThan(100);
     const xlsx = VSICHKI.filter((f) => /\.(xlsx|xlsb|xlsm)$/i.test(f));
     for (const f of xlsx) expect(f).toMatch(/^tests\/mostri\/Coretovia-mostra[^/]*\.xlsx$/);
   });

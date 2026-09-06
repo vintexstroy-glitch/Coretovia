@@ -130,6 +130,8 @@ describe('неподвижната точка', () => {
     expect(otchet.predlozheniya).toEqual([]);
     expect(otchet.nahodki).toEqual([]);
     expect(otchet.obobshtenie).toBe('0 предложения · 0 находки · 0 бележки');
+    // сверките се БРОЯТ, преди да се проверяват: празен списък би минал тихо
+    expect(otchet.sverki.length).toBeGreaterThan(0);
     for (const s of otchet.sverki) expect(s.nared, s.kakvo).toBe(true);
     expect(otchet.sluzhebno?.kursor?.seq).toBe(6);
   });
@@ -824,6 +826,7 @@ describe('Управление · задачите през Книгата (ADR-
     const otchet = await sveriListove(iz, listove(iz));
     expect(otchet.predlozheniya).toEqual([]);
     expect(otchet.nahodki).toEqual([]);
+    expect(otchet.sverki.length).toBeGreaterThan(0);
     for (const s of otchet.sverki) expect(s.nared, s.kakvo).toBe(true);
   });
 

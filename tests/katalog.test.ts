@@ -27,6 +27,7 @@ describe('каталогът', () => {
       expect(SABITIYA[t], `няма проверка за „${t}"`).toBeDefined();
       expect(CHETTSI[t], `няма четец за „${t}"`).toBeDefined();
     }
+    expect(KATALOG.length).toBeGreaterThan(20);
     for (const k of KATALOG) for (const t of k.proizvezhda) expect(tipove).toContain(t);
   });
 
