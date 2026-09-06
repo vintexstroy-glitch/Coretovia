@@ -30,7 +30,7 @@ import {
 } from '../../src/porta/vnasyane.js';
 import { dumiZaGreshka } from '../../src/yadro/dumi.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { ekraniraj } from '../reshetka/obshto.js';
+import { h, sloji, type Zapechatan } from '../reshetka/shablon.js';
 import { zakachiZebrata } from '../reshetka/zebra.js';
 import { dumiteHTML } from './profil.js';
 
@@ -105,7 +105,7 @@ function izbraniDumi(pr: Prochit): string {
   return `избрани ${[...pr.otmetnati].filter((i) => !blokirano(pr, i)).length} от ${pr.otchet.predlozheniya.length}`;
 }
 
-function redNaPredlozhenieHTML(pr: Prochit, p: Predlozhenie, i: number): string {
+function redNaPredlozhenieHTML(pr: Prochit, p: Predlozhenie, i: number): Zapechatan {
   const proba = pr.probi[i];
   const sastoyanie = pr.rezultat?.sastoyaniya.get(i);
   const otkazSled = pr.rezultat?.otkaz?.indeks === i ? pr.rezultat.otkaz.zashto.join(' ') : '';
@@ -113,14 +113,14 @@ function redNaPredlozhenieHTML(pr: Prochit, p: Predlozhenie, i: number): string 
   const gotovo = svarsheno(pr, i);
   const portata =
     otkazSled !== ''
-      ? `<span class="greshka-tekst">${ekraniraj(otkazSled)}</span>`
+      ? h`<span class="greshka-tekst">${otkazSled}</span>`
       : proba === undefined
         ? ''
         : !proba.probvano
-          ? `<span class="sivo">зависи от № ${p.zavisiOt.map((z) => z + 1).join(', ')}</span>`
+          ? h`<span class="sivo">зависи от № ${p.zavisiOt.map((z) => z + 1).join(', ')}</span>`
           : proba.otkaz === null
             ? 'минава'
-            : `<span class="greshka-tekst">${ekraniraj(proba.otkaz.join(' '))}</span>`;
+            : h`<span class="greshka-tekst">${proba.otkaz.join(' ')}</span>`;
   const otkazano = proba?.otkaz !== null && proba?.probvano === true;
   const otmetnato = pr.otmetnati.has(i) && !blok && !otkazano;
   const zamlaknala = blok || otkazano || gotovo || priklyuchen(pr) || pr.teche;
@@ -129,19 +129,19 @@ function redNaPredlozhenieHTML(pr: Prochit, p: Predlozhenie, i: number): string 
     : priklyuchen(pr) && !gotovo
       ? DUMI_ZA_PRIKLYUCHEN
       : '';
-  return `<tr class="red${gotovo ? ' svarsheno' : ''}" data-predlozhenie="${i}" data-vid="${p.vid}">
-    <td><input type="checkbox" data-otmetka="${i}" ${otmetnato ? 'checked' : ''} ${zamlaknala ? 'disabled' : ''} title="${ekraniraj(zashto)}"></td>
+  return h`<tr class="red${gotovo ? ' svarsheno' : ''}" data-predlozhenie="${i}" data-vid="${p.vid}">
+    <td><input type="checkbox" data-otmetka="${i}" ${otmetnato ? 'checked' : ''} ${zamlaknala ? 'disabled' : ''} title="${zashto}"></td>
     <td class="nomer">${i + 1}</td>
-    <td translate="no">${ekraniraj(p.list)}</td>
-    <td translate="no">${ekraniraj(p.adres)}</td>
+    <td translate="no">${p.list}</td>
+    <td translate="no">${p.adres}</td>
     <td>${DUMI_NA_VIDA[p.vid]}</td>
-    <td translate="no">${ekraniraj(p.zashto)}</td>
+    <td translate="no">${p.zashto}</td>
     <td data-porta="${i}" translate="no">${portata}</td>
     <td data-sastoyanie="${i}">${sastoyanie === undefined ? '' : DUMI_NA_SASTOYANIETO[sastoyanie]}</td>
   </tr>`;
 }
 
-function otchetHTML(pr: Prochit): string {
+function otchetHTML(pr: Prochit): Zapechatan {
   const { otchet } = pr;
   const greshki = otchet.nahodki.filter((n) => n.stepen === 'greshka').length;
   const sivDumi = pr.teche
@@ -151,67 +151,65 @@ function otchetHTML(pr: Prochit): string {
       : priklyuchen(pr)
         ? DUMI_ZA_PRIKLYUCHEN
         : '';
-  return `
-    <p class="vest" data-otchet-fayl translate="no">${ekraniraj(pr.ime)} · отпечатък ${ekraniraj(pr.otpechatak.slice(0, 16))}…${
+  return h`
+    <p class="vest" data-otchet-fayl translate="no">${pr.ime} · отпечатък ${pr.otpechatak.slice(0, 16)}…${
       otchet.sluzhebno === null
         ? ' · без служебен лист (не е наша Книга)'
-        : ` · изнесена ${ekraniraj(otchet.sluzhebno.iznesenoNa || '—')} · seq ${otchet.sluzhebno.kursor?.seq ?? '—'}`
+        : ` · изнесена ${otchet.sluzhebno.iznesenoNa || '—'} · seq ${otchet.sluzhebno.kursor?.seq ?? '—'}`
     }</p>
-    <p class="vest" data-otchet-vest>${ekraniraj(otchet.obobshtenie)}</p>
+    <p class="vest" data-otchet-vest>${otchet.obobshtenie}</p>
     <details class="sverki">
       <summary data-sverki-obobshtenie>сверки · ${otchet.sverki.filter((s) => s.nared).length} от ${otchet.sverki.length} затварят</summary>
       <table class="tablitsa" data-sverki>
         <thead><tr><th>какво</th><th>вход</th><th>изход</th><th>разлика</th></tr></thead>
-        <tbody>${otchet.sverki
-          .map(
-            (s) =>
-              `<tr class="${s.nared ? '' : 'greshka-red'}"><td translate="no">${ekraniraj(s.kakvo)}</td><td>${s.vhod}</td><td>${s.izhod}</td><td>${s.razlika}</td></tr>`,
-          )
-          .join('')}</tbody>
+        <tbody>${otchet.sverki.map(
+          (s) =>
+            h`<tr class="${s.nared ? '' : 'greshka-red'}"><td translate="no">${s.kakvo}</td><td>${s.vhod}</td><td>${s.izhod}</td><td>${s.razlika}</td></tr>`,
+        )}</tbody>
       </table>
     </details>
     <h3>Находки · ${greshki} грешки · ${otchet.nahodki.length - greshki} бележки</h3>
     ${
       otchet.nahodki.length === 0
-        ? '<p class="vest" data-nahodki-nyama>няма</p>'
-        : `<table class="tablitsa" data-nahodki>
+        ? h`<p class="vest" data-nahodki-nyama>няма</p>`
+        : h`<table class="tablitsa" data-nahodki>
         <thead><tr><th>лист</th><th>адрес</th><th>степен</th><th>какво</th></tr></thead>
-        <tbody>${otchet.nahodki
-          .map(
-            (n) =>
-              `<tr class="${n.stepen === 'greshka' ? 'greshka-red' : ''}" data-nahodka="${ekraniraj(n.adres)}"><td translate="no">${ekraniraj(n.list)}</td><td translate="no">${ekraniraj(n.adres)}</td><td>${n.stepen === 'greshka' ? 'грешка' : 'бележка'}</td><td translate="no">${ekraniraj(n.kakvo)}</td></tr>`,
-          )
-          .join('')}</tbody>
+        <tbody>${otchet.nahodki.map(
+          (n) =>
+            h`<tr class="${n.stepen === 'greshka' ? 'greshka-red' : ''}" data-nahodka="${n.adres}"><td translate="no">${n.list}</td><td translate="no">${n.adres}</td><td>${n.stepen === 'greshka' ? 'грешка' : 'бележка'}</td><td translate="no">${n.kakvo}</td></tr>`,
+        )}</tbody>
       </table>`
     }
     <h3>Предложения · ${otchet.predlozheniya.length}</h3>
     <table class="reshetka" data-predlozheniya>
       <thead><tr><th></th><th>№</th><th>лист</th><th>адрес</th><th>вид</th><th>защо</th><th>Портата</th><th>състояние</th></tr></thead>
-      <tbody class="tablitsa">${otchet.predlozheniya.map((p, i) => redNaPredlozhenieHTML(pr, p, i)).join('')}</tbody>
+      <tbody class="tablitsa">${otchet.predlozheniya.map((p, i) => redNaPredlozhenieHTML(pr, p, i))}</tbody>
     </table>
     <div class="deystviya">
-      <button type="button" data-priemi ${sivDumi === '' ? '' : `disabled title="${ekraniraj(sivDumi)}"`}>Приеми избраните</button>
+      <button type="button" data-priemi ${sivDumi === '' ? '' : h`disabled title="${sivDumi}"`}>Приеми избраните</button>
       <span class="vest" data-izbrani>${izbraniDumi(pr)}</span>
     </div>
-    <p class="vest" data-vnos-vest translate="no">${ekraniraj(pr.vest)}</p>`;
+    <p class="vest" data-vnos-vest translate="no">${pr.vest}</p>`;
 }
 
 export function narisuvayII(k: KonteksNaEkrana): void {
   const o = k.porta.ogledalo();
   const p = PROZORTSI.find((x) => x.klyuch === 'ii')!;
-  const glavi = GLAVI_NA_AGENTITE.map((g) => `<th>${ekraniraj(g)}</th>`).join('');
-  k.tyalo.innerHTML = `
+  const glavi = GLAVI_NA_AGENTITE.map((g) => h`<th>${g}</th>`);
+  sloji(
+    k.tyalo,
+    h`
     ${dumiteHTML(DUMI_OT_KNIGATA.ii)}
     <section class="sektsiya" data-sektsiya="agenti">
-      <h2 class="lenta" translate="no">${ekraniraj(p.lenti[0] ?? '')}</h2>
+      <h2 class="lenta" translate="no">${p.lenti[0] ?? ''}</h2>
       <table class="reshetka agenti" data-agenti="aktivni">
         <thead><tr>${glavi}</tr></thead>
         <tbody class="tablitsa">${AGENTI.map(
           (a) =>
-            `<tr class="red" data-agent="${a.nomer}"><td class="nomer">${a.nomer}</td><td translate="no">${ekraniraj(a.agent)}</td><td translate="no">${ekraniraj(a.dlazhnost)}</td><td translate="no">${ekraniraj(a.zadacha)}</td><td data-status>${ekraniraj(statusNaAgenta(a))}</td><td></td><td></td></tr>`,
-        ).join('')}</tbody>
+            h`<tr class="red" data-agent="${a.nomer}"><td class="nomer">${a.nomer}</td><td translate="no">${a.agent}</td><td translate="no">${a.dlazhnost}</td><td translate="no">${a.zadacha}</td><td data-status>${statusNaAgenta(a)}</td><td></td><td></td></tr>`,
+        )}</tbody>
       </table>
-      <h2 class="lenta" translate="no">${ekraniraj(p.lenti[1] ?? '')}</h2>
+      <h2 class="lenta" translate="no">${p.lenti[1] ?? ''}</h2>
       <table class="reshetka agenti" data-agenti="neaktivni">
         <thead><tr>${glavi}</tr></thead>
         <tbody class="tablitsa"></tbody>
@@ -221,24 +219,23 @@ export function narisuvayII(k: KonteksNaEkrana): void {
       <h2>Прочети Книгата</h2>
       <p>Сверчикът чете една Книга (.xlsx), сравнява я с Огледалото и ПРЕДЛАГА. Нищо не се записва, докато не натиснеш „Приеми избраните" — тогава отметнатите минават през Портата едно по едно и се записва разписка, дори при нула.</p>
       <input type="file" accept=".xlsx" data-kniga-vnos>
-      <div data-otchet>${prochit === null ? '<p class="vest" data-otchet-vest>няма прочетена Книга</p>' : otchetHTML(prochit)}</div>
+      <div data-otchet>${prochit === null ? h`<p class="vest" data-otchet-vest>няма прочетена Книга</p>` : otchetHTML(prochit)}</div>
     </section>
     <section class="sektsiya" data-sektsiya="vnasyaniya">
       <h2>Разписки за внос</h2>
       ${
         o.vnasyaniya.length === 0
-          ? '<p class="vest" data-vnasyaniya-nyama>още няма</p>'
-          : `<table class="tablitsa" data-vnasyaniya>
+          ? h`<p class="vest" data-vnasyaniya-nyama>още няма</p>`
+          : h`<table class="tablitsa" data-vnasyaniya>
           <thead><tr><th>кога</th><th>файл</th><th>изнесена</th><th>предложени</th><th>избрани</th><th>приети</th><th>отказани</th><th>находки</th></tr></thead>
-          <tbody>${o.vnasyaniya
-            .map(
-              (v) =>
-                `<tr data-vnasyane="${ekraniraj(v.otpechatakNaFayla.slice(0, 16))}" translate="no"><td>${ekraniraj(v.vnesenoNa)}</td><td>${ekraniraj(v.otpechatakNaFayla.slice(0, 16))}…</td><td>${ekraniraj(v.iznesenoNa || '—')}</td><td>${v.predlozheni}</td><td>${v.izbrani}</td><td>${v.prieti}</td><td>${v.otkazani}</td><td>${v.nahodki}</td></tr>`,
-            )
-            .join('')}</tbody>
+          <tbody>${o.vnasyaniya.map(
+            (v) =>
+              h`<tr data-vnasyane="${v.otpechatakNaFayla.slice(0, 16)}" translate="no"><td>${v.vnesenoNa}</td><td>${v.otpechatakNaFayla.slice(0, 16)}…</td><td>${v.iznesenoNa || '—'}</td><td>${v.predlozheni}</td><td>${v.izbrani}</td><td>${v.prieti}</td><td>${v.otkazani}</td><td>${v.nahodki}</td></tr>`,
+          )}</tbody>
         </table>`
       }
-    </section>`;
+    </section>`,
+  );
 
   zakachiZebrata(k.tyalo);
 

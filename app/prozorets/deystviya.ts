@@ -14,7 +14,8 @@ import type { DumaOtKnigata } from '../../src/model/dumi-ot-knigata.js';
 import type { Kletka } from '../../src/model/kletka.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
 import { pokazhiMenyu, type Tochka } from '../reshetka/menyu.js';
-import { ekraniraj, svaliFayl } from '../reshetka/obshto.js';
+import { svaliFayl } from '../reshetka/obshto.js';
+import { h, type Zapechatan } from '../reshetka/shablon.js';
 import { otvoriProzorets } from '../reshetka/prozorets.js';
 import { pokazhiGreshka } from '../reshetka/redaktsiya.js';
 import { dumiteHTML } from './profil.js';
@@ -29,13 +30,11 @@ let iznosVest = '';
  * Забраненият бутон СТОИ и казва защо (правило 12 · правило 15: изключено не е
  * липсващо); заглавието е думите на Портата, не наши.
  */
-export function butoniteHTML(butoni: readonly Buton[]): string {
-  return butoni
-    .map(
-      (b) =>
-        `<button type="button" data-buton="${b.klyuch}" ${b.razreshena ? '' : 'disabled'} title="${ekraniraj(b.zashto)}">${ekraniraj(b.ime)}</button>`,
-    )
-    .join('');
+export function butoniteHTML(butoni: readonly Buton[]): Zapechatan {
+  return h`${butoni.map(
+    (b) =>
+      h`<button type="button" data-buton="${b.klyuch}" ${b.razreshena ? '' : 'disabled'} title="${b.zashto}">${b.ime}</button>`,
+  )}`;
 }
 
 /**
@@ -71,8 +70,8 @@ export async function zapishiOtForma(
   }
 }
 
-export function iznosVestHTML(): string {
-  return `<p class="vest" data-iznos-vest>${ekraniraj(iznosVest)}</p>`;
+export function iznosVestHTML(): Zapechatan {
+  return h`<p class="vest" data-iznos-vest>${iznosVest}</p>`;
 }
 
 export async function izpalniOtMenyuto(
@@ -84,7 +83,7 @@ export async function izpalniOtMenyuto(
     const zatvori = otvoriProzorets({
       zaglavie: 'Сторно на последната промяна',
       pod: 'Журналът не се пипа: сторното е ново събитие с причина, а Огледалото се пресгъва.',
-      tyalo: `<form data-storno-forma class="red-poleta"><input class="pole" data-prichina placeholder="причина" required><button type="submit">Сторнирай</button></form><p class="greshka" data-storno-greshka></p>`,
+      tyalo: h`<form data-storno-forma class="red-poleta"><input class="pole" data-prichina placeholder="причина" required><button type="submit">Сторнирай</button></form><p class="greshka" data-storno-greshka></p>`,
     });
     const forma = document.querySelector<HTMLFormElement>('[data-storno-forma]');
     forma?.querySelector<HTMLInputElement>('[data-prichina]')?.focus();
@@ -178,9 +177,9 @@ export function gantIDumiHTML(
   lenta: string,
   dumi: readonly DumaOtKnigata[],
   skrit = false,
-): string {
-  return `<div class="gant-blok" data-blok="gant" ${skrit ? 'hidden' : ''}>
-        <h2 class="lenta" translate="no">${ekraniraj(lenta)}</h2>
+): Zapechatan {
+  return h`<div class="gant-blok" data-blok="gant" ${skrit ? 'hidden' : ''}>
+        <h2 class="lenta" translate="no">${lenta}</h2>
         <div class="gant-skrol" data-gant-skrol></div>
         <p class="pod-tablitsata" data-sverka="gant"></p>
       </div>

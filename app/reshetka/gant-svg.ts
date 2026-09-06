@@ -16,7 +16,7 @@
 import type { Lenta, SborVKolona, Svetofar } from '../../src/smetach/gant.js';
 import type { KolonaNaTakta } from '../../src/smetach/vreme.js';
 import { pishi } from '../../src/yadro/pari.js';
-import { ekraniraj } from './obshto.js';
+import { h, type Zapechatan } from './shablon.js';
 
 export interface RedNaGanta {
   readonly id: string;
@@ -49,57 +49,57 @@ function kratko(st: number): string {
   return String(evro);
 }
 
-export function gantSVG(g: GantZaRisuvane): string {
+export function gantSVG(g: GantZaRisuvane): Zapechatan {
   const w = g.shirinaNaKolonata;
   const shirina = g.koloni.length * w;
   const posledenRed = g.redove.at(-1);
   const dolu = posledenRed === undefined ? g.visinaNaGlavata : posledenRed.y + posledenRed.visina;
   const visina = dolu + VISINA_NA_SBORA;
-  const chasti: string[] = [];
+  const chasti: Zapechatan[] = [];
   // главата · колоните · днес
   for (const [i, k] of g.koloni.entries()) {
     const x = i * w;
     chasti.push(
-      `<rect class="gant-kolona${k.dnes ? ' dnes' : ''}" x="${x}" y="0" width="${w}" height="${visina}"><title>${ekraniraj(k.opis)}</title></rect>`,
-      `<text class="gant-nadpis" x="${x + w / 2}" y="${Math.min(14, g.visinaNaGlavata - 4)}" text-anchor="middle">${ekraniraj(k.nadpis)}</text>`,
+      h`<rect class="gant-kolona${k.dnes ? ' dnes' : ''}" x="${x}" y="0" width="${w}" height="${visina}"><title>${k.opis}</title></rect>`,
+      h`<text class="gant-nadpis" x="${x + w / 2}" y="${Math.min(14, g.visinaNaGlavata - 4)}" text-anchor="middle">${k.nadpis}</text>`,
     );
   }
   // редовете · линия под всеки · лентата на задачата
   for (const r of g.redove) {
     chasti.push(
-      `<line class="gant-red" x1="0" y1="${r.y + r.visina}" x2="${shirina}" y2="${r.y + r.visina}"/>`,
+      h`<line class="gant-red" x1="0" y1="${r.y + r.visina}" x2="${shirina}" y2="${r.y + r.visina}"/>`,
     );
     if (r.lenta === null) continue;
     const x = r.lenta.ot * w;
     const sh = r.lenta.broy * w;
     const y = r.y + 4;
-    const h = Math.max(6, r.visina - 8);
+    const vis = Math.max(6, r.visina - 8);
     const klas = `gant-lenta ${r.svetofar ?? 'normalno'}${r.speshno ? ' speshno' : ''}${r.lenta.izlizaNalyavo ? ' nalyavo' : ''}${r.lenta.izlizaNadyasno ? ' nadyasno' : ''}`;
     chasti.push(
-      `<rect class="${klas}" data-lenta="${ekraniraj(r.id)}" x="${x}" y="${y}" width="${sh}" height="${h}" rx="3"><title>${ekraniraj(r.ime)}</title></rect>`,
+      h`<rect class="${klas}" data-lenta="${r.id}" x="${x}" y="${y}" width="${sh}" height="${vis}" rx="3"><title>${r.ime}</title></rect>`,
     );
   }
   // днешната линия
   const dnes = g.koloni.findIndex((k) => k.dnes);
   if (dnes >= 0)
     chasti.push(
-      `<line class="gant-dnes-liniya" x1="${dnes * w}" y1="0" x2="${dnes * w}" y2="${visina}"/>`,
+      h`<line class="gant-dnes-liniya" x1="${dnes * w}" y1="0" x2="${dnes * w}" y2="${visina}"/>`,
     );
   // СБОР под тактовете · бюджетът по началото · броят покриващи
   chasti.push(
-    `<rect class="gant-sbor-fon" x="0" y="${dolu}" width="${shirina}" height="${VISINA_NA_SBORA}"/>`,
+    h`<rect class="gant-sbor-fon" x="0" y="${dolu}" width="${shirina}" height="${VISINA_NA_SBORA}"/>`,
   );
   for (const [i, s] of g.sborove.entries()) {
     const x = i * w + w / 2;
     if (s.obhvat > 0 && s.sbor !== 0)
       chasti.push(
-        `<text class="gant-sbor" data-sbor-takt="${i}" x="${x}" y="${dolu + 16}" text-anchor="middle">${kratko(s.sbor)}<title>${ekraniraj(pishi(s.sbor))}</title></text>`,
+        h`<text class="gant-sbor" data-sbor-takt="${i}" x="${x}" y="${dolu + 16}" text-anchor="middle">${kratko(s.sbor)}<title>${pishi(s.sbor)}</title></text>`,
       );
     const b = g.pokrivashti[i] ?? 0;
     if (b > 0)
       chasti.push(
-        `<text class="gant-broy" data-broy-takt="${i}" x="${x}" y="${dolu + 34}" text-anchor="middle">${b}</text>`,
+        h`<text class="gant-broy" data-broy-takt="${i}" x="${x}" y="${dolu + 34}" text-anchor="middle">${b}</text>`,
       );
   }
-  return `<svg class="gant" data-gant width="${shirina}" height="${visina}" viewBox="0 0 ${shirina} ${visina}" role="img" aria-label="Диаграма Гант">${chasti.join('')}</svg>`;
+  return h`<svg class="gant" data-gant width="${shirina}" height="${visina}" viewBox="0 0 ${shirina} ${visina}" role="img" aria-label="Диаграма Гант">${chasti}</svg>`;
 }

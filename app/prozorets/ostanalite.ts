@@ -8,7 +8,7 @@ import { DUMI_OT_KNIGATA } from '../../src/model/dumi-ot-knigata.js';
 import type { KlyuchNaProzorets } from '../../src/model/klyuchove.js';
 import { PROZORTSI } from '../../src/model/osnova.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { ekraniraj } from '../reshetka/obshto.js';
+import { h, sloji } from '../reshetka/shablon.js';
 import { dumiteHTML } from './profil.js';
 
 /** С кой резен идва прозорецът · по `docs/03-plan.md`. */
@@ -19,11 +19,14 @@ export function narisuvayOstanalite(k: KonteksNaEkrana, klyuch: KlyuchNaProzoret
   const p = PROZORTSI.find((x) => x.klyuch === klyuch);
   if (!p) return;
   const rezen = REZEN_NA_PROZORETSA[klyuch];
-  k.tyalo.innerHTML = `
+  sloji(
+    k.tyalo,
+    h`
     <section class="sektsiya" data-sektsiya="${klyuch}">
-      <h2 translate="no">${ekraniraj(p.list)}</h2>
+      <h2 translate="no">${p.list}</h2>
       <p class="vest" data-idva>${rezen === undefined ? 'още не е построен' : `идва с резен ${rezen}`}</p>
-      ${p.lenti.length > 0 ? `<p class="vest">ленти: ${p.lenti.map(ekraniraj).join(' · ')}</p>` : ''}
+      ${p.lenti.length > 0 ? h`<p class="vest">ленти: ${p.lenti.join(' · ')}</p>` : ''}
       ${dumiteHTML(DUMI_OT_KNIGATA[klyuch])}
-    </section>`;
+    </section>`,
+  );
 }

@@ -104,7 +104,7 @@ describe('чистотата на кода', () => {
     expect(IZVOR).toContain('function izravni(pat)');
   });
 
-  it('ДЕСЕТТЕ обхода ОБЯВЯВАТ обхвата си · и нито един не е нула', () => {
+  it('ЕДИНАЙСЕТТЕ обхода ОБЯВЯВАТ обхвата си · и нито един не е нула', () => {
     const { kod, izhod } = pusni();
     expect(kod).toBe(0);
     const po = obhvatite(izhod);
@@ -121,6 +121,7 @@ describe('чистотата на кода', () => {
       '7 · без тест',
       '8 · дублирано',
       '8б · дублирано по структура',
+      '9 · път до HTML извън вратата',
     ]);
     for (const [ime, broy] of po) expect(broy, `обхватът на „${ime}"`).toBeGreaterThan(0);
   }, 60_000);
@@ -134,14 +135,14 @@ describe('чистотата на кода', () => {
     expect(obhvatite(izhod).get('7 · без тест')).toBe(kod.length - vhodni);
   }, 60_000);
 
-  it('и ВСИЧКИТЕ ДЕСЕТ ловят · доказано с нарочно счупено ДЪРВО', () => {
+  it('и ВСИЧКИТЕ ЕДИНАЙСЕТ ловят · доказано с нарочно счупено ДЪРВО', () => {
     /**
      * ДЪРВОТО ЖИВЕЕ ВЪВ ВРЕМЕННАТА ПАПКА. Тест, който пише в хранилището, се
      * състезава с всеки друг, който обхожда същата папка — точно дефектът, който
      * обход И лови, и той веднъж влезе през вратата на собственото си
      * доказателство (ADR-015 §6).
      *
-     * И ДЕСЕТТЕ, не някои: обход, който още не е ловил нищо, е надпис — не се
+     * И ЕДИНАЙСЕТТЕ, не някои: обход, който още не е ловил нищо, е надпис — не се
      * знае дали мълчи, защото е чисто, или защото не работи (ADR-015 §7). Дотук
      * `chistota` нямаше НИТО ЕДНО доказателство; едно от деветте му мълчания се
      * оказа счупен обход, който рапортуваше нула, без да е погледнал.
@@ -154,6 +155,14 @@ describe('чистотата на кода', () => {
 
       // 1 · мъртво · 6 · несвързан · 7 · без тест — три обхода върху един файл
       pishi('src', 'samotno.ts', ['export const nikoyNeGoVika = 1;']);
+
+      // 9 · път до HTML ИЗВЪН вратата · вратата живее само в истинското дърво,
+      // тъй че тук всяко присвояване на `innerHTML` е извън нея
+      pishi('app', 'vrata-zaobikolena.ts', [
+        'export function zle(el, chuzhdo) {',
+        '  el.innerHTML = chuzhdo;',
+        '}',
+      ]);
 
       // 2 · излишен export (вика се само вътре) · 3 · само тест · 3б · изнесено
       // за теста (вика се вътре И в теста) · 4 · празно поле
@@ -214,11 +223,12 @@ describe('чистотата на кода', () => {
 
       pishi('app', 'main.ts', [
         "import { tri } from '../src/dubel-v.js';",
+        "import { zle } from './vrata-zaobikolena.js';",
         "import { chetiri, prazno } from '../src/zhivo.js';",
         "import { izlishno } from '../src/izlishno.js';",
         "import { edno } from '../src/dubel-a.js';",
         "import { dve } from '../src/dubel-b.js';",
-        'console.log(chetiri, prazno(1), izlishno(), edno(1, 2, 3), dve(1, 2, 3));',
+        'console.log(chetiri, prazno(1), izlishno(), edno(1, 2, 3), dve(1, 2, 3), zle);',
       ]);
       pishi('tests', 'zhivo.test.ts', [
         "import { samoZaTesta, yadroto } from '../src/zhivo.js';",
@@ -245,6 +255,7 @@ describe('чистотата на кода', () => {
         '7 · без тест',
         '8 · дублирано',
         '8б · дублирано по структура',
+        '9 · път до HTML извън вратата',
       ]);
       for (const [ime, broy] of po) expect(broy, `обход „${ime}" не лови`).toBeGreaterThan(0);
 

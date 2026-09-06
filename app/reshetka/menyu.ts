@@ -8,7 +8,7 @@
  * на първия произволен клавиш.
  */
 
-import { ekraniraj } from './obshto.js';
+import { h, sloji } from './shablon.js';
 
 export interface Tochka {
   readonly klyuch: string;
@@ -36,14 +36,15 @@ export function pokazhiMenyu(x: number, y: number, tochki: readonly Tochka[]): v
   ul.dataset['menyu'] = '';
   ul.style.left = `${x}px`;
   ul.style.top = `${y}px`;
-  ul.innerHTML = tochki
-    .map(
+  sloji(
+    ul,
+    h`${tochki.map(
       (t) =>
-        `<li><button type="button" data-tochka="${t.klyuch}" ${t.razreshena ? '' : 'disabled'} title="${ekraniraj(t.zashto)}">${ekraniraj(t.ime)}${
-          t.razreshena ? '' : ` <span class="zashto">${ekraniraj(t.zashto)}</span>`
+        h`<li><button type="button" data-tochka="${t.klyuch}" ${t.razreshena ? '' : 'disabled'} title="${t.zashto}">${t.ime}${
+          t.razreshena ? '' : h` <span class="zashto">${t.zashto}</span>`
         }</button></li>`,
-    )
-    .join('');
+    )}`,
+  );
   for (const t of tochki) {
     ul.querySelector<HTMLButtonElement>(`[data-tochka="${t.klyuch}"]`)?.addEventListener(
       'click',

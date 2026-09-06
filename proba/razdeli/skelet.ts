@@ -5,6 +5,8 @@ import { otvori, tekstNa, tekstoveNa } from '../yadro/pomoshtni.ts';
 const MOSTRA = fileURLToPath(new URL('../../tests/mostri/Coretovia-mostra.xlsx', import.meta.url));
 
 /** 0 · скелетът · страницата · хранилището · осемте прозореца · Книгата се чете в браузъра */
+import { tishina } from '../yadro/tishina.ts';
+
 export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   const { stranitsa: p, broyach } = ctx;
   let razdel = '—';
@@ -47,6 +49,35 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     'в реда на Книгата',
     prozortsi.join(' · '),
     'Профил · ИмотиОбектиБизнеси · УправлениеДелаПреписки · Сметки · Служители · Продажби · ИИ · Настройки(Стопанин)',
+  );
+
+  // ══ 0д · ВРАТАТА · Trusted Types действа ли НАИСТИНА ═════════════════
+  //
+  // Директивата стои в `<meta>`, а спецификацията пренебрегва там само
+  // `frame-ancestors`, `report-uri` и `sandbox`. „Би трябвало да работи" не е
+  // проверка (ADR-056): тук се ОПИТВА гол `innerHTML` в живата страница и се
+  // иска ОТКАЗ. Мине ли, вратата е надпис и това пада ТУК, не при нападение.
+  razdel = '0д · вратата';
+  // НАРОЧНИЯТ шум се обявява · браузърът пише за всеки блокиран опит, а тук
+  // блокирането Е очакваният резултат (същият флаг, който §16 ползва за мрежата)
+  tishina.ochakvana = true;
+  proveri(
+    'гол innerHTML е ОТКАЗАН от браузъра · политиката е в сила',
+    await p.evaluate(() => {
+      try {
+        document.createElement('div').innerHTML = '<b>проба</b>';
+        return 'мина';
+      } catch {
+        return 'отказано';
+      }
+    }),
+    'отказано',
+  );
+  tishina.ochakvana = false;
+  proveri(
+    'и през запечатаната врата МИНАВА · инак екранът щеше да е празен',
+    await p.$$eval('[data-prozortsi] a', (es) => es.length),
+    8,
   );
 
   // ══ 0г · Книгата се чете в браузъра ══════════════════════════════════

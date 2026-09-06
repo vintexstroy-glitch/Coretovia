@@ -25,7 +25,7 @@ import {
 } from '../../src/model/nomenklatura.js';
 import type { Ogledalo } from '../../src/ogledalo/ogledalo.js';
 import type { KonteksNaEkrana } from '../kontekst.js';
-import { ekraniraj } from '../reshetka/obshto.js';
+import { h, sloji, type Zapechatan } from '../reshetka/shablon.js';
 import { naEnterIEscape, pokazhiGreshka } from '../reshetka/redaktsiya.js';
 import { zakachiZebrata } from '../reshetka/zebra.js';
 import { dumiteHTML } from './profil.js';
@@ -54,20 +54,20 @@ function belegSDumi(o: Ogledalo, n: ZhivaNomenklatura, beleg: string): string {
 
 export function narisuvayNastroyki(k: KonteksNaEkrana): void {
   const o = k.porta.ogledalo();
-  const redove: string[] = [];
+  const redove: Zapechatan[] = [];
   for (const n of o.nomenklaturi.values()) {
     redove.push(
-      `<tr class="grupata" data-nomenklatura="${n.klyuch}"><td colspan="${GLAVI.length}" translate="no">${ekraniraj(n.ime)}</td></tr>`,
+      h`<tr class="grupata" data-nomenklatura="${n.klyuch}"><td colspan="${GLAVI.length}" translate="no">${n.ime}</td></tr>`,
     );
     const spreni = n.stoynosti.filter((s) => s.spryana);
     for (const s of [...zhivite(n), ...spreni]) {
       const beleg = belegNa(n, s.belezi);
       redove.push(
-        `<tr class="red${s.spryana ? ' spryana' : ''}" data-nomenklatura="${n.klyuch}" data-nomer="${s.nomer}" data-beleg="${ekraniraj(beleg)}">
+        h`<tr class="red${s.spryana ? ' spryana' : ''}" data-nomenklatura="${n.klyuch}" data-nomer="${s.nomer}" data-beleg="${beleg}">
           <td></td>
           <td class="nomer">${s.nomer}</td>
-          <td class="kletka" data-stoynost tabindex="0" translate="no">${ekraniraj(s.tekst)}</td>
-          <td translate="no">${ekraniraj(belegSDumi(o, n, beleg))}</td>
+          <td class="kletka" data-stoynost tabindex="0" translate="no">${s.tekst}</td>
+          <td translate="no">${belegSDumi(o, n, beleg)}</td>
           <td>${s.spryana ? 'спряна' : ''}</td>
         </tr>`,
       );
@@ -76,16 +76,15 @@ export function narisuvayNastroyki(k: KonteksNaEkrana): void {
     const izborNaBeleg =
       kategorii === undefined
         ? ''
-        : `<select class="pole" data-nov-beleg>${zhivite(kategorii)
+        : h`<select class="pole" data-nov-beleg>${zhivite(kategorii)
             .filter((s) => s.belezi['bezVid'] !== true)
-            .map((s) => `<option value="${s.nomer}">${ekraniraj(s.tekst)}</option>`)
-            .join('')}</select>`;
+            .map((s) => h`<option value="${s.nomer}">${s.tekst}</option>`)}</select>`;
     const sledvasht =
       kategorii === undefined
         ? sledvashtNomer(n)
         : sledvashtNomer(n, beleziOt(n, String(zhivite(kategorii)[0]?.nomer ?? '')));
     redove.push(
-      `<tr class="nov" data-nov="${n.klyuch}">
+      h`<tr class="nov" data-nov="${n.klyuch}">
         <td></td>
         <td class="nomer" data-sledvasht>${sledvasht}</td>
         <td><input class="pole" data-nova-stoynost placeholder="нова стойност · Enter"></td>
@@ -95,19 +94,22 @@ export function narisuvayNastroyki(k: KonteksNaEkrana): void {
     );
     const b = broyachNaNomenklaturata(n);
     redove.push(
-      `<tr class="sverka"><td colspan="${GLAVI.length}" data-sverka="${n.klyuch}">живи ${b.zhivi} · спрени ${b.spreni} · всички ${b.vsichki}</td></tr>`,
+      h`<tr class="sverka"><td colspan="${GLAVI.length}" data-sverka="${n.klyuch}">живи ${b.zhivi} · спрени ${b.spreni} · всички ${b.vsichki}</td></tr>`,
     );
   }
 
-  k.tyalo.innerHTML = `
+  sloji(
+    k.tyalo,
+    h`
     ${dumiteHTML(DUMI_OT_KNIGATA.nastroyki)}
     <h2 class="lenta">Номенклатури</h2>
     <p class="vest">Пиши в празния ред и натисни Enter. Поправи текста — номерът остава. Изтрий текста — стойността спира, старите редове я пазят. Пиши в спрян ред — връща се.</p>
     <p class="greshka" data-greshka></p>
     <table class="reshetka nomenklaturi" data-reshetka="nomenklaturi">
-      <thead><tr>${GLAVI.map((g) => `<th>${g}</th>`).join('')}</tr></thead>
-      <tbody class="tablitsa">${redove.join('')}</tbody>
-    </table>`;
+      <thead><tr>${GLAVI.map((g) => h`<th>${g}</th>`)}</tr></thead>
+      <tbody class="tablitsa">${redove}</tbody>
+    </table>`,
+  );
 
   zakachiZebrata(k.tyalo);
 

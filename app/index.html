@@ -13,7 +13,20 @@
 
     `ws://localhost` е само за `npm run dev`.
   -->
+  <!--
+    И ВТОРАТА КЛЮЧАЛКА · Trusted Types (резен 6м · ADR-019).
+
+    `require-trusted-types-for 'script'` кара браузъра да ОТКАЖЕ `innerHTML` с
+    обикновен низ. Оттук нататък забравеното екраниране не е дупка, която някой
+    трябва да забележи — то е грешка, която пада на място.
+
+    Политиката е ЕДНА и се казва `coretovia` (`app/reshetka/shablon.ts`); втора
+    браузърът не пуска. Проходът ДОКАЗВА, че директивата действа: §0д опитва
+    гол `innerHTML` в живата страница и иска отказ (ADR-056: обявеното се пуска).
+  -->
   <meta http-equiv="Content-Security-Policy" content="
+    require-trusted-types-for 'script';
+    trusted-types coretovia;
     default-src 'self';
     img-src 'self' data:;
     script-src 'self';

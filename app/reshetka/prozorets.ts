@@ -6,15 +6,15 @@
  * началото на документа, кара човека с клавиатура да извърви целия екран наново.
  */
 
-import { ekraniraj } from './obshto.js';
+import { h, sloji, type Zapechatan } from './shablon.js';
 
 interface Prozorets {
   /** заглавието вътре · и достъпното име на прозореца */
   readonly zaglavie: string;
   /** ред под заглавието · празен, ако няма какво да се каже */
   readonly pod?: string;
-  /** ГОТОВА разметка · викащият я е екранирал сам, тя е негова */
-  readonly tyalo: string;
+  /** ЗАПЕЧАТАНА разметка · строи се с `h`, тъй че екранирането не се забравя */
+  readonly tyalo: Zapechatan;
 }
 
 /**
@@ -30,13 +30,16 @@ export function otvoriProzorets(p: Prozorets): () => void {
 
   const fon = document.createElement('div');
   fon.className = 'istoriya-fon';
-  fon.innerHTML = `
-    <div class="istoriya-karta" role="dialog" aria-modal="true" aria-label="${ekraniraj(p.zaglavie)}">
-      <h3>${ekraniraj(p.zaglavie)}</h3>
-      ${p.pod ? `<p class="pod">${ekraniraj(p.pod)}</p>` : ''}
+  sloji(
+    fon,
+    h`
+    <div class="istoriya-karta" role="dialog" aria-modal="true" aria-label="${p.zaglavie}">
+      <h3>${p.zaglavie}</h3>
+      ${p.pod ? h`<p class="pod">${p.pod}</p>` : ''}
       ${p.tyalo}
       <button type="button" class="vtorichen istoriya-zatvori">Затвори</button>
-    </div>`;
+    </div>`,
+  );
 
   const zatvori = (): void => {
     fon.remove();

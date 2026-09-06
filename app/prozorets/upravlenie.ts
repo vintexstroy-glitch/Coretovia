@@ -67,7 +67,7 @@ import { otvoriChernova } from '../reshetka/chernova.js';
 import { gantSVG, type RedNaGanta } from '../reshetka/gant-svg.js';
 import { pokazhiMenyu } from '../reshetka/menyu.js';
 import { otvoriModel, zapaziModela } from '../reshetka/modeli.js';
-import { ekraniraj } from '../reshetka/obshto.js';
+import { h, sloji, type Zapechatan } from '../reshetka/shablon.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
 import { pokazhiGreshka } from '../reshetka/redaktsiya.js';
 import { kletkaHTML, zakachiReshetkata } from '../reshetka/reshetka.js';
@@ -130,7 +130,7 @@ interface RedNaEkrana {
   readonly dumi: readonly string[];
   /** клетката под всяка негова глава · за сбора */
   readonly kletki: readonly (Kletka | null)[];
-  readonly html: string;
+  readonly html: Zapechatan;
   readonly ime: string;
   readonly ot: string;
   readonly do: string;
@@ -147,20 +147,20 @@ function redNaRoditel(
   const t = tablitsata(o.model, r.tablitsa);
   const dumi: string[] = [];
   const kletki: (Kletka | null)[] = [];
-  const tds: string[] = [];
+  const tds: Zapechatan[] = [];
   const nomer = tekstNaNomera(r.nomer);
   for (const g of oblik) {
     const broy = Math.max(1, koloniPodGlavata(g).length);
     if (g.ot === 'nomeratsiya') {
       dumi.push(nomer);
       kletki.push(null);
-      tds.push(`<td class="kletka nomer" data-kolona="nomeratsiya" translate="no">${nomer}</td>`);
+      tds.push(h`<td class="kletka nomer" data-kolona="nomeratsiya" translate="no">${nomer}</td>`);
       continue;
     }
     if (g.ot === 'zadacha') {
       dumi.push('');
       kletki.push(null);
-      tds.push(`<td class="kletka prazna" colspan="${broy}"></td>`);
+      tds.push(h`<td class="kletka prazna" colspan="${broy}"></td>`);
       continue;
     }
     // колоната на родителя · Състоянието на Обекта е Видът му · името на Обект/Бизнес е Имотът му
@@ -171,13 +171,13 @@ function redNaRoditel(
       const ime = imot !== undefined && 'tekst' in imot ? imeNaReda(o, 'imoti', imot.tekst) : '';
       dumi.push(ime);
       kletki.push(ime === '' ? null : { tekst: ime });
-      tds.push(`<td class="kletka tekst" data-kolona="ime" translate="no">${ekraniraj(ime)}</td>`);
+      tds.push(h`<td class="kletka tekst" data-kolona="ime" translate="no">${ime}</td>`);
       continue;
     }
     if (kol === undefined) {
       dumi.push('');
       kletki.push(null);
-      tds.push(`<td class="kletka prazna"></td>`);
+      tds.push(h`<td class="kletka prazna"></td>`);
       continue;
     }
     const k = red.kletki[kol.klyuch] ?? null;
@@ -202,7 +202,7 @@ function redNaRoditel(
     ot: '',
     do: '',
     speshno: false,
-    html: `<tr class="${klas}" data-id="${ekraniraj(r.id)}" data-tablitsa="${r.tablitsa}" data-nivo="${r.nivo}" data-seq="${red.seq}">${tds.join('')}</tr>`,
+    html: h`<tr class="${klas}" data-id="${r.id}" data-tablitsa="${r.tablitsa}" data-nivo="${r.nivo}" data-seq="${red.seq}">${tds}</tr>`,
   };
 }
 
@@ -216,13 +216,13 @@ function redNaZadacha(
   const t = tablitsata(o.model, TABLITSA);
   const dumi: string[] = [];
   const kletki: (Kletka | null)[] = [];
-  const tds: string[] = [];
+  const tds: Zapechatan[] = [];
   for (const g of oblik) {
     const koloni = koloniPodGlavata(g);
     if (g.ot !== 'zadacha' || koloni.length === 0) {
       dumi.push('');
       kletki.push(null);
-      tds.push(`<td class="kletka prazna" colspan="${Math.max(1, koloni.length)}"></td>`);
+      tds.push(h`<td class="kletka prazna" colspan="${Math.max(1, koloni.length)}"></td>`);
       continue;
     }
     const chasti: string[] = [];
@@ -255,7 +255,7 @@ function redNaZadacha(
     do: tekst('do'),
     speshno:
       speshnoNomer !== null && ots !== undefined && 'nomer' in ots && ots.nomer === speshnoNomer,
-    html: `<tr class="red zadacha nivo-2" data-id="${ekraniraj(red.id)}" data-tablitsa="${TABLITSA}" data-roditel="${ekraniraj(roditelId)}" data-nivo="2" data-seq="${red.seq}">${tds.join('')}</tr>`,
+    html: h`<tr class="red zadacha nivo-2" data-id="${red.id}" data-tablitsa="${TABLITSA}" data-roditel="${roditelId}" data-nivo="2" data-seq="${red.seq}">${tds}</tr>`,
   };
 }
 
@@ -309,16 +309,16 @@ export function narisuvayUpravlenie(k: KonteksNaEkrana): void {
   const vidimi = f.vidimi.map((i) => redove[i]!);
 
   // ═══ сборът под всяка глава · върху видимите ═══
-  const sborKletki: string[] = [];
+  const sborKletki: Zapechatan[] = [];
   for (const [j, g] of oblik.entries()) {
     const broy = Math.max(1, koloniPodGlavata(g).length);
     if (j === 0) {
-      sborKletki.push(`<td class="sbor-duma" translate="no">сбор</td>`);
+      sborKletki.push(h`<td class="sbor-duma" translate="no">сбор</td>`);
       continue;
     }
     const zs = kolonaZaSbora(g);
     if (zs === null) {
-      sborKletki.push(`<td colspan="${broy}"></td>`);
+      sborKletki.push(h`<td colspan="${broy}"></td>`);
       continue;
     }
     const smetka = smetki[String(j)] ?? smetkataPoPodrazbirane(zs.kol);
@@ -333,91 +333,82 @@ export function narisuvayUpravlenie(k: KonteksNaEkrana): void {
         : rez.smetka === 'broy' || rez.smetka === 'razlichni'
           ? String('chislo' in rez.kletka ? rez.kletka.chislo : '')
           : dumiNaKletka(o, zs.tablitsa, zs.kol.klyuch, rez.kletka);
-    const izbor = smetkiteNaKolonata(zs.kol)
-      .map(
-        (s) =>
-          `<option value="${s}" ${s === smetka ? 'selected' : ''}>${IMENA_NA_SMETKITE[s]}</option>`,
-      )
-      .join('');
+    const izbor = smetkiteNaKolonata(zs.kol).map(
+      (s) =>
+        h`<option value="${s}" ${s === smetka ? 'selected' : ''}>${IMENA_NA_SMETKITE[s]}</option>`,
+    );
     sborKletki.push(
-      `<td class="sbor-kletka ${zs.kol.vid}" colspan="${broy}" data-sbor="${j}"><select class="pole malak" data-smetka="${j}" title="${ekraniraj(`сметката под „${g.glava}"`)}">${izbor}</select><span class="sbor-stoynost" data-sbor-stoynost="${j}" title="${rez.vlizaVSbor ? 'влиза в сбор' : 'не влиза в сбор (правило 3)'}" translate="no">${ekraniraj(dumi)}</span></td>`,
+      h`<td class="sbor-kletka ${zs.kol.vid}" colspan="${broy}" data-sbor="${j}"><select class="pole malak" data-smetka="${j}" title="${`сметката под „${g.glava}"`}">${izbor}</select><span class="sbor-stoynost" data-sbor-stoynost="${j}" title="${rez.vlizaVSbor ? 'влиза в сбор' : 'не влиза в сбор (правило 3)'}" translate="no">${dumi}</span></td>`,
     );
   }
 
   // ═══ главите · подглавите · редът „филтър" ═══
-  const glavi = oblik
-    .map(
-      (g) =>
-        `<th colspan="${Math.max(1, koloniPodGlavata(g).length)}" data-glava="${ekraniraj(g.kolona ?? 'nomeratsiya')}">${ekraniraj(g.glava)}</th>`,
-    )
-    .join('');
-  const podglavi = oblik
-    .map(
-      (g) =>
-        `<th class="podglava" colspan="${Math.max(1, koloniPodGlavata(g).length)}">${ekraniraj(g.podglava ?? '')}</th>`,
-    )
-    .join('');
-  const redFiltar = oblik
-    .map((g, j) =>
-      j === 0
-        ? `<td class="filtar-duma" translate="no">филтър</td>`
-        : `<td colspan="${Math.max(1, koloniPodGlavata(g).length)}"><input class="pole malak filtar" data-filtar="${j}" value="${ekraniraj(filtar[j] ?? '')}" placeholder="филтър" aria-label="${ekraniraj(`филтър под „${g.glava}"`)}"></td>`,
-    )
-    .join('');
+  const glavi = oblik.map(
+    (g) =>
+      h`<th colspan="${Math.max(1, koloniPodGlavata(g).length)}" data-glava="${g.kolona ?? 'nomeratsiya'}">${g.glava}</th>`,
+  );
+  const podglavi = oblik.map(
+    (g) =>
+      h`<th class="podglava" colspan="${Math.max(1, koloniPodGlavata(g).length)}">${g.podglava ?? ''}</th>`,
+  );
+  const redFiltar = oblik.map((g, j) =>
+    j === 0
+      ? h`<td class="filtar-duma" translate="no">филтър</td>`
+      : h`<td colspan="${Math.max(1, koloniPodGlavata(g).length)}"><input class="pole malak filtar" data-filtar="${j}" value="${filtar[j] ?? ''}" placeholder="филтър" aria-label="${`филтър под „${g.glava}"`}"></td>`,
+  );
 
   // ═══ полетата с цифри · бутоните ═══
   const poleta = poletataNaUpravlenie(o, dnes, kogato);
-  const poletaHTML = poleta.poleta
-    .map(
-      (pl) =>
-        `<div class="pole-s-tsifra" data-pole="${pl.klyuch}"><span class="tsifra" data-tsifra="${pl.klyuch}" translate="no">${pl.vid === 'evro' ? ekraniraj(pishi(pl.stoynost)) : pl.stoynost}</span><span class="ime">${ekraniraj(pl.ime)}</span></div>`,
-    )
-    .join('');
-  const butonHTML = (b: ButonNaProzoretsa): string => {
+  const poletaHTML = poleta.poleta.map(
+    (pl) =>
+      h`<div class="pole-s-tsifra" data-pole="${pl.klyuch}"><span class="tsifra" data-tsifra="${pl.klyuch}" translate="no">${pl.vid === 'evro' ? pishi(pl.stoynost) : pl.stoynost}</span><span class="ime">${pl.ime}</span></div>`,
+  );
+  const butonHTML = (b: ButonNaProzoretsa): Zapechatan => {
     const d = b.deystvie;
     if (d.vid === 'idva')
-      return `<button type="button" class="malak" data-buton-ekran="${b.klyuch}" disabled title="${ekraniraj(d.dumi ?? `идва с резен ${d.rezen}`)}">${ekraniraj(litse(b))}</button>`;
+      return h`<button type="button" class="malak" data-buton-ekran="${b.klyuch}" disabled title="${d.dumi ?? `идва с резен ${d.rezen}`}">${litse(b)}</button>`;
     if (b.klyuch === 'takt') {
-      const izbor = (b.izbor ?? [])
-        .map((duma) => {
-          const t = TAKTOVE.find((x) => IMENA_NA_TAKTOVETE[x].toLowerCase() === duma.toLowerCase());
-          return t === undefined
-            ? ''
-            : `<option value="${t}" ${t === takt ? 'selected' : ''}>${ekraniraj(duma)}</option>`;
-        })
-        .join('');
-      return `<label class="malak buton-grupa" data-buton-ekran="${b.klyuch}">${ekraniraj(litse(b))} <select class="pole malak" data-takt>${takt === 'svoy' ? '<option value="svoy" selected>свой</option>' : ''}${izbor}</select></label>`;
+      const izbor = (b.izbor ?? []).map((duma) => {
+        const t = TAKTOVE.find((x) => IMENA_NA_TAKTOVETE[x].toLowerCase() === duma.toLowerCase());
+        return t === undefined
+          ? ''
+          : h`<option value="${t}" ${t === takt ? 'selected' : ''}>${duma}</option>`;
+      });
+      return h`<label class="malak buton-grupa" data-buton-ekran="${b.klyuch}">${litse(b)} <select class="pole malak" data-takt>${takt === 'svoy' ? '<option value="svoy" selected>свой</option>' : ''}${izbor}</select></label>`;
     }
     if (b.klyuch === 'period')
-      return `<label class="malak buton-grupa" data-buton-ekran="${b.klyuch}">${ekraniraj(litse(b))} <input type="date" class="pole malak" data-period-ot value="${period?.ot ?? ''}" title="${ekraniraj(b.izbor?.[0] ?? '')}"><input type="date" class="pole malak" data-period-do value="${period?.do ?? ''}" title="${ekraniraj(b.izbor?.[1] ?? '')}"></label>`;
+      return h`<label class="malak buton-grupa" data-buton-ekran="${b.klyuch}">${litse(b)} <input type="date" class="pole malak" data-period-ot value="${period?.ot ?? ''}" title="${b.izbor?.[0] ?? ''}"><input type="date" class="pole malak" data-period-do value="${period?.do ?? ''}" title="${b.izbor?.[1] ?? ''}"></label>`;
     let duma = litse(b);
     if (b.klyuch === 'skriy-tablitsa') duma = dumataNaButona(vizhda, 'tablitsa');
     if (b.klyuch === 'skriy-diagrama') duma = dumataNaButona(vizhda, 'diagrama');
     if (b.klyuch === 'skriy-dela') duma = skriyDela ? 'Покажи Дела' : 'Скрий Дела';
-    return `<button type="button" class="malak" data-buton-ekran="${b.klyuch}" title="${ekraniraj(b.ime)}">${ekraniraj(duma)}</button>`;
+    return h`<button type="button" class="malak" data-buton-ekran="${b.klyuch}" title="${b.ime}">${duma}</button>`;
   };
 
-  k.tyalo.innerHTML = `
+  sloji(
+    k.tyalo,
+    h`
     <div class="zalepeno" data-zalepeno="upravlenie">
       <div class="poleta-s-tsifri" data-poleta>${poletaHTML}</div>
-      <div class="deystviya butoni-malki" data-butoni>${BUTONI_NA_UPRAVLENIE.map(butonHTML).join('')}</div>
+      <div class="deystviya butoni-malki" data-butoni>${BUTONI_NA_UPRAVLENIE.map(butonHTML)}</div>
     </div>
     <p class="greshka" data-greshka></p>
     <section class="upravlenie-tyalo" data-upravlenie>
       <div class="tablitsa-blok darvo-blok" data-blok="darvo" ${vizhda.tablitsa ? '' : 'hidden'}>
-        <h2 class="lenta" translate="no">${ekraniraj(p.lenti[1] ?? 'ОБЕКТИ')}</h2>
+        <h2 class="lenta" translate="no">${p.lenti[1] ?? 'ОБЕКТИ'}</h2>
         <table class="reshetka darvo" data-reshetka="${TABLITSA}">
           <thead>
             <tr class="glavi">${glavi}</tr>
             <tr class="podglavi">${podglavi}</tr>
             <tr class="filtar" data-filtar-red>${redFiltar}</tr>
           </thead>
-          <tbody class="tablitsa">${vidimi.map((r) => r.html).join('')}</tbody>
-          <tfoot><tr class="sbor" data-sbor-red>${sborKletki.join('')}</tr></tfoot>
+          <tbody class="tablitsa">${vidimi.map((r) => r.html)}</tbody>
+          <tfoot><tr class="sbor" data-sbor-red>${sborKletki}</tr></tfoot>
         </table>
         <p class="pod-tablitsata" data-sverka="darvo">видими ${f.broyVidimi} от ${redove.length} · родители ${darvo.broyRoditeli} · задачи ${darvo.broyZadachi} · сираци ${darvo.siratsi.length}${eFiltarPrazen(filtar) ? '' : ' · филтърът е включен'}</p>
       </div>
-      ${gantIDumiHTML(p.lenti[2] ?? 'Диаграма Гант', DUMI_OT_KNIGATA.upravlenie, !vizhda.diagrama)}`;
+      ${gantIDumiHTML(p.lenti[2] ?? 'Диаграма Гант', DUMI_OT_KNIGATA.upravlenie, !vizhda.diagrama)}`,
+  );
 
   zakachiReshetkata(k);
   narisuvayGanta(k, vidimi, takt, period, dnes);
@@ -555,14 +546,17 @@ function narisuvayGanta(
     });
   const sborove = sboroveVKolonite(koloni, chislaPoData);
   const pokrivashti = broyPokrivashti(koloni, lenti);
-  skrol.innerHTML = gantSVG({
-    koloni,
-    redove,
-    visinaNaGlavata,
-    sborove,
-    pokrivashti,
-    shirinaNaKolonata: SHIRINA_NA_KOLONATA[deystvasht],
-  });
+  sloji(
+    skrol,
+    gantSVG({
+      koloni,
+      redove,
+      visinaNaGlavata,
+      sborove,
+      pokrivashti,
+      shirinaNaKolonata: SHIRINA_NA_KOLONATA[deystvasht],
+    }),
+  );
   const zadachi = vidimi.filter((r) => r.vid === 'zadacha').length;
   const sverka = k.tyalo.querySelector('[data-sverka="gant"]');
   if (sverka)

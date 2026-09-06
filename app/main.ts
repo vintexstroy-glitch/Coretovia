@@ -26,7 +26,7 @@ import {
 import type { KonteksNaEkrana } from './kontekst.js';
 import { narisuvayProzorets } from './prozorets/prozortsite.js';
 import { zatvoriMenyuto } from './reshetka/menyu.js';
-import { ekraniraj } from './reshetka/obshto.js';
+import { h, nashSkript, sloji } from './reshetka/shablon.js';
 import { chetiEkranno, zapomniEkranno } from './reshetka/pamet-ekran.js';
 
 const KNIGA = 'coretovia';
@@ -63,18 +63,20 @@ async function main(): Promise<void> {
   });
   const hranilishte = await osiguriHranilishte();
 
-  ekran.innerHTML = `
+  sloji(
+    ekran,
+    h`
     <header class="glava">
       <h1>Coretovia</h1>
       <p class="vest" data-vest></p>
     </header>
     <nav class="lenta-prozortsi" data-prozortsi>
       ${PROZORTSI.map(
-        (p) =>
-          `<a href="#/${p.klyuch}" data-prozorets="${p.klyuch}" translate="no">${ekraniraj(p.list)}</a>`,
-      ).join('')}
+        (p) => h`<a href="#/${p.klyuch}" data-prozorets="${p.klyuch}" translate="no">${p.list}</a>`,
+      )}
     </nav>
-    <main class="prozorets" data-prozorets-tyalo></main>`;
+    <main class="prozorets" data-prozorets-tyalo></main>`,
+  );
 
   const vest = ekran.querySelector<HTMLElement>('[data-vest]')!;
   const glavnoTyalo = ekran.querySelector<HTMLElement>('[data-prozorets-tyalo]')!;
@@ -159,7 +161,7 @@ async function main(): Promise<void> {
   narisuvay();
 
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
+    navigator.serviceWorker.register(nashSkript('./sw.js')).catch(() => {
       /* без джоб · приложението пак работи, само не офлайн */
     });
   }
