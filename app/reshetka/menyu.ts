@@ -46,13 +46,12 @@ export function pokazhiMenyu(x: number, y: number, tochki: readonly Tochka[]): v
     )}`,
   );
   for (const t of tochki) {
-    ul.querySelector<HTMLButtonElement>(`[data-tochka="${t.klyuch}"]`)?.addEventListener(
-      'click',
-      () => {
-        zatvoriMenyuto();
-        t.deystvie();
-      },
-    );
+    ul.querySelector<HTMLButtonElement>(
+      `[data-tochka="${CSS.escape(t.klyuch)}"]`,
+    )?.addEventListener('click', () => {
+      zatvoriMenyuto();
+      t.deystvie();
+    });
   }
   priKlavish = (e: KeyboardEvent): void => {
     if (e.key === 'Escape') zatvoriMenyuto();

@@ -19,24 +19,12 @@ jobs:
 
       - run: npm ci
 
-      - name: Типове
-        run: npm run typecheck
-
-      - name: Инвариантни тестове
-        run: npm test
-
-      # Обходите са ДОГОВОР, не пожелание: обход, който CI не пуска, разчита на
-      # дисциплина вместо на машина (урок ADR-056 на MasterBook).
-      - name: Чистотата · деветте обхода
-        run: npm run chistota
-      - name: Честността на проверките
-        run: npm run chestnost
-      - name: Слоевете · посоката на зависимостите
-        run: npm run sloeve
-      - name: Лицензите · нищо заразяващо
-        run: npm run litsenzi
-      - name: Стилът
-        run: npm run stil
+      # ЕДНА стъпка, не изброени. Изброяването се разминава: `npm run proverka`
+      # порасна на ДЕВЕТ порти, а тук стояха седем — `knip` и `dumi:proveri` не
+      # се пускаха НИКЪДЕ, а вторият пази неговите думи от Книгата, не чистотата.
+      # Домът на списъка е `package.json`; тук се ВИКА, не се преписва (правило 17).
+      - name: Пълната проверка · деветте порти
+        run: npm run proverka
 
       - name: Браузър за прохода
         run: npx playwright-core install --with-deps chromium

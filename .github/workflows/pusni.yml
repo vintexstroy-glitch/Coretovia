@@ -39,18 +39,12 @@ jobs:
 
       - run: npm ci
 
-      - name: Типове
-        run: npm run typecheck
-      - name: Инвариантни тестове
-        run: npm test
-      - name: Чистотата
-        run: npm run chistota
-      - name: Честността
-        run: npm run chestnost
-      - name: Слоевете
-        run: npm run sloeve
-      - name: Лицензите
-        run: npm run litsenzi
+      # ПУБЛИЧНИЯТ адрес не бива да получава по-малко проверки от клона. Дотук
+      # тук стояха ШЕСТ от деветте порти — липсваха `stil`, `knip` и
+      # `dumi:proveri`, тоест живата страница можеше да носи думи, разминати с
+      # неговата Книга. Един ред, който не се разминава.
+      - name: Пълната проверка · деветте порти
+        run: npm run proverka
 
       - name: Построяване
         run: npm run build

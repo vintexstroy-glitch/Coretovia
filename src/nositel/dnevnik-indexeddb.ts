@@ -18,7 +18,11 @@ const INDEKS_OPID = 'po-opId';
 const INDEKS_SASHTNOST = 'po-sashtnost';
 
 /** Отваря (и при нужда създава) базата. */
-export function otvoriDnevnik(ime = 'masterbook'): Promise<DnevnikVIndexedDB> {
+/**
+ * Името се ПОДАВА · `app/main.ts` дава своето. Подразбиране няма нарочно:
+ * наследено име от друг проект е тиха уговорка, а не решение.
+ */
+export function otvoriDnevnik(ime: string): Promise<DnevnikVIndexedDB> {
   return new Promise((resolve, reject) => {
     const zayavka = indexedDB.open(ime, 1);
 

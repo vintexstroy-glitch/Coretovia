@@ -62,7 +62,7 @@ export function klyuchalkaMezhduRazdeli():
   const locks = (navigator as { locks?: LockManager }).locks;
   if (!locks) return undefined;
   return <T>(naematel: string, rabota: () => Promise<T>): Promise<T> =>
-    locks.request(`masterbook:vrata:${naematel}`, rabota) as Promise<T>;
+    locks.request(`coretovia:vrata:${naematel}`, rabota) as Promise<T>;
 }
 
 /** За човешки очи: 3 481 600 → „3,3 МБ". */

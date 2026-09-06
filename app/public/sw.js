@@ -18,14 +18,24 @@ const CHERUPKA = __CHERUPKA__;
 const KESH = `coretovia-${VERSIYA}`;
 
 self.addEventListener('install', (sabitie) => {
-  sabitie.waitUntil(caches.open(KESH).then((kesh) => kesh.addAll(CHERUPKA)));
+  // `cache: 'reload'` ЗАОБИКАЛЯ HTTP кеша · измерено: живият адрес връща
+  // `max-age=600`, тоест `./` идва от кеша и новият работник инсталира СТАРАТА
+  // черупка — бял екран до следващото пускане, без нищо счупено в кода.
+  sabitie.waitUntil(
+    caches
+      .open(KESH)
+      .then((kesh) => kesh.addAll(CHERUPKA.map((u) => new Request(u, { cache: 'reload' })))),
+  );
 });
 
 self.addEventListener('activate', (sabitie) => {
   sabitie.waitUntil(
     (async () => {
+      // ВСЕКИ чужд кеш пада, не само нашите стари. Кеш, създаден от друг код
+      // на този произход, преживяваше всяко пускане — и печелеше пред нашия по
+      // ред на създаване. Филтър по наше име пази нас от нас, не нас от чужд.
       for (const ime of await caches.keys()) {
-        if (ime.startsWith('coretovia-') && ime !== KESH) await caches.delete(ime);
+        if (ime !== KESH) await caches.delete(ime);
       }
       await self.clients.claim();
     })(),
@@ -40,18 +50,19 @@ self.addEventListener('fetch', (sabitie) => {
 
   sabitie.respondWith(
     (async () => {
-      const otKesha = await caches.match(iskane, { ignoreSearch: true });
+      // СВОЯ кеш, не CacheStorage · голото `caches.match` обхожда ВСИЧКИ кешове
+      // на произхода, включително чужди. Това беше трайният път за подмяна на
+      // скрипт: преживява презареждане и работи офлайн.
+      const kesh = await caches.open(KESH);
+      const otKesha = await kesh.match(iskane, { ignoreSearch: true });
       if (otKesha) return otKesha;
       try {
         const otvod = await fetch(iskane);
-        if (otvod.ok) {
-          const kesh = await caches.open(KESH);
-          await kesh.put(iskane, otvod.clone());
-        }
+        if (otvod.ok) await kesh.put(iskane, otvod.clone());
         return otvod;
       } catch {
         if (iskane.mode === 'navigate') {
-          const cherupka = await caches.match('./index.html');
+          const cherupka = await kesh.match('./index.html');
           if (cherupka) return cherupka;
         }
         throw new Error('Офлайн, и това го няма в джоба.');

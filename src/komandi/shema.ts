@@ -66,7 +66,12 @@ export function proveriPoShema(sh: ShemaJSON, v: unknown, pat = 'товарът'
       if (!Object.hasOwn(obekt, klyuch)) n.push(`${pat}: липсва „${klyuch}".`);
     }
     for (const [klyuch, stoynost] of Object.entries(obekt)) {
-      const pod = properties[klyuch];
+      // `Object.hasOwn`, не гол достъп · иначе `constructor`, `toString`,
+      // `valueOf`, `hasOwnProperty` и `__proto__` идват от прототипа и връщат
+      // ФУНКЦИЯ вместо `undefined`. Тогава проверката ХВЪРЛЯ, вместо да откаже
+      // с думи — а строгата схема съществува точно за да откаже с думи
+      // (правило 12). Идиомът вече стои три реда по-горе.
+      const pod = Object.hasOwn(properties, klyuch) ? properties[klyuch] : undefined;
       if (pod === undefined) {
         if (sh.additionalProperties === false) n.push(`${pat}: „${klyuch}" не е познато поле.`);
         continue;

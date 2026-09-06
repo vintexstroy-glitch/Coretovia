@@ -1241,6 +1241,10 @@ export function razpoznayKnigata(
   const sluzhebno = sluzhebenList === undefined ? null : ch.sluzhebno(sluzhebenList);
 
   let svereniFormuli = 0;
+  // НЕСМЕТНАТИТЕ се БРОЯТ · дотук `sveriFormulite` ги връщаше, а викащият взимаше
+  // само `svereni` и ги хвърляше на пода. Тогава сверката долу сравняваше едно и
+  // също число със себе си — проверка, която НЕ МОЖЕ да падне (обход К).
+  let nesmetnatiFormuli = 0;
   for (const p of PROZORTSI) {
     const l = poList.get(podravni(p.list));
     if (l === undefined) {
@@ -1249,9 +1253,9 @@ export function razpoznayKnigata(
       continue;
     }
     // формулите на листа · срещу кеша, който Excel е оставил в клетките
-    svereniFormuli += sveriFormulite(l, (adres, kakvo, stepen) =>
-      ch.nahodka(p.list, adres, kakvo, stepen),
-    ).svereni;
+    const f = sveriFormulite(l, (adres, kakvo, stepen) => ch.nahodka(p.list, adres, kakvo, stepen));
+    svereniFormuli += f.svereni;
+    nesmetnatiFormuli += f.nesmetnati;
     if (p.klyuch === 'nastroyki') {
       for (const [k, v] of ch.nomenklaturi(l)) nomenklaturi.set(k, v);
       continue;
@@ -1270,7 +1274,15 @@ export function razpoznayKnigata(
   }
   // сверката се записва и когато е нула (правило 7)
   ch.sverki.push(
-    sverka('четене · формули срещу кеша на Excel', svereniFormuli, svereniFormuli, kogato),
+    // ВХОД са ВСИЧКИ формули, ИЗХОД са сверените · разликата са онези, които
+    // не сме могли да сметнем (обхват над тавана, непозната функция). Нулата се
+    // записва (правило 7), а несметнатата формула вече не мълчи.
+    sverka(
+      'четене · формули срещу кеша на Excel',
+      svereniFormuli + nesmetnatiFormuli,
+      svereniFormuli,
+      kogato,
+    ),
   );
   return { tablitsi, nomenklaturi, sluzhebno, nahodki: ch.nahodki, sverki: ch.sverki };
 }

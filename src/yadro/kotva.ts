@@ -30,7 +30,7 @@ export interface DrajkaNaKotva {
 export class KotvaVLocalStorage implements DrajkaNaKotva {
   readonly #predstavka: string;
 
-  constructor(predstavka = 'masterbook:kotva') {
+  constructor(predstavka = 'coretovia:kotva') {
     this.#predstavka = predstavka;
   }
 

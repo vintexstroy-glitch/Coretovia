@@ -66,6 +66,30 @@ function poleta(sh: ShemaJSON, pat = ''): [string, ShemaJSON][] {
   return r;
 }
 
+describe('полетата от прототипа НЕ хвърлят · отказват с думи', () => {
+  /**
+   * Строгата схема съществува, за да ОТКАЖЕ с думи (правило 12). Но голият
+   * достъп `properties[klyuch]` вземаше от ПРОТОТИПА: `constructor`,
+   * `toString`, `valueOf`, `hasOwnProperty` и `__proto__` връщаха ФУНКЦИЯ
+   * вместо `undefined`, и проверката хвърляше `TypeError` вместо да откаже.
+   *
+   * Товарът идва от чужд `.xlsx` през Сверчика и от агента — тоест точно от
+   * местата, където отказът трябва да е дума, не срив.
+   */
+  const sh = strogObekt({ ime: { type: 'string' } });
+
+  it('всяко наследено име се ОТКАЗВА, а не хвърля', () => {
+    const imena = ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__'];
+    // първо БРОЯТ · празен списък би направил цикъла безсмислен (обход Г)
+    expect(imena).toHaveLength(5);
+    for (const ime of imena) {
+      const tovar = JSON.parse(`{"ime":"а","${ime}":1}`) as unknown;
+      const n = proveriPoShema(sh, tovar, 'товар');
+      expect(n.join(' '), ime).toContain(`„${ime}" не е познато поле`);
+    }
+  });
+});
+
 describe('честност на каталога', () => {
   it('всяка схема е строга · обект · без непознати · всичко в required', () => {
     for (const k of KATALOG) {

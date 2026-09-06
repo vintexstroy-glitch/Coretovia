@@ -23,6 +23,22 @@
 
 import ExcelJS from 'exceljs';
 
+/**
+ * ТАВАНЪТ НА ЕДИН ЛИСТ · далеч над всяка негова таблица, далеч под смъртта.
+ *
+ * Най-големият лист в Книгата му е под хиляда реда. Сто хиляди е сто пъти
+ * повече и пак е далеч под 1 048 576, при които разделът замръзва.
+ */
+const NAY_MNOGO_REDOVE = 100_000;
+
+/** Отказът на Книгата е ДУМИ, не срив · викащият ги показва (правило 12). */
+class GreshkaKniga extends Error {
+  constructor(dumi: string) {
+    super(dumi);
+    this.name = 'GreshkaKniga';
+  }
+}
+
 /** Една клетка за писане · текст, число, или формула с кеширан резултат. */
 export type KletkaZaPisane =
   | string
@@ -175,6 +191,23 @@ export async function prochetiKniga(danni: Uint8Array | ArrayBuffer): Promise<Pr
     const otklyucheni: string[] = [];
     const otklyucheniRedove: number[] = [];
     let broyKoloni = 0;
+    /**
+     * ТАВАН НА РЕДА · измерено: файл от 6 460 байта с ЕДНА форматирана клетка
+     * на ред 1 048 576 става 414 МБ и 1 165 ms при четене, защото `eachRow`
+     * СЪЗДАВА всеки ред до последния видян номер. На телефон разделът пада,
+     * преди да си видял ред.
+     *
+     * Не иска нападател — иска обикновена таблица, редактирана години в Excel.
+     *
+     * `rowCount` е измерено безплатен (0 ms · 58 МБ), тъй че пазачът не струва
+     * нищо, а замразяването става изречение, което човекът може да поправи сам.
+     */
+    if (list.rowCount > NAY_MNOGO_REDOVE) {
+      throw new GreshkaKniga(
+        `Листът „${list.name}" стига до ред ${list.rowCount} · над тавана от ${NAY_MNOGO_REDOVE}. ` +
+          'Най-често това са празни редове под таблицата: маркирай ги в Excel, изтрий ги и опитай пак.',
+      );
+    }
     list.eachRow({ includeEmpty: true }, (red, nomer) => {
       if (red.protection?.locked === false) otklyucheniRedove.push(nomer);
       const stoynosti: ProchetenaStoynost[] = [];

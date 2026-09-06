@@ -121,6 +121,23 @@ export function bukviOtKolona(n: number): string {
   return rez;
 }
 
+/**
+ * ТАВАН НА ОБХВАТА · измерено, не предположено (резен 6н · ADR-020).
+ *
+ * `A1:XFD1048576` — онова, което Excel сам вписва при избор на ЦЕЛИЯ лист — е
+ * 17 179 869 184 адреса, и те се разгъваха в масив на главната нишка, преди да
+ * се прочете каквото и да е. Разделът замръзва завинаги, без съобщение и без
+ * изход освен затваряне.
+ *
+ * Не иска нападател: това е формула, която човек пише с две кликвания.
+ *
+ * Числото е избрано да е ДАЛЕЧ над всяка негова таблица (най-голямата в Книгата
+ * му е под хиляда реда) и далеч под онова, което замразява раздел. Отказът е
+ * НАХОДКА с думи, не срив (правило 12) — `sveriFormulite` вече го превръща в
+ * бележка през своя `try/catch`.
+ */
+const NAY_GOLYAM_OBHVAT = 200_000;
+
 /** Адресите в един обхват · по редове, отляво надясно. */
 export function adresiteV(ot: string, doo: string): string[] {
   const a = /^([A-Z]{1,3})(\d{1,7})$/.exec(ot.toUpperCase());
@@ -130,6 +147,13 @@ export function adresiteV(ot: string, doo: string): string[] {
   const k2 = kolonaOtBukvi(b[1]!);
   const r1 = Number(a[2]);
   const r2 = Number(b[2]);
+  // БРОЯТ се смята ПРЕДИ разгъването · инак таванът идва след повредата
+  const kolko = (Math.abs(r2 - r1) + 1) * (Math.abs(k2 - k1) + 1);
+  if (kolko > NAY_GOLYAM_OBHVAT) {
+    throw new GreshkaIzraz(
+      `Обхватът „${ot}:${doo}" е ${kolko} клетки · над тавана от ${NAY_GOLYAM_OBHVAT}. Тази формула не се сверява.`,
+    );
+  }
   const rez: string[] = [];
   for (let r = Math.min(r1, r2); r <= Math.max(r1, r2); r += 1) {
     for (let k = Math.min(k1, k2); k <= Math.max(k1, k2); k += 1) {
@@ -203,6 +227,14 @@ export function smetni(v: Vazel, chetets: ChetetsNaKletki): Drob {
         case 'ROUND': {
           const x = vsichki[0] ?? NULA;
           const znaka = vsichki[1] === undefined ? 0 : kamTsyalo(vsichki[1]);
+          // ТАВАН и тук · `ROUND(1; 90000000)` вдига `10n ** 90000000n`, което
+          // струва 7,2 s на КЛЕТКА (измерено). Хвърля се, не се подменя тихо с
+          // `Math.min`: подменен резултат е по-лош от казан отказ (правило 12).
+          if (znaka > 15) {
+            throw new GreshkaIzraz(
+              `ROUND с ${znaka} знака · над петнайсетте, които числото носи. Не се смята.`,
+            );
+          }
           const mnozhitel = 10n ** BigInt(Math.max(0, znaka));
           const vdignato = umnozhi(x, { n: mnozhitel, d: 1n });
           return drob(BigInt(kamTsyalo(vdignato)), mnozhitel);
