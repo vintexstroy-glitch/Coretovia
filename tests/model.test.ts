@@ -195,8 +195,8 @@ describe('основата на резен 1', () => {
       'година',
     ]);
     expect(BUTONI_NA_UPRAVLENIE.map((b) => b.deystvie.vid)).toEqual([
-      'idva',
-      'idva',
+      'ekran',
+      'ekran',
       'ekran',
       'kniga',
       'nastroyki',

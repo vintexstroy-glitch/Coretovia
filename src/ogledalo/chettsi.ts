@@ -10,6 +10,7 @@ import { poNomer, sStoynost, spri } from '../model/nomenklatura.js';
 import { TIP, type TipSabitie } from '../sabitiya/registar.js';
 import type {
   PayloadKnigaIznesena,
+  PayloadModelZapisan,
   PayloadKnigaVnesena,
   PayloadRedIzklyuchen,
   PayloadRedZapisan,
@@ -60,6 +61,14 @@ export const CHETTSI: Readonly<Record<TipSabitie, Chetets>> = Object.freeze({
   [TIP.redIzklyuchen]: (s, st) => {
     const p = tovar<PayloadRedIzklyuchen>(s);
     st.tablitsa(p.tablitsa).izklyuchi(p.id, s.naematel, s.seq, p.izklyuchen);
+  },
+
+  [TIP.modelZapisan]: (s, st) => {
+    const p = tovar<PayloadModelZapisan>(s);
+    // ЕДНО име, ЕДИН модел в прозореца · повторният запис го ПОПРАВЯ, не го дублира
+    const i = st.modeli.findIndex((m) => m.prozorets === p.prozorets && m.ime === p.ime);
+    if (i >= 0) st.modeli[i] = p;
+    else st.modeli.push(p);
   },
 
   [TIP.knigaIznesena]: (s, st) => {

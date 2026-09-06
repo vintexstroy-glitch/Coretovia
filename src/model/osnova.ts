@@ -886,12 +886,12 @@ export const BUTONI_NA_UPRAVLENIE: readonly ButonNaProzoretsa[] = [
   {
     klyuch: 'otvori',
     ime: 'Отвори(запазен по рано модел или таблица за създаване на празна таблица и после вкарване на функционалност. Предложи начин наклрая на кода за най голяма лекота и функционалност по познат модел от ексел).)',
-    deystvie: { vid: 'idva', rezen: '6б', dumi: 'идва с пясъчника · резен 6б' },
+    deystvie: { vid: 'ekran', klyuch: 'otvori' },
   },
   {
     klyuch: 'zapazi',
     ime: 'Запази(записваш експерименталния модел за периоди напред)',
-    deystvie: { vid: 'idva', rezen: '6б', dumi: 'идва с пясъчника · резен 6б' },
+    deystvie: { vid: 'ekran', klyuch: 'zapazi' },
   },
   {
     klyuch: 'dobavyane',

@@ -10,9 +10,9 @@ import { proveriTovar, SABITIYA, TIP } from '../src/sabitiya/registar.js';
 import { eKletka, slotNaKletka } from '../src/model/kletka.js';
 
 describe('регистърът', () => {
-  it('осем типа · всеки с проверка И четец · броят е пин', () => {
+  it('девет типа · всеки с проверка И четец · броят е пин', () => {
     const tipove = Object.values(TIP).sort();
-    expect(tipove).toHaveLength(8);
+    expect(tipove).toHaveLength(9);
     expect(Object.keys(SABITIYA).sort()).toEqual(tipove);
     expect(Object.keys(CHETTSI).sort()).toEqual(tipove);
   });

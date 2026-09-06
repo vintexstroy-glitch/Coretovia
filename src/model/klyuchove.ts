@@ -44,6 +44,8 @@ export const VID = Object.freeze({
   stopan: 'stopan',
   /** ред от таблицата „Служители свързани с Coretovia" */
   sluzhitel: 'sluzhitel',
+  /** ИМЕНУВАН модел на екрана · неговите „Отвори" и „Запази" (ADR-014) */
+  model: 'model',
   prodazhba: 'prodazhba',
   prodazhba2: 'prodazhba2',
   /** ред от таблицата „Достъп на Длъжности за Служител" · четирите оси */

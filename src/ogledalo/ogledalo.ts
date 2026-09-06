@@ -28,6 +28,7 @@ import { proveriTovar, TIP } from '../sabitiya/registar.js';
 import type {
   Kursor,
   PayloadKnigaIznesena,
+  PayloadModelZapisan,
   PayloadKnigaVnesena,
   PayloadRedIzklyuchen,
   PayloadRedZapisan,
@@ -67,6 +68,8 @@ export interface Ogledalo {
   readonly stopanin: string;
   readonly tablitsi: ReadonlyMap<string, TablitsaVOgledaloto>;
   readonly nomenklaturi: ReadonlyMap<string, ZhivaNomenklatura>;
+  /** запазените модели на екрана · по прозорец и име (неговите Отвори/Запази) */
+  readonly modeli: readonly PayloadModelZapisan[];
   readonly knigi: readonly PayloadKnigaIznesena[];
   /** разписките за внесени Книги · кога, колко предложено, колко прието */
   readonly vnasyaniya: readonly PayloadKnigaVnesena[];
@@ -204,6 +207,7 @@ export function fold(sabitiya: readonly Sabitie[], model: Model, kogato: string)
     stopanin: st.stopanin,
     tablitsi,
     nomenklaturi: new Map(st.nomenklaturi),
+    modeli: Object.freeze([...st.modeli]),
     knigi: Object.freeze([...st.knigi]),
     vnasyaniya: Object.freeze([...st.vnasyaniya]),
     pogaseni: Object.freeze(pogaseni),

@@ -19,6 +19,7 @@ export const TIP = Object.freeze({
   stoynostSpryana: 'СтойностНаНоменклатураСпряна',
   redZapisan: 'РедЗаписан',
   redIzklyuchen: 'РедИзключен',
+  modelZapisan: 'МоделНаЕкранаЗаписан',
   knigaIznesena: 'КнигаИзнесена',
   knigaVnesena: 'КнигаВнесена',
   storno: 'Сторно',
@@ -139,6 +140,23 @@ export const SABITIYA: Readonly<Record<TipSabitie, Proverka>> = Object.freeze({
     const n: string[] = [];
     proveriAdresNaRed(p, model, n);
     if (typeof p['izklyuchen'] !== 'boolean') n.push('„izklyuchen" трябва да е да/не.');
+    return n;
+  },
+
+  [TIP.modelZapisan]: (p) => {
+    const n: string[] = [];
+    const prozorets = p['prozorets'];
+    const ime = p['ime'];
+    const snimka = p['snimka'];
+    if (typeof prozorets !== 'string' || prozorets === '') n.push('„prozorets" е задължителен.');
+    if (typeof ime !== 'string' || ime.trim() === '') n.push('Моделът иска ИМЕ.');
+    if (typeof ime === 'string' && ime.length > 60) n.push('Името на модела е до 60 знака.');
+    if (snimka === null || typeof snimka !== 'object' || Array.isArray(snimka)) {
+      n.push('„snimka" е карта от ключове към стойности.');
+    }
+    if (p['izklyuchen'] !== undefined && typeof p['izklyuchen'] !== 'boolean') {
+      n.push('„izklyuchen" трябва да е да/не.');
+    }
     return n;
   },
 

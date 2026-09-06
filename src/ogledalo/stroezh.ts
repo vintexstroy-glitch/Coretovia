@@ -8,7 +8,11 @@
 
 import type { Model } from '../model/model.js';
 import { otBazovite, type ZhivaNomenklatura } from '../model/nomenklatura.js';
-import type { PayloadKnigaIznesena, PayloadKnigaVnesena } from '../sabitiya/tovari.js';
+import type {
+  PayloadKnigaIznesena,
+  PayloadKnigaVnesena,
+  PayloadModelZapisan,
+} from '../sabitiya/tovari.js';
 import { StroitelNaTablitsa } from './tablitsa.js';
 
 export class StroezhNaOgledaloto {
@@ -17,6 +21,7 @@ export class StroezhNaOgledaloto {
   stopanin = '';
   readonly tablitsi = new Map<string, StroitelNaTablitsa>();
   readonly nomenklaturi = new Map<string, ZhivaNomenklatura>();
+  readonly modeli: PayloadModelZapisan[] = [];
   readonly knigi: PayloadKnigaIznesena[] = [];
   readonly vnasyaniya: PayloadKnigaVnesena[] = [];
 

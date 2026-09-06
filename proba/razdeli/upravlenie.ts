@@ -48,12 +48,9 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
     14,
   );
   proveri(
-    'Отвори и Запази казват кога идват',
-    await p.$eval(
-      '[data-buton-ekran="otvori"]',
-      (e) => `${(e as HTMLButtonElement).disabled} · ${e.getAttribute('title')}`,
-    ),
-    'true · идва с пясъчника · резен 6б',
+    'Отвори и Запази вече РАБОТЯТ · не казват „идва с резен" (резен 6б)',
+    await p.$eval('[data-buton-ekran="otvori"]', (e) => (e as HTMLButtonElement).disabled),
+    false,
   );
   proveri(
     'дървото · трите Имота · сверката затваря',
@@ -214,6 +211,58 @@ export async function blok1(ctx: KonteksNaProhoda): Promise<void> {
   );
 
   // ══ 3г · „Свалифайл" = Книгата · листът Управление ═══════════════════
+  // ══ 3в2 · неговите Отвори и Запази · моделът е ИМЕНУВАН поглед ══════
+  razdel = '3в2 · моделът';
+  // погледът се мени · тактът става година
+  await p.selectOption('[data-takt]', 'godina');
+  await p.waitForFunction(
+    () => (document.querySelector('[data-sverka="gant"]')?.textContent ?? '').length > 0,
+  );
+  await p.evaluate(() => {
+    // името на модела идва през prompt · тук се отговаря вместо човека
+    (globalThis as unknown as { prompt: (a?: string, b?: string) => string }).prompt = () =>
+      'Годишен преглед';
+  });
+  await p.click('[data-buton-ekran="zapazi"]');
+  await p.waitForFunction(() =>
+    (document.querySelector('[data-greshka]')?.textContent ?? '').includes('е записан'),
+  );
+  proveri(
+    'Запази · моделът се записва с името си (негово B14)',
+    await tekstNa(p, '[data-greshka]'),
+    'Моделът „Годишен преглед" е записан.',
+  );
+  // погледът се разваля · после моделът го връща
+  await p.selectOption('[data-takt]', 'den');
+  await p.click('[data-buton-ekran="otvori"]');
+  await p.waitForSelector('[data-menyu]');
+  const punktove = await tekstoveNa(p, '[data-menyu] button');
+  proveri(
+    'Отвори · менюто носи празната таблица и запазения модел (негово A14)',
+    punktove.join(' · '),
+    'Празна таблица (изчисти погледа) · Годишен преглед',
+  );
+  await p.click('[data-menyu] [data-tochka="Годишен преглед"]');
+  await p.waitForFunction(() =>
+    (document.querySelector('[data-greshka]')?.textContent ?? '').includes('е отворен'),
+  );
+  proveri(
+    'погледът се ВРЪЩА · тактът пак е година',
+    await p.$eval('[data-takt]', (e) => (e as HTMLSelectElement).value),
+    'godina',
+  );
+  await p.click('[data-buton-ekran="otvori"]');
+  await p.waitForSelector('[data-menyu]');
+  await p.click('[data-menyu] [data-tochka=""]');
+  await p.waitForFunction(() =>
+    (document.querySelector('[data-greshka]')?.textContent ?? '').includes('изчистен'),
+  );
+  proveri(
+    'празната таблица изчиства погледа до подразбраното',
+    await p.$eval('[data-takt]', (e) => (e as HTMLSelectElement).value),
+    'mesets',
+  );
+
   razdel = '3г · Книгата';
   const [svalyane] = await Promise.all([
     p.waitForEvent('download'),

@@ -66,6 +66,7 @@ import type { KonteksNaEkrana } from '../kontekst.js';
 import { otvoriChernova } from '../reshetka/chernova.js';
 import { gantSVG, type RedNaGanta } from '../reshetka/gant-svg.js';
 import { pokazhiMenyu } from '../reshetka/menyu.js';
+import { otvoriModel, zapaziModela } from '../reshetka/modeli.js';
 import { ekraniraj } from '../reshetka/obshto.js';
 import { chetiEkranno, zapomniEkranno } from '../reshetka/pamet-ekran.js';
 import { pokazhiGreshka } from '../reshetka/redaktsiya.js';
@@ -595,6 +596,13 @@ function deystvieNaButona(
       break;
   }
   switch (d.klyuch) {
+    // неговите „Отвори" и „Запази" · моделът е ИМЕНУВАН поглед (ADR-014)
+    case 'otvori':
+      otvoriModel(k, 'upravlenie', el);
+      return;
+    case 'zapazi':
+      void zapaziModela(k, 'upravlenie');
+      return;
     case 'obnovi':
       k.prerisuvay();
       return;

@@ -32,12 +32,8 @@ describe('резените по прозорец', () => {
 
   it('бутоните на Управление, които „идват с резен N", сочат ред от плана с темата си', () => {
     const idvat = BUTONI_NA_UPRAVLENIE.filter((b) => b.deystvie.vid === 'idva');
-    expect(idvat.map((b) => b.klyuch)).toEqual([
-      'otvori',
-      'zapazi',
-      'skriy-razhodi',
-      'skriy-prihodi',
-    ]);
+    // Отвори и Запази вече ЖИВЕЯТ (резен 6б · ADR-014)
+    expect(idvat.map((b) => b.klyuch)).toEqual(['skriy-razhodi', 'skriy-prihodi']);
     for (const b of idvat) {
       const rezen = b.deystvie.vid === 'idva' ? b.deystvie.rezen : 0;
       const zaglavie = redove.get(String(rezen)) ?? '';

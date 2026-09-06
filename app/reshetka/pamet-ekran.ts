@@ -55,3 +55,50 @@ export function chetiEkranno<T>(klyuch: string, inache: T): T {
     return inache;
   }
 }
+
+/**
+ * СНИМКАТА на един прозорец · всичко запомнено с този префикс.
+ *
+ * Оттук идва „моделът" на неговите Отвори/Запази (ADR-014): не се измисля втора
+ * форма на записа — взима се същото, което екранът вече помни. Така всяка нова
+ * запомнена настройка влиза в моделите сама, без ред код.
+ */
+export function snimkaNaEkrana(prefiks: string): Record<string, unknown> {
+  const rez: Record<string, unknown> = {};
+  const h = hranilishte();
+  if (h === null) return rez;
+  try {
+    for (let i = 0; i < h.length; i += 1) {
+      const klyuch = h.key(i);
+      if (klyuch === null || !klyuch.startsWith(PREFIKS + prefiks)) continue;
+      const surovo = h.getItem(klyuch);
+      if (surovo === null) continue;
+      rez[klyuch.slice(PREFIKS.length)] = JSON.parse(surovo);
+    }
+  } catch {
+    // Счупен запис или заключено хранилище · снимката е каквото е успяло
+  }
+  return rez;
+}
+
+/**
+ * ВЪЗСТАНОВЯВА снимка · чисти стария поглед на прозореца и слага новия.
+ *
+ * Чистенето е нарочно: модел, който само ДОПИСВА, би оставил филтър от предишния
+ * поглед и човек не би разбрал защо вижда по-малко редове.
+ */
+export function vazstanoviEkrana(prefiks: string, snimka: Readonly<Record<string, unknown>>): void {
+  const h = hranilishte();
+  if (h === null) return;
+  try {
+    const zaMahane: string[] = [];
+    for (let i = 0; i < h.length; i += 1) {
+      const klyuch = h.key(i);
+      if (klyuch !== null && klyuch.startsWith(PREFIKS + prefiks)) zaMahane.push(klyuch);
+    }
+    for (const k of zaMahane) h.removeItem(k);
+    for (const [k, v] of Object.entries(snimka)) h.setItem(PREFIKS + k, JSON.stringify(v));
+  } catch {
+    // Пълно или заключено хранилище: екранът работи, просто не помни
+  }
+}
